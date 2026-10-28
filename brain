@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Run self-improving-brain straight from a clone: ./brain <command>. No install, no dependencies."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from self_improving_brain.cli import main  # noqa: E402
+
+sys.exit(main())

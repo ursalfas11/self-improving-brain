@@ -1,0 +1,4 @@
+# per-machine runtime state; events, inbox and drafts are versioned on purpose
+.brain/state/
+.obsidian/workspace*.json
+.DS_Store

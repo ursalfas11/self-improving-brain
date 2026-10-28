@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="602" viewBox="0 0 960 602" role="img" aria-label="Demo: a correction becomes a lesson that fires in the next session">
+<style>
+.m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:15px;white-space:pre}
+.l{animation-duration:17.1s;animation-iteration-count:infinite;animation-timing-function:steps(1,end)}
+@keyframes k0{0%{opacity:0}1.75%{opacity:1}98%{opacity:1}100%{opacity:0}}.l0{animation-name:k0}
+@keyframes k1{0%{opacity:0}5.26%{opacity:1}98%{opacity:1}100%{opacity:0}}.l1{animation-name:k1}
+@keyframes k2{0%{opacity:0}10.53%{opacity:1}98%{opacity:1}100%{opacity:0}}.l2{animation-name:k2}
+@keyframes k3{0%{opacity:0}16.96%{opacity:1}98%{opacity:1}100%{opacity:0}}.l3{animation-name:k3}
+@keyframes k4{0%{opacity:0}19.30%{opacity:1}98%{opacity:1}100%{opacity:0}}.l4{animation-name:k4}
+@keyframes k5{0%{opacity:0}22.81%{opacity:1}98%{opacity:1}100%{opacity:0}}.l5{animation-name:k5}
+@keyframes k6{0%{opacity:0}26.32%{opacity:1}98%{opacity:1}100%{opacity:0}}.l6{animation-name:k6}
+@keyframes k7{0%{opacity:0}30.99%{opacity:1}98%{opacity:1}100%{opacity:0}}.l7{animation-name:k7}
+@keyframes k8{0%{opacity:0}36.84%{opacity:1}98%{opacity:1}100%{opacity:0}}.l8{animation-name:k8}
+@keyframes k9{0%{opacity:0}40.94%{opacity:1}98%{opacity:1}100%{opacity:0}}.l9{animation-name:k9}
+@keyframes k10{0%{opacity:0}43.27%{opacity:1}98%{opacity:1}100%{opacity:0}}.l10{animation-name:k10}
+@keyframes k11{0%{opacity:0}46.78%{opacity:1}98%{opacity:1}100%{opacity:0}}.l11{animation-name:k11}
+@keyframes k12{0%{opacity:0}51.46%{opacity:1}98%{opacity:1}100%{opacity:0}}.l12{animation-name:k12}
+@keyframes k13{0%{opacity:0}56.73%{opacity:1}98%{opacity:1}100%{opacity:0}}.l13{animation-name:k13}
+@keyframes k14{0%{opacity:0}63.74%{opacity:1}98%{opacity:1}100%{opacity:0}}.l14{animation-name:k14}
+@keyframes k15{0%{opacity:0}66.08%{opacity:1}98%{opacity:1}100%{opacity:0}}.l15{animation-name:k15}
+@keyframes k16{0%{opacity:0}70.18%{opacity:1}98%{opacity:1}100%{opacity:0}}.l16{animation-name:k16}
+@keyframes k17{0%{opacity:0}72.51%{opacity:1}98%{opacity:1}100%{opacity:0}}.l17{animation-name:k17}
+@keyframes k18{0%{opacity:0}74.27%{opacity:1}98%{opacity:1}100%{opacity:0}}.l18{animation-name:k18}
+@keyframes k19{0%{opacity:0}76.61%{opacity:1}98%{opacity:1}100%{opacity:0}}.l19{animation-name:k19}
+@media (prefers-reduced-motion:reduce){.l,.cur{animation:none}}
+@keyframes cur{0%,49%{opacity:1}50%,100%{opacity:0}}.cur{animation:cur 1s steps(1) infinite}
+</style>
+<rect width="960" height="602" rx="14" fill="#0d1124"/>
+<rect x=".5" y=".5" width="959" height="601" rx="14" fill="none" stroke="#2b3366"/>
+<circle cx="24" cy="24" r="6.5" fill="#ff5f57"/><circle cx="46" cy="24" r="6.5" fill="#febc2e"/><circle cx="68" cy="24" r="6.5" fill="#28c840"/>
+<text class="m" x="480.0" y="29" fill="#7d86b8" text-anchor="middle" style="font-size:13px">your agent · two sessions and one night apart</text>
+<line x1="0" y1="46" x2="960" y2="46" stroke="#1f2550"/>
+<text class="m l l0" x="28" y="74" fill="#8b9bff">── Tuesday ─────────────────────────────────────────────</text>
+<text class="m l l1" x="28" y="99" fill="#7cf7d4">you   › the checkout test is flaky, fix it</text>
+<text class="m l l2" x="28" y="124" fill="#c9d1ff">agent › Added a retry around the test. Done ✓</text>
+<text class="m l l3" x="28" y="149" fill="#7cf7d4">you   › no — that&#x27;s not a fix. find the race instead of adding retries</text>
+<text class="m l l5" x="28" y="199" fill="#8b9bff">── that night, on your laptop ───────────────────────────</text>
+<text class="m l l6" x="28" y="224" fill="#ffd479">$ brain learn</text>
+<text class="m l l7" x="28" y="249" fill="#7d86b8">scanned 14 transcripts · 212 user messages · 9 corrections · 3 new drafts</text>
+<text class="m l l8" x="28" y="274" fill="#ffd479">$ brain approve d-ca0e5af6 --rule &quot;Fix flaky tests at the root; never add retries.&quot;</text>
+<text class="m l l9" x="28" y="299" fill="#7cf7d4">✓ lesson L-fix-flaky-tests-root (reflex) written to note testing</text>
+<text class="m l l11" x="28" y="349" fill="#8b9bff">── Friday ──────────────────────────────────────────────</text>
+<text class="m l l12" x="28" y="374" fill="#7cf7d4">you   › the login test is flaky again, can you add a retry?</text>
+<text class="m l l13" x="28" y="399" fill="#f08cff" font-weight="700">brain › LESSON L-fix-flaky-tests-root: Fix flaky tests at the root; never add retries.</text>
+<text class="m l l14" x="28" y="424" fill="#c9d1ff">agent › Before any retry, let me find the race… shared session fixture. Fixed at the root.</text>
+<text class="m l l16" x="28" y="474" fill="#ffd479">$ brain stats</text>
+<text class="m l l17" x="28" y="499" fill="#7d86b8">CORRECTIONS per 100 user messages   (example)</text>
+<g class="l l18"><text class="m" x="28" y="524" fill="#e8ebff">  W41  12.4  </text><rect x="146" y="511" width="372" height="16" rx="3" fill="#f08cff" opacity=".85"/></g>
+<g class="l l19"><text class="m" x="28" y="549" fill="#e8ebff">  W44   5.3  </text><rect x="146" y="536" width="159" height="16" rx="3" fill="#7cf7d4" opacity=".85"/></g>
+<rect class="cur" x="28" y="554" width="9" height="18" fill="#7cf7d4"/>
+</svg>

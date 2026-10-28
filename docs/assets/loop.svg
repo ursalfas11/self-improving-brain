@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="470" viewBox="0 0 1100 470" role="img" aria-label="The learning loop: session, learn, approve, inject, measure">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7cf7d4"/><stop offset=".5" stop-color="#8b9bff"/><stop offset="1" stop-color="#f08cff"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b9bff"/>
+    </marker>
+    <style>
+      .t{font-family:-apple-system,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
+      .m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .card{fill:#141a38;stroke:#2b3366;stroke-width:1.5}
+      .h{fill:#ffffff;font-size:19px;font-weight:700}
+      .s{fill:#aab2e0;font-size:13.5px}
+      .c{fill:#7cf7d4;font-size:13px}
+      .flow{fill:none;stroke:#8b9bff;stroke-width:2.2;stroke-dasharray:7 7;animation:dash 1.2s linear infinite}
+      @keyframes dash{to{stroke-dashoffset:-14}}
+      .dot{fill:#7cf7d4;animation:p 2.5s ease-in-out infinite}
+      @keyframes p{0%,100%{opacity:.35}50%{opacity:1}}
+    </style>
+  </defs>
+  <rect width="1100" height="470" rx="22" fill="#0b1020"/>
+
+  <!-- center -->
+  <circle cx="550" cy="235" r="92" fill="#141a38" stroke="url(#a)" stroke-width="2.5"/>
+  <text class="t" x="550" y="222" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">your vault</text>
+  <text class="t" x="550" y="246" text-anchor="middle" fill="#aab2e0" font-size="14">Markdown · [[links]]</text>
+  <text class="t" x="550" y="266" text-anchor="middle" fill="#aab2e0" font-size="14">lessons live in notes</text>
+
+  <!-- 1 session -->
+  <g transform="translate(60 40)">
+    <rect class="card" width="250" height="118" rx="16"/>
+    <circle class="dot" cx="26" cy="30" r="6"/>
+    <text class="t h" x="44" y="37">1 · You work</text>
+    <text class="t s" x="22" y="68">Claude Code, Codex, Gemini …</text>
+    <text class="t s" x="22" y="90">you correct it: "no, …"</text>
+  </g>
+  <!-- 2 learn -->
+  <g transform="translate(790 40)">
+    <rect class="card" width="250" height="118" rx="16"/>
+    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:.5s"/>
+    <text class="t h" x="44" y="37">2 · It learns</text>
+    <text class="m c" x="22" y="68">brain learn</text>
+    <text class="t s" x="22" y="90">corrections → lesson drafts</text>
+  </g>
+  <!-- 3 approve -->
+  <g transform="translate(850 300)">
+    <rect class="card" width="210" height="118" rx="16"/>
+    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1s"/>
+    <text class="t h" x="44" y="37">3 · You OK it</text>
+    <text class="m c" x="22" y="68">brain approve</text>
+    <text class="t s" x="22" y="90">nothing without you</text>
+  </g>
+  <!-- 4 inject -->
+  <g transform="translate(330 360)">
+    <rect class="card" width="440" height="92" rx="16"/>
+    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1.5s"/>
+    <text class="t h" x="44" y="37">4 · Right rule, right moment</text>
+    <text class="t s" x="22" y="68">prompt words · tool · shell command · path  →  reflex or guard</text>
+  </g>
+  <!-- 5 measure -->
+  <g transform="translate(40 300)">
+    <rect class="card" width="230" height="118" rx="16"/>
+    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:2s"/>
+    <text class="t h" x="44" y="37">5 · It measures</text>
+    <text class="m c" x="22" y="68">brain stats</text>
+    <text class="t s" x="22" y="90">mistakes ↓ · recall tunes itself</text>
+  </g>
+
+  <!-- arrows -->
+  <path class="flow" d="M310,95 C450,70 650,70 788,95" marker-end="url(#arr)"/>
+  <path class="flow" d="M960,160 C985,210 985,250 965,298" marker-end="url(#arr)"/>
+  <path class="flow" d="M850,380 C820,400 800,405 772,405" marker-end="url(#arr)"/>
+  <path class="flow" d="M330,405 C300,405 285,400 272,385" marker-end="url(#arr)"/>
+  <path class="flow" d="M150,300 C135,240 140,200 170,160" marker-end="url(#arr)"/>
+</svg>

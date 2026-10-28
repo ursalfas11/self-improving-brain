@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "self-improving-brain"
+version = "0.1.0"
+description = "A self-improving, local-first memory for any coding agent: Claude Code, Codex, Gemini, Grok, Cursor, Aider. Learns from your corrections. No server, no API key, no dependencies."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+keywords = ["ai-agent", "memory", "claude-code", "codex", "llm", "second-brain", "obsidian", "agents-md", "self-improving"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Environment :: Console",
+  "Topic :: Software Development",
+  "Intended Audience :: Developers",
+]
+
+[project.scripts]
+brain = "self_improving_brain.cli:main"
+
+[tool.setuptools]
+packages = ["self_improving_brain"]
+
+[tool.setuptools.package-data]
+self_improving_brain = [
+  "templates/commands/*.md",
+  "templates/vault/*/*.md",
+  "templates/vault/.gitignore",
+  "templates/vault/*/.gitkeep",
+]
