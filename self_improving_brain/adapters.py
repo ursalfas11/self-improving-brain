@@ -25,19 +25,55 @@ PKG_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 
 
+def _python() -> str:
+    """An absolute interpreter that provably runs this code: agents (GUI apps, cron) often have a bare PATH
+    whose `python3` is old or missing. Prefer the PATH entry when it is this interpreter (e.g.
+    /opt/homebrew/bin/python3): unlike sys.executable it survives interpreter upgrades."""
+    found = shutil.which("python3") if os.name != "nt" else None
+    try:
+        if found and Path(found).resolve() == Path(sys.executable).resolve():
+            return f'"{found}"'
+    except OSError:
+        pass
+    return f'"{sys.executable}"'
+
+
+def console_script() -> Path | None:
+    """The `brain` entry point pip, pipx or uv installed for this interpreter (it pins its own venv)."""
+    name = "brain.exe" if os.name == "nt" else "brain"
+    here = Path(sys.executable).parent / name  # venv, pipx, uv tool
+    if here.is_file():
+        return here
+    import sysconfig  # system-wide or --user install
+    dirs = [sysconfig.get_path("scripts")]
+    try:
+        user = sysconfig.get_preferred_scheme("user") if hasattr(sysconfig, "get_preferred_scheme") else f"{os.name}_user"
+        dirs.append(sysconfig.get_path("scripts", user))
+    except KeyError:
+        pass
+    return next((Path(d) / name for d in dirs if d and (Path(d) / name).is_file()), None)
+
+
 def brain_cmd() -> str:
     """Absolute command, so hooks work no matter what PATH the agent runs with."""
     shim = PKG_ROOT / "brain"
-    if shim.is_file():
-        return f'python3 "{shim}"'
-    return f'"{sys.executable}" -m self_improving_brain'
+    if shim.is_file():  # running from a clone
+        return f'{_python()} "{shim}"'
+    script = console_script()
+    if script:
+        return f'"{script}"'
+    # -P (3.11+) keeps the agent's working directory off sys.path, so a project file can't shadow a module
+    return f'"{sys.executable}"{" -P" if sys.version_info >= (3, 11) else ""} -m self_improving_brain'
 
 
 def cli_name() -> str:
     """`brain` if it is on PATH and points here, else the full command."""
     found = shutil.which("brain")
-    if found and (Path(found).resolve() == (PKG_ROOT / "brain").resolve() or not (PKG_ROOT / "brain").is_file()):
-        return "brain"
+    if found:
+        shim = PKG_ROOT / "brain"
+        ours = shim if shim.is_file() else console_script()
+        if ours and Path(found).resolve() == ours.resolve():
+            return "brain"
     return brain_cmd()
 
 
@@ -107,6 +143,7 @@ CLAUDE_HOOKS = [
     ("UserPromptSubmit", None, "prompt", 10, False),
     ("PreToolUse", "*", "pre-tool", 10, False),
     ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit", "post-tool", 15, False),
+    ("Stop", None, "stop", 10, False),
     ("SessionEnd", None, "session-end", 5, True),
 ]
 

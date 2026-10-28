@@ -45,7 +45,8 @@ def packet(v: Vault) -> str:
     return "\n".join(out)
 
 
-DECIDE = """You maintain a personal Markdown wiki. Decide where a new claim goes.
+DECIDE = llm.MARKER + """
+You maintain a personal Markdown wiki. Decide where a new claim goes.
 Rules: one truth per fact (update, never duplicate); keep the existing style; never invent facts.
 Return JSON: {"action": "append"|"new"|"skip"|"conflict",
  "note": "<existing note name for append>", "section": "<existing H2 title or empty>",
@@ -120,6 +121,9 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             d = llm.ask_json(v, prompt)
         except (llm.NoLLM, ValueError) as e:
             report.append(f"{it['id']}: llm error {e}")
+            continue
+        if not isinstance(d, dict):
+            report.append(f"{it['id']}: llm error: expected a JSON object")
             continue
         act = str(d.get("action", "")).lower()
         if act == "skip":

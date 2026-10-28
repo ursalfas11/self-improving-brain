@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A self-improving, local-first memory for any coding agent: Claude Code, Codex, Gemini, Grok, Cursor, Aider. Learns from your corrections. No server, no API key, no dependencies."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = ["ai-agent", "memory", "claude-code", "codex", "llm", "second-brain", "obsidian", "agents-md", "self-improving"]
 classifiers = [
   "Programming Language :: Python :: 3",

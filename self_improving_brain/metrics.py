@@ -34,6 +34,8 @@ def build_learned(v: Vault) -> dict:
     hit_once: set = set()
     for e in events.all_events(v):
         s = e.get("session", "")
+        if s == "doctor":  # `brain doctor` probes are not real questions
+            continue
         k = e.get("k")
         if k == "recall":
             last_terms[s] = (str(e.get("t", "")), e.get("terms", [])[:8])
@@ -56,7 +58,8 @@ def build_learned(v: Vault) -> dict:
 
 
 def recall_numbers(v: Vault, days: int = 30) -> dict:
-    ev = [e for e in events.all_events(v) if (days_since(e.get("t", "")) or 0) <= days]
+    ev = [e for e in events.all_events(v)
+          if (days_since(e.get("t", "")) or 0) <= days and e.get("session") != "doctor"]
     prompts = [e for e in ev if e.get("k") == "recall" and e.get("via") != "search"]
     shown = [(e.get("session"), n) for e in prompts for n in e.get("notes", [])]
     shown_set = set(shown)

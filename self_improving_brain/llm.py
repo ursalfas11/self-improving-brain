@@ -17,6 +17,27 @@ import subprocess
 from .config import Vault
 
 
+# Every prompt we send starts with this, so `brain learn` can recognise and skip transcripts of
+# our own headless calls (some CLIs keep a session log even in print mode).
+MARKER = "[self-improving-brain:internal]"
+
+# Headless invocations known to work: no tools, no user settings/hooks, no session log.
+KNOWN = {
+    "claude": 'claude -p --model haiku --tools "" --setting-sources "" --no-session-persistence',
+    "codex": "codex exec --skip-git-repo-check --ephemeral --sandbox read-only",
+    "ollama": "ollama run llama3.1",
+}
+
+
+def detect() -> str:
+    """The best LLM CLI on this machine, or ''."""
+    import shutil
+    for name in ("claude", "codex", "ollama"):
+        if shutil.which(name):
+            return KNOWN[name]
+    return ""
+
+
 class NoLLM(RuntimeError):
     pass
 
@@ -30,8 +51,13 @@ def ask(v: Vault, prompt: str) -> str:
     if not cmd:
         raise NoLLM("no llm_cmd configured")
     env = dict(os.environ, BRAIN_HOOKS_OFF="1")
-    res = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
-                         timeout=int(v.get("llm_timeout") or 240), env=env)
+    try:
+        res = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
+                             timeout=int(v.get("llm_timeout") or 240), env=env)
+    except subprocess.TimeoutExpired:
+        raise NoLLM(f"llm_cmd timed out after {v.get('llm_timeout')} s") from None
+    except (OSError, ValueError) as e:  # CLI missing on this machine, or a broken llm_cmd
+        raise NoLLM(f"llm_cmd could not run: {e}") from None
     if res.returncode != 0:
         raise NoLLM(f"llm_cmd failed ({res.returncode}): {res.stderr.strip()[:300]}")
     return res.stdout

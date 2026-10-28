@@ -19,6 +19,7 @@ name: kebab-case-name        # stable id, used in [[links]]
 description: one line        # recall and INDEX.md use this - make it specific
 type: fact | decision | howto | pitfall | preference | project | person | hub
 updated: YYYY-MM-DD          # set automatically when the brain edits a note
+repo: my-service             # optional: injected at session start when an agent works in that repo
 ---
 ```
 

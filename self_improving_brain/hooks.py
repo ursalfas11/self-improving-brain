@@ -19,14 +19,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import events, inbox, learn
+from . import cache, events, inbox, learn
 from .adapters import cli_name
 from .config import NotAVault, Vault, open_vault
 from .lint import lint_note
 from .notes import Library, Lesson
-from .search import Index, learned_model
+from .search import learned_model
 from .secrets import scan
-from .util import load_json, terms
+from .transcripts import HOOK_MARK
+from .util import fold, load_json, short, terms
+
+# The Stop hook interrupts the agent, so only unmistakable signals count there ("why did you…",
+# "I told you…", "from now on always…"). Everything weaker waits quietly for `brain review`.
+STOP_MIN = 0.8
 
 
 def _out(event: str, context: str = "", decision: dict | None = None) -> dict:
@@ -88,9 +93,48 @@ def regex_match(rx: str, text: str) -> bool:
 
 # --- handlers -----------------------------------------------------------------------------
 
+def repo_of(cwd: str) -> str:
+    """Name of the git repo (or folder) the agent works in."""
+    if not cwd:
+        return ""
+    p = Path(cwd)
+    for d in [p, *p.parents]:
+        if (d / ".git").exists():
+            return d.name
+    return p.name if p != Path.home() else ""
+
+
+def _key(s) -> str:
+    """Comparable form of a repo, tag or note name; names without Latin letters compare as written."""
+    s = str(s or "").strip()
+    return re.sub(r"[^a-z0-9]+", "-", fold(s)).strip("-") or s.casefold()
+
+
+def repo_notes(lib: Library, repo: str, k: int = 3) -> list:
+    """Notes that declare `repo: <name>`, are tagged with it, or are named after it."""
+    r = _key(repo)
+    if not r:
+        return []
+    hits = []
+    for n in lib.notes.values():
+        raw = n.meta.get("repo")
+        declared = {_key(x) for x in (raw if isinstance(raw, list) else [raw])} - {""}
+        name = _key(n.name)
+        if r in declared or r in {_key(x) for x in n.tags} or name == r or name.startswith(r + "-"):
+            hits.append(n)
+    hits.sort(key=lambda n: (not n.is_hub, n.name))
+    return hits[:k]
+
+
 def session_start(v: Vault, payload: dict) -> dict:
-    lib = Library(v.root)
+    lib = cache.library(v)
     events.prune_sessions(v)
+    session = _session(payload)
+    st = events.session_state(v, session)
+    tp = payload.get("transcript_path")
+    if "checked_ts" not in st and tp and Path(str(tp)).is_file():
+        # a resumed session starts with old turns: the knowledge check only looks at what comes next
+        st["checked_ts"] = max((t.ts for t in _tail_turns(Path(str(tp))) if t.ts), default="")
     always = [l for l in lib.lessons() if l.mechanism == "always"][: int(v.get("always_max"))]
     b = cli_name()
     lines = [f"SELF-IMPROVING-BRAIN vault: {v.root} — before answering from memory, run `{b} search \"<question>\"`;"
@@ -99,23 +143,26 @@ def session_start(v: Vault, payload: dict) -> dict:
     if always:
         lines.append("LESSONS (apply in every session):")
         lines += [f"- {l.id}: {l.rule}" for l in always]
-        st = events.session_state(v, _session(payload))
         for l in always:
-            _mark_lesson(v, _session(payload), st, l, "always")
-        events.save_session_state(v, _session(payload), st)
+            _mark_lesson(v, session, st, l, "always")
+    repo = repo_of(str(payload.get("cwd") or os.getcwd()))
+    rnotes = repo_notes(lib, repo)
+    if rnotes:
+        st["shown"] += [n.name for n in rnotes]
+        lines.append(f"BRAIN-REPO {repo}: " + " · ".join(f"{n.name} — {short(n.description, 100)}" for n in rnotes))
+    events.save_session_state(v, session, st)
     pending = []
-    d = len(learn.drafts(v))
-    if d:
-        pending.append(f"{d} lesson drafts → `brain review`")
+    groups = learn.groups(learn.drafts(v))
+    if groups:
+        pending.append(f"{len(groups)} lesson candidates from past sessions → `{b} review` (or /brain-review)")
     i = len(inbox.items(v))
     if i:
         pending.append(f"{i} inbox items → `brain distill`")
     report = load_json(v.path("state", "nightly.json"), {})
     for msg in (report.get("attention") or [])[:3]:
         pending.append(msg)
-    must = [f for n in lib.notes.values() for f in lint_note(n, lib) if f.level == "MUST"][:3]
-    for f in must:
-        pending.append(f"MUST fix {f.note}: {f.msg}")
+    for f in cache.must_findings(v)[:3]:
+        pending.append("fix " + " ".join(f.split()))
     if pending:
         lines.append("BRAIN TODO (mention to the user only if relevant): " + " · ".join(pending))
     return _out("SessionStart", "\n".join(lines))
@@ -126,9 +173,9 @@ def prompt(v: Vault, payload: dict) -> dict:
     session = _session(payload)
     if not text.strip() or text.lstrip().startswith("/"):
         return {}
-    lib = Library(v.root)
+    idx = cache.index(v, learned_model(v))
+    lib = idx.lib
     st = events.session_state(v, session)
-    idx = Index(lib, learned_model(v))
     hits = idx.score(text, graph_beta=float(v.get("graph_beta")), seeds=int(v.get("graph_seeds")),
                      include_hubs=False)
     th = float(v.get("recall_threshold"))
@@ -146,7 +193,7 @@ def prompt(v: Vault, payload: dict) -> dict:
     if chosen:
         st["shown"] += [h.note.name for h in chosen]
         lines.append(f"BRAIN-RECALL (open with `{cli_name()} read <note>` if relevant): " + " · ".join(
-            f"{h.note.name} — {h.note.description[:110]}" for h in chosen))
+            f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
     for l in lib.lessons():
         if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words"):
             lines.append(f"LESSON {l.id}: {l.rule}")
@@ -179,10 +226,12 @@ def pre_tool(v: Vault, payload: dict) -> dict:
                 "permissionDecisionReason": "self-improving-brain: refusing to write a secret into the vault ("
                 + ", ".join(k for k, _ in found) + "). Store the variable name and where the value lives instead."})
     cmd = command_head(str(ti.get("command") or "")) if tool == "Bash" else ""
-    lib = Library(v.root)
+    candidates = [l for l in cache.lessons(v) if l.tools or (cmd and (l.commands or l.paths)) or (paths and l.paths)]
+    if not candidates:
+        return {}
     st = events.session_state(v, session)
     lines, guard = [], None
-    for l in lib.lessons():
+    for l in candidates:
         fired = (tool_match(l, tool) or regex_match(l.commands, cmd)
                  or any(regex_match(l.paths, p) for p in paths) or (cmd and regex_match(l.paths, cmd)))
         if not fired:
@@ -201,7 +250,8 @@ def pre_tool(v: Vault, payload: dict) -> dict:
     return _out("PreToolUse", "\n".join(lines)) if lines else {}
 
 
-READ_CMD = re.compile(r"\bbrain(?:\.py)?\s+read\s+[\"']?([\w\-./]+)")
+# matches `brain read x`, `python3 "/path/brain" read x` and `python -m self_improving_brain read x`
+READ_CMD = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\"']?\s+(?:--vault\s+\S+\s+)?read\s+[\"']?([\w\-./]+)")
 
 
 def post_tool(v: Vault, payload: dict) -> dict:
@@ -214,7 +264,7 @@ def post_tool(v: Vault, payload: dict) -> dict:
     if tool == "Bash":
         m = READ_CMD.search(str(ti.get("command") or ""))
         if m:
-            lib = Library(v.root)
+            lib = cache.library(v)
             n = lib.find(m.group(1))
             if n:
                 events.log(v, "read", session=session, note=n.name, via="cli")
@@ -222,7 +272,7 @@ def post_tool(v: Vault, payload: dict) -> dict:
     in_vault = [p for p in paths if p.endswith(".md") and Path(p).resolve().is_relative_to(v.root)]
     if not in_vault:
         return {}
-    lib = Library(v.root)
+    lib = cache.library(v) if tool == "Read" else Library(v.root)
     if tool == "Read":
         for p in in_vault:
             n = lib.find(Path(p).stem)
@@ -238,6 +288,66 @@ def post_tool(v: Vault, payload: dict) -> dict:
         if msgs:
             return _out("PostToolUse", "BRAIN-LINT on the note you just edited:\n" + "\n".join(msgs))
     return {}
+
+
+def _tail_turns(path: Path, max_bytes: int = 400_000):
+    """Parse only the end of a (possibly huge) transcript — Stop fires after every answer."""
+    from .transcripts import parse_lines
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            fh.seek(max(0, size - max_bytes))
+            raw = fh.read().decode("utf-8", errors="replace")
+    except OSError:
+        return []
+    lines = raw.split("\n")  # not splitlines(): JSON strings may hold a raw U+2028
+    if size > max_bytes:
+        lines = lines[1:]
+    tr = parse_lines(lines, path)
+    return tr.turns if tr and not tr.internal else []
+
+
+SAVED = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?(remember|approve|lesson)\b")
+
+
+def stop(v: Vault, payload: dict) -> dict:
+    """Knowledge check at the end of an answer — only when the session gave a reason to keep something.
+
+    A correction or a lasting preference that was not saved yet makes the agent pause once and decide:
+    save it with `brain remember`, or finish. Never twice for the same moment, never in a loop.
+    """
+    if payload.get("stop_hook_active") or not v.get("capture_on_stop"):
+        return {}
+    tp = payload.get("transcript_path")
+    if not tp or not Path(tp).exists():
+        return {}
+    session = _session(payload)
+    st = events.session_state(v, session)
+    turns = _tail_turns(Path(tp))
+    last_checked = st.get("checked_ts", "")
+    signal = None
+    for i, t in enumerate(turns):
+        if t.ts and t.ts <= last_checked:
+            continue
+        c = learn.classify(turns, i)
+        if c and c[1] >= STOP_MIN:
+            later = turns[i + 1:]
+            if not any(x.role == "tool_call" and SAVED.search(x.text) for x in later):
+                signal = c
+    newest = max((t.ts for t in turns if t.ts), default=last_checked)
+    st["checked_ts"] = newest
+    events.save_session_state(v, session, st)
+    if not signal:
+        return {}
+    kind, _, quote = signal
+    b = cli_name()
+    what = "a lasting preference" if kind == "preference" else "a correction"
+    events.log(v, "capture", session=session, what=kind)
+    return {"decision": "block", "reason": (
+        f"{HOOK_MARK} BRAIN knowledge check: this session contains {what} that is not stored yet: “{short(quote, 160)}”. "
+        f"If it will matter beyond this task, save it in one line — `{b} remember "
+        f"{'preference' if kind == 'preference' else 'pitfall'} \"<one self-contained sentence>\" --quote \"<the user's words>\"` — "
+        "then finish your answer. If it was a one-off, just finish. Do not mention this check to the user.")}
 
 
 def session_end(v: Vault, payload: dict) -> dict:
@@ -258,6 +368,7 @@ HANDLERS = {
     "pre-tool": pre_tool,
     "post-tool": post_tool,
     "session-end": session_end,
+    "stop": stop,
 }
 
 

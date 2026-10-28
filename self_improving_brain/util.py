@@ -55,6 +55,8 @@ def host() -> str:
 
 def fold(s: str) -> str:
     """Lowercase and strip accents so 'Prüfung' matches 'prufung' and 'pruefung' roughly."""
+    if s.isascii():
+        return s.lower()
     s = unicodedata.normalize("NFC", s).lower().replace("ß", "ss").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
     s = unicodedata.normalize("NFKD", s)
     return "".join(c for c in s if not unicodedata.combining(c))

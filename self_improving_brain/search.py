@@ -49,6 +49,7 @@ class Index:
         self.N = max(1, len(self.docs))
         self.avg = sum(d[3] for d in self.docs) / self.N
         self.idf = {t: math.log(1 + (self.N - c + 0.5) / (c + 0.5)) for t, c in df.items()}
+        self.graph = lib.neighbors()
 
     def _idf(self, t: str) -> float:
         return self.idf.get(t, math.log(1 + self.N))
@@ -91,7 +92,7 @@ class Index:
                     scores[name] *= 0.75 + 0.5 * (hit + 1) / (shown + 2)
 
         if graph_beta > 0 and scores:
-            g = self.lib.neighbors()
+            g = self.graph
             top = sorted(scores.items(), key=lambda x: -x[1])[:seeds]
             for seed, s in top:
                 for nb in g.get(seed, ()):
@@ -113,13 +114,22 @@ class Index:
         return hits
 
 
-def learned_model(v: Vault) -> dict:
-    """Cached by `brain nightly`; computed live if no cache exists yet."""
-    cached = load_json(v.path("state", "learned.json"), None)
+def learned_model(v: Vault, max_age_s: int = 3600) -> dict:
+    """What recall has learned from past reads. Rebuilt from the event log at most once an hour."""
+    import time
+    p = v.path("state", "learned.json")
+    try:
+        fresh = time.time() - p.stat().st_mtime < max_age_s
+    except OSError:
+        fresh = False
+    cached = load_json(p, None) if fresh else None
     if cached is not None:
         return cached
     from .metrics import build_learned
-    return build_learned(v)
+    from .util import save_json
+    model = build_learned(v)
+    save_json(p, model)
+    return model
 
 
 def snippet(section: Section | None, query: str, max_lines: int = 3) -> str:

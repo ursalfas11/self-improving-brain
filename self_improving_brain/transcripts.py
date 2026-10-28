@@ -10,6 +10,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+# Our Stop-hook message carries this; agents may log it as a user turn, which must not count as one.
+HOOK_MARK = "[self-improving-brain:check]"
+
 REJECT_MARKERS = (
     "doesn't want to proceed", "does not want to proceed", "user rejected", "tool use was rejected",
     "user denied", "permission denied by user", "the user declined",
@@ -33,12 +36,21 @@ class Transcript:
     turns: list[Turn]
 
     @property
+    def internal(self) -> bool:
+        """A transcript of one of our own headless LLM calls."""
+        return any("[self-improving-brain:internal]" in t.text[:200] for t in self.turns[:3] if t.role == "user")
+
+    @property
     def user_messages(self) -> list[Turn]:
         return [t for t in self.turns if t.role == "user"]
 
 
 def _is_noise(text: str) -> bool:
     s = text.lstrip()
+    if s.startswith("[self-improving-brain:internal]"):
+        return False
+    if HOOK_MARK in s[:600] or s.startswith("Stop hook feedback"):
+        return True
     return (not s or s.startswith("<") or s.startswith("Caveat:") or s.startswith("[Request interrupted")
             or s.startswith("This session is being continued"))
 
@@ -127,18 +139,22 @@ def _generic(lines: list[dict], path: Path) -> Transcript:
 
 
 def parse(path: Path) -> Transcript | None:
-    lines = []
     try:
         with path.open(encoding="utf-8", errors="replace") as fh:
-            for line in fh:
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(rec, dict):
-                    lines.append(rec)
+            return parse_lines(fh, path)
     except OSError:
         return None
+
+
+def parse_lines(raw_lines, path: Path) -> Transcript | None:
+    lines = []
+    for line in raw_lines:
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(rec, dict):
+            lines.append(rec)
     if not lines:
         return None
     if any(d.get("type") in ("session_meta", "response_item") for d in lines[:50]):

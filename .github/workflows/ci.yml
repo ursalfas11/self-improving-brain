@@ -13,10 +13,29 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m unittest discover -s tests -v
-      - name: smoke
+      - name: smoke (run from a clone)
         run: |
           export HOME=$RUNNER_TEMP/home BRAIN_VAULT=$RUNNER_TEMP/vault
-          ./brain init $BRAIN_VAULT --git
+          ./brain setup --yes --vault $BRAIN_VAULT --no-github --no-llm --no-schedule
           ./brain lint
           ./brain search "how do lessons work"
           ./brain doctor
+      - name: smoke (pip install into a venv, like pipx)
+        run: |
+          python -m venv $RUNNER_TEMP/venv
+          $RUNNER_TEMP/venv/bin/pip install -q .
+          export HOME=$RUNNER_TEMP/home-pip
+          mkdir -p $HOME/.claude
+          cd $RUNNER_TEMP
+          $RUNNER_TEMP/venv/bin/brain setup --yes --no-github --no-llm --no-schedule --agents claude
+          $RUNNER_TEMP/venv/bin/brain doctor
+      - name: installer syntax
+        run: sh -n install.sh
+  macos-system-python:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tests on the python3 that ships with macOS
+        run: |
+          /usr/bin/python3 --version
+          /usr/bin/python3 -m unittest discover -s tests

@@ -31,8 +31,16 @@ DEFAULTS = {
     # Empty = no LLM: your agent does the thinking the next time you review.
     "llm_cmd": "",
     "llm_timeout": 240,
+    # Stop hook: when a session contains an unsaved correction or lasting preference, ask the agent
+    # once to store it (`brain remember`) before finishing. Never loops, never fires without a signal.
+    "capture_on_stop": True,
     # git sync at the end of nightly runs (only if the vault is a git repo with a remote)
     "git_sync": True,
+    # set by `brain init` when it created the repo: then sync commits everything in the vault. In a repo
+    # the brain joined, sync stages only notes (*.md), .brain/ and .gitignore, never your other files.
+    "git_owned": False,
+    # never push to a repo anyone can read (checked before every push); set true only on purpose
+    "allow_public_remote": False,
     # notes of type project that were not updated for this many days are flagged
     "stale_days": 45,
     # transcript sources to learn from (globs, ~ expanded)
@@ -41,6 +49,16 @@ DEFAULTS = {
         "~/.codex/sessions/**/*.jsonl",
     ],
 }
+
+
+# Settings about this machine, not about the vault: they live in ~/.config/self-improving-brain/config.json
+# and never travel to your other laptops with the vault's git sync (a CLI installed here may be missing there).
+LOCAL_KEYS = ("llm_cmd", "llm_timeout")
+
+
+def _load_dict(path: Path) -> dict:
+    data = load_json(path, {})
+    return data if isinstance(data, dict) else {}
 
 
 class NotAVault(RuntimeError):
@@ -63,8 +81,12 @@ class Vault:
         return self.cfg.get(key, DEFAULTS.get(key))
 
     def set(self, key: str, value) -> None:
+        """Persist one setting. Only what you set is written, so later default changes still reach you."""
         self.cfg[key] = value
-        save_json(self.meta / MARKER, self.cfg)
+        path = user_config_path() if key in LOCAL_KEYS else self.meta / MARKER
+        data = _load_dict(path)
+        data[key] = value
+        save_json(path, data)
 
 
 def user_config_path() -> Path:
@@ -78,7 +100,7 @@ def candidate_roots(explicit: str | None = None) -> list[Path]:
         out.append(Path(explicit).expanduser())
     if os.environ.get("BRAIN_VAULT"):
         out.append(Path(os.environ["BRAIN_VAULT"]).expanduser())
-    uc = load_json(user_config_path(), {})
+    uc = _load_dict(user_config_path())
     if uc.get("vault"):
         out.append(Path(uc["vault"]).expanduser())
     out.append(Path.home() / "brain")
@@ -93,7 +115,9 @@ def open_vault(explicit: str | None = None) -> Vault:
     for root in candidate_roots(explicit):
         if is_vault(root):
             cfg = dict(DEFAULTS)
-            cfg.update(load_json(root / ".brain" / MARKER, {}))
+            cfg.update(_load_dict(root / ".brain" / MARKER))
+            local = _load_dict(user_config_path())
+            cfg.update({k: local[k] for k in LOCAL_KEYS if k in local})
             return Vault(root.resolve(), cfg)
         if explicit:
             break
@@ -105,6 +129,6 @@ def open_vault(explicit: str | None = None) -> Vault:
 
 def remember_vault(root: Path) -> None:
     p = user_config_path()
-    data = load_json(p, {})
+    data = _load_dict(p)
     data["vault"] = str(root)
     save_json(p, data)

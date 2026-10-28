@@ -48,23 +48,43 @@ def c_init(a):
         print(f"refusing: {root} is not empty. Use --force to add self-improving-brain to an existing folder of notes.")
         return 1
     root.mkdir(parents=True, exist_ok=True)
+    had_git = (root / ".git").exists()
+    quiet = getattr(a, "quiet", False)
     tpl = Path(__file__).resolve().parent / "templates" / "vault"
     for src in tpl.rglob("*"):
         if src.is_dir():
             continue
         dst = root / src.relative_to(tpl)
         if dst.exists():
+            if dst.name == ".gitignore":  # yours stays; only the brain's own lines are added
+                have = dst.read_text(encoding="utf-8", errors="replace")
+                add = [l for l in src.read_text(encoding="utf-8").splitlines()
+                       if l.strip() and not l.startswith("#") and l not in have.split("\n")]
+                if add:
+                    with dst.open("a", encoding="utf-8") as fh:
+                        fh.write(("" if have.endswith("\n") or not have else "\n") + "# self-improving-brain\n" + "\n".join(add) + "\n")
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(src.read_text(encoding="utf-8").replace("{{TODAY}}", today()), encoding="utf-8")
-    save_json(root / ".brain" / MARKER, {"version": DEFAULTS["version"], "created": today()})
+    make_git = bool(a.git) and not had_git and shutil.which("git") is not None
+    marker = {"version": DEFAULTS["version"], "created": today(), "git_owned": make_git}
+    if had_git:
+        # a repo you already had: the brain never commits your other files, and never pushes until you say so
+        marker["git_sync"] = False
+        if not quiet:
+            print(f"note: {root} already is a git repo — nightly sync stays off until you run: brain config git_sync true")
+    save_json(root / ".brain" / MARKER, marker)
     v = Vault(root, dict(DEFAULTS))
     idx = root / "INDEX.md"
     if idx.exists() and maplib.HEADER.splitlines()[0] not in idx.read_text(encoding="utf-8", errors="replace"):
         print(f"note: kept your own {idx.name}; the generated map is skipped until you move it")
     else:
         maplib.write(v)
-    if a.git and not (root / ".git").exists():
+    if make_git:
+        top = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+        if top.returncode == 0 and Path(top.stdout.strip()).resolve() != root:
+            print(f"note: {root} lies inside the git repo {top.stdout.strip()}; the brain gets its own nested history."
+                  " A folder outside any repo (e.g. ~/brain) is cleaner.")
         subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=False)
     if (root / ".git").exists():
         hook = root / ".git" / "hooks" / "pre-commit"
@@ -76,9 +96,35 @@ def c_init(a):
         elif "self-improving-brain secret scan" not in hook.read_text(encoding="utf-8", errors="replace"):
             print(f"note: {hook} exists — add this line to it to block secrets on commit:\n  {line}")
     remember_vault(root)
-    print(f"✓ vault ready at {root}")
-    print("next:  brain install claude      (or codex | gemini | agents | print)")
-    print("       brain schedule install    (nightly self-improvement, runs locally)")
+    if not quiet:
+        print(f"✓ vault ready at {root}")
+        print("next:  brain setup               (connects your agents, backup, nightly run — recommended)")
+        print("   or  brain install claude      (codex | gemini | agents | print) and brain schedule install")
+    return 0
+
+
+def c_setup(a):
+    from . import setup
+    a.vault = a.setup_vault or a.vault
+    return setup.run(a)
+
+
+def c_refine(a):
+    v = _vault(a)
+    if not llm.available(v):
+        print("no llm_cmd configured — `brain config llm_cmd \"<cli>\"` or let your agent judge in `brain review`")
+        return 1
+    print(f"judged {learn.refine(v, batches=10)} candidates")
+    return 0
+
+
+def c_update(a):
+    root = Path(__file__).resolve().parent.parent
+    if (root / ".git").exists():
+        r = subprocess.run(["git", "-C", str(root), "pull", "--ff-only", "-q"], capture_output=True, text=True)
+        print("✓ updated" if r.returncode == 0 else "update failed: " + r.stderr.strip()[:300])
+        return r.returncode
+    print("installed as a package — update with:  pipx upgrade self-improving-brain")
     return 0
 
 
@@ -225,20 +271,27 @@ def c_learn(a):
 
 def c_review(a):
     v = _vault(a)
-    ds = learn.drafts(v)
-    if not ds:
-        print("no open lesson drafts")
+    gs = learn.groups(learn.drafts(v))
+    if not gs:
+        print("no open lesson candidates — keep working, `brain learn` picks up new corrections")
         return 0
-    print(f"{len(ds)} open drafts. For each: turn it into ONE imperative rule and approve, or reject noise.\n"
-          "Show them to the user; approve only with the user's OK.\n")
-    for d in ds[: a.limit]:
-        print(f"[{d['id']}] {d['kind']} · {d['source']} · {d.get('ts', '')[:10]}")
+    print(f"{len(gs)} lesson candidates (similar corrections grouped, strongest first).\n"
+          "For each real, reusable mistake write ONE imperative rule and approve it; reject noise.\n"
+          "Show the user what you propose and approve only with their OK.\n")
+    for g in gs[: a.limit]:
+        d = g[0]
+        seen = f" · seen {len(g)}×" if len(g) > 1 else ""
+        print(f"[{d['id']}] {d['kind']} · confidence {float(d.get('score', 0.5)):.2f}{seen} · {d['source']} · {str(d.get('ts', ''))[:10]}")
         if d.get("context"):
             print(f"   agent did: {short(d['context'], 200)}")
         print(f"   user said: {short(d['quote'], 300)}")
+        for other in g[1:3]:
+            print(f"   also:      {short(other['quote'], 160)}")
         if d.get("rule"):
             sug = d.get("suggest") or {}
             print(f"   suggested rule: {d['rule']}  [{sug.get('mechanism', 'reflex')}; words: {', '.join(sug.get('words') or [])}]")
+    if len(gs) > a.limit:
+        print(f"\n… {len(gs) - a.limit} more (brain review --limit {len(gs)})")
     print('\n→ brain approve <id> --rule "<rule>" [--mechanism reflex|always|guard] [--note <note>] '
           '[--words "a, b"] [--commands REGEX] [--tools name]')
     print("→ brain reject <id> [--block word word]   (block = never draft this topic again)")
@@ -462,9 +515,51 @@ def c_doctor(a):
         if not shutil.which(exe):
             print(f"✗ {exe} not on PATH")
             ok = False
+    url, problem = nightly.backup_state(v.root)
+    if not url:
+        print("! no backup remote — if this disk dies, the brain dies too (brain setup → step 6)")
+    elif problem:
+        print(f"! backup remote {url}: {problem} (brain sync)")
+    else:
+        vis = nightly.remote_visibility(url)
+        if vis == "PUBLIC":
+            print(f"✗ backed up to {url} — but it is PUBLIC: anyone can read your brain. Make it private.")
+            ok = False
+        else:
+            print(f"✓ backed up to {url}" + (" (private)" if vis == "PRIVATE" else ""))
+    if url and not v.get("git_sync"):
+        print("· nightly sync is off (brain config git_sync true)")
     rep = v.path("state", "nightly.json")
     print(("✓ last nightly run " + json.loads(rep.read_text())["t"]) if rep.exists() else "· nightly never ran (brain schedule install)")
+    ok = hook_selftest(v) and ok
     return 0 if ok else 1
+
+
+def hook_selftest(v: Vault) -> bool:
+    """Run every hook the way the agent does and time it."""
+    import time
+    probes = [("session-start", {"session_id": "doctor", "cwd": str(v.root)}),
+              ("prompt", {"session_id": "doctor", "prompt": "how do lessons and recall work in this brain"}),
+              ("pre-tool", {"session_id": "doctor", "tool_name": "Bash", "tool_input": {"command": "git status"}}),
+              ("post-tool", {"session_id": "doctor", "tool_name": "Read", "tool_input": {"file_path": str(v.root / "INDEX.md")}})]
+    env = dict(os.environ, BRAIN_VAULT=str(v.root))
+    env.pop("BRAIN_HOOKS_OFF", None)
+    good, times = True, []
+    for event, payload in probes:
+        t0 = time.perf_counter()
+        r = subprocess.run(adapters.brain_cmd() + f" hook {event}", shell=True, input=json.dumps(payload),
+                           capture_output=True, text=True, env=env)
+        ms = (time.perf_counter() - t0) * 1000
+        try:
+            json.loads(r.stdout) if r.stdout.strip() else None
+            valid = r.returncode == 0
+        except json.JSONDecodeError:
+            valid = False
+        times.append(f"{event} {ms:.0f} ms")
+        good = good and valid
+    events.log(v, "doctor", session="doctor")
+    print(("✓" if good else "✗") + " hooks answer correctly · " + " · ".join(times))
+    return good
 
 
 # --- parser ------------------------------------------------------------------------------
@@ -474,7 +569,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--vault", help="vault folder (default: $BRAIN_VAULT or ~/brain)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("init", help="create a vault"); s.add_argument("path", nargs="?"); s.add_argument("--git", action="store_true"); s.add_argument("--force", action="store_true"); s.set_defaults(f=c_init)
+    s = sub.add_parser("setup", help="one command: vault, agents, history, backup, nightly (start here)")
+    s.add_argument("--vault", dest="setup_vault", metavar="PATH"); s.add_argument("--yes", "-y", action="store_true", help="accept all defaults")
+    s.add_argument("--agents", help="comma list to connect, e.g. claude,codex (default: all detected)")
+    s.add_argument("--no-github", action="store_true"); s.add_argument("--no-llm", action="store_true"); s.add_argument("--no-schedule", action="store_true")
+    s.set_defaults(f=c_setup)
+    s = sub.add_parser("init", help="create a vault"); s.add_argument("path", nargs="?"); s.add_argument("--git", action="store_true"); s.add_argument("--force", action="store_true"); s.add_argument("--quiet", action="store_true"); s.set_defaults(f=c_init)
+    s = sub.add_parser("refine", help="let llm_cmd judge open lesson candidates now"); s.set_defaults(f=c_refine)
+    s = sub.add_parser("update", help="update self-improving-brain itself"); s.set_defaults(f=c_update)
     s = sub.add_parser("context", help="print the session-start context (for agents without hooks)"); s.set_defaults(f=c_context)
     s = sub.add_parser("search", help="find the best sections for a question"); s.add_argument("query"); s.add_argument("-k", type=int, default=5); s.add_argument("--json", action="store_true"); s.set_defaults(f=c_search)
     s = sub.add_parser("read", help="outline of a note, or one section"); s.add_argument("note"); s.add_argument("section", nargs="?"); s.add_argument("--all", action="store_true"); s.set_defaults(f=c_read)

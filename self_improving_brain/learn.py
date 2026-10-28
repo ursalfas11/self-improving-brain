@@ -19,17 +19,112 @@ from .transcripts import parse
 from .util import (digest, iso_week, load_json, now_iso, read_jsonl, save_json, short, slugify,
                    terms, today, write_jsonl, append_jsonl)
 
-CORRECTION = re.compile(
-    r"^\s*(no+|nope|wrong|stop|wait|hm+|huh|nein|ne+|nö|falsch|stopp?|halt|hä+|moment)\b[\s,.!?:]"
-    r"|\b(that'?s not|that is not|not what i|i said|i told you|you didn'?t|you forgot|why did you|"
-    r"you should have|that'?s wrong|incorrect|still (broken|failing|wrong)|doesn'?t work|where is|"
-    r"don'?t do|did i ask|again\?|"
-    r"das ist nicht|nicht das|hab ich doch|ich hatte (doch )?gesagt|ich sagte|warum hast du|wieso hast du|"
-    r"schon wieder|geht nicht|funktioniert nicht|wo ist|ja aber|hast du (nicht|vergessen)|sollst nicht)\b",
-    re.I)
+# Correction signals, strongest first. Measured on real sessions: a bare "no"/"ne" at the start
+# is most often an *answer* to a question the agent asked, so it only counts when the agent did
+# not just ask one. Strong phrases ("why did you", "I told you") count anywhere in the opening.
+STRONG = re.compile(
+    r"\b(why did you|why would you|i told you|i said|i already said|you should(n'?t)? have|you were supposed to|"
+    r"not what i (asked|said|meant|wanted)|that'?s not what|did i ask|how many times|stop doing|don'?t ever|"
+    r"never do that|you did it again|same mistake|again\?!|"
+    r"warum hast du|wieso hast du|weshalb hast du|ich hatte (dir )?(doch )?gesagt|ich sagte doch|hab(e)? ich (dir )?doch gesagt|"
+    r"hab(e)? ich nicht gesagt|hab(e)? ich nicht gefragt|nicht schon wieder|"
+    r"das war falsch|das ist falsch|falsch verstanden|wie oft noch)(?!\w)", re.I)
+MEDIUM = re.compile(
+    r"\b(that'?s wrong|that is wrong|incorrect|doesn'?t work|does not work|still (broken|failing|wrong)|"
+    r"you forgot|you didn'?t|you missed|you broke|no,? you|du sollst|du solltest|schon wieder|"
+    r"hast du (vergessen|nicht)|geht (immer )?noch nicht|geht nicht|funktioniert (immer )?(noch )?nicht|klappt nicht|"
+    r"nein,? du|ne,? du|stimmt nicht)(?!\w)", re.I)
+# Openers that are as often an *answer* to the agent's question as a correction ("No, that's fine").
+START = re.compile(
+    r"^\s*(no+|nope|wrong|stop|wait|huh|nein|ne+|nö|falsch|stopp?|halt|hä+|moment)(?:[\s,.!?:]|$)|"
+    r"\b(no,? that|nein,? das|ne,? das|yes,? but|ja,? aber|actually,)(?!\w)", re.I)
 REMEMBER = re.compile(
-    r"\b(remember (that|this|to)|from now on|going forward|in (the )?future|always make sure|never again|"
-    r"merk dir|merke dir|ab jetzt|ab sofort|in zukunft|künftig|kuenftig)\b", re.I)
+    r"\b(remember (that|this|to)|keep in mind|from now on|going forward|in (the )?future|always make sure|never again|"
+    r"merk dir|merke dir|denk dran|ab jetzt|ab sofort|in zukunft|künftig|kuenftig)\b", re.I)
+LASTING = re.compile(
+    r"\b(always|never|every time|each time|by default|from now on|going forward|in (the )?future|"
+    r"immer|nie|niemals|jedes mal|grundsätzlich|generell|standardmäßig|ab jetzt|ab sofort|in zukunft|künftig)\b", re.I)
+ACCIDENT = re.compile(r"^\s*(sorry|sry|sorri|oops|ups|weiter|continue|go on|mach weiter|ok(ay)?|passt|egal|"
+                      r"aus versehen|versehentlich|my bad|mistake)\b", re.I)
+DRAFT_MIN = 0.4
+
+
+def correction_score(text: str, agent_asked: bool) -> float:
+    head = text[:220]
+    if STRONG.search(head):
+        return 0.85
+    if MEDIUM.search(head):
+        return 0.55
+    if START.search(head):
+        if agent_asked or head.rstrip().endswith("?"):
+            return 0.15  # an answer to the agent's question, not a correction
+        return 0.45
+    return 0.0
+
+
+def _agent_asked(turns, i: int) -> bool:
+    for t in reversed(turns[:i]):
+        if t.role == "assistant":
+            return "?" in t.text[-400:]
+        if t.role == "user":
+            return False
+    return False
+
+
+def classify(turns, i: int):
+    """(kind, score, quote) for turn i, or None. kind: lesson | preference."""
+    t = turns[i]
+    if t.role == "user":
+        if len(t.text) > 1500:
+            return None
+        if REMEMBER.search(t.text[:400]):
+            return ("preference", 0.8 if LASTING.search(t.text[:400]) else 0.35, t.text)
+        sc = correction_score(t.text, _agent_asked(turns, i))
+        return ("lesson", sc, t.text) if sc else None
+    if t.role == "tool_result" and t.rejected:
+        nxt = next((x for x in turns[i + 1:i + 4] if x.role == "user"), None)
+        if nxt is None:
+            return ("lesson", 0.4, "(tool call rejected)")
+        if ACCIDENT.search(nxt.text[:60]):
+            return None
+        sc = correction_score(nxt.text, False)
+        if sc >= 0.45:
+            return ("lesson", max(0.75, sc), nxt.text)
+        return ("lesson", 0.42 if len(nxt.text.split()) >= 4 else 0.3, nxt.text)
+    return None
+
+
+def _score(d: dict) -> float:
+    try:
+        return float(d.get("score", 0.5))
+    except (TypeError, ValueError):
+        return 0.5
+
+
+def _overlap(ta: set, tb: set) -> float:
+    m = min(len(ta), len(tb))
+    return len(ta & tb) / m if m >= 3 else 0.0
+
+
+def similarity(a: str, b: str) -> float:
+    return _overlap(set(terms(a)), set(terms(b)))
+
+
+def groups(ds: list[dict], threshold: float = 0.5, limit: int = 500) -> list[list[dict]]:
+    """Cluster similar drafts. A mistake you corrected four times beats one you corrected once.
+    Only the `limit` strongest drafts are clustered, so a review backlog never slows a session start."""
+    out: list[tuple[set, list[dict]]] = []
+    for d in sorted(ds, key=lambda x: -_score(x))[:limit]:
+        t = set(terms(d.get("rule") or d.get("quote", "")))
+        for key, g in out:
+            if _overlap(t, key) >= threshold:
+                g.append(d)
+                break
+        else:
+            out.append((t, [d]))
+    gs = [g for _, g in out]
+    gs.sort(key=lambda g: -(max(_score(x) for x in g) + 0.15 * (len(g) - 1)))
+    return gs
 
 
 def drafts_path(v: Vault) -> Path:
@@ -72,6 +167,7 @@ def transcript_files(v: Vault) -> list[Path]:
 
 
 def scan(v: Vault, files: list[Path] | None = None, max_age_days: int = 21) -> dict:
+    """Mine transcripts not seen before. Each file is read once (signature: mtime + size)."""
     seen = load_json(v.path("state", "learn_seen.json"), {"files": {}, "items": []})
     seen_items = set(seen.get("items", []))
     topics = rejected_topics(v)
@@ -96,28 +192,25 @@ def scan(v: Vault, files: list[Path] | None = None, max_age_days: int = 21) -> d
         seen["files"][str(f)] = sig
         if tr is None or not tr.turns:
             continue
+        if tr.internal:
+            continue  # our own headless LLM calls must never be mined as "user corrections"
         stats["transcripts"] += 1
         n_user = n_corr = 0
+        counted: set[int] = set()
         for i, t in enumerate(tr.turns):
-            kind = None
             if t.role == "user":
                 n_user += 1
-                head = t.text[:160]
-                if REMEMBER.search(t.text[:400]):
-                    kind = "preference"
-                elif CORRECTION.search(head) and len(t.text) < 1500:
-                    kind = "lesson"
-                    n_corr += 1
-            elif t.role == "tool_result" and t.rejected:
-                kind = "lesson"
-                n_corr += 1
-            if not kind:
+            c = classify(tr.turns, i)
+            if not c or c[1] < DRAFT_MIN:
                 continue
-            quote = t.text if t.role == "user" else "(tool call rejected)"
-            if t.role == "tool_result":
-                nxt = next((x for x in tr.turns[i + 1:i + 3] if x.role == "user"), None)
-                if nxt:
-                    quote = nxt.text
+            kind, score, quote = c
+            if kind == "lesson":
+                # a rejection and the user's explanation right after it are one correction
+                j = next((k for k in range(i, min(i + 4, len(tr.turns))) if tr.turns[k].role == "user"), i)
+                if j in counted or i in counted:
+                    continue
+                counted.update({i, j})
+                n_corr += 1
             key = digest(str(tr.session), quote[:300], str(t.ts or ""))
             if key in seen_items:
                 continue
@@ -128,7 +221,7 @@ def scan(v: Vault, files: list[Path] | None = None, max_age_days: int = 21) -> d
                            lessons_shown=sorted(shown_by_session.get(tr.session, set())))
             if _blocked(quote, topics):
                 continue
-            new.append({"id": "d-" + key[:8], "t": now_iso(), "kind": kind, "status": "open",
+            new.append({"id": "d-" + key[:8], "t": now_iso(), "kind": kind, "status": "open", "score": score,
                         "quote": short(quote, 500), "context": _context_before(tr.turns, i),
                         "session": tr.session, "source": tr.source, "ts": t.ts, "rule": ""})
         stats["user_messages"] += n_user
@@ -145,7 +238,8 @@ def scan(v: Vault, files: list[Path] | None = None, max_age_days: int = 21) -> d
     return stats
 
 
-REFINE_PROMPT = """You maintain the lesson memory of a coding/work agent. Below are moments from real
+REFINE_PROMPT = llm.MARKER + """
+You maintain the lesson memory of a coding/work agent. Below are moments from real
 sessions where the user corrected the agent, rejected a tool call or asked it to remember something.
 For EACH item decide:
 - keep: true only if it reveals a reusable rule (a mistake likely to repeat, or a lasting preference).
@@ -163,21 +257,41 @@ Items:
 """
 
 
-def refine(v: Vault, limit: int = 25) -> int:
-    all_d = read_jsonl(drafts_path(v))
-    todo = [d for d in all_d if d.get("status") == "open" and not d.get("rule")][:limit]
+def refine(v: Vault, limit: int = 25, batches: int = 4) -> int:
+    """Let the configured LLM judge drafts in batches: keep real, reusable mistakes, write the rule."""
+    total = 0
+    for _ in range(batches):
+        n = _refine_batch(v, limit)
+        if not n:
+            break
+        total += n
+    return total
+
+
+def _refine_batch(v: Vault, limit: int) -> int:
+    todo = sorted((d for d in read_jsonl(drafts_path(v))
+                   if d.get("id") and d.get("status") == "open" and not d.get("rule") and not d.get("judged")),
+                  key=lambda d: -_score(d))[:limit]
     if not todo:
         return 0
-    body = "\n".join(f'- id={d["id"]} kind={d["kind"]}\n  agent did: {d["context"]}\n  user said: {d["quote"]}'
-                     for d in todo)
+    body = "\n".join(f'- id={d["id"]} kind={d.get("kind", "lesson")}\n  agent did: {d.get("context", "")}\n'
+                     f'  user said: {d.get("quote", "")}' for d in todo)
     try:
         res = llm.ask_json(v, REFINE_PROMPT + body)
     except (llm.NoLLM, ValueError, OSError) as e:
         events.log(v, "error", where="refine", msg=str(e)[:200])
         return 0
+    if isinstance(res, dict):
+        res = res.get("items") or [res]
     by_id = {r.get("id"): r for r in res if isinstance(r, dict)}
+    todo_ids = {d["id"] for d in todo}
+    # The LLM call takes minutes: update the file as it is *now*, so drafts appended meanwhile survive.
+    fresh = read_jsonl(drafts_path(v))
     n = 0
-    for d in all_d:
+    for d in fresh:
+        if d.get("id") not in todo_ids:
+            continue
+        d["judged"] = True  # never send the same draft twice, even if the LLM skipped it
         r = by_id.get(d["id"])
         if not r:
             continue
@@ -187,7 +301,7 @@ def refine(v: Vault, limit: int = 25) -> int:
             continue
         d["rule"] = short(str(r.get("rule", "")), 220)
         d["suggest"] = {k: r.get(k) for k in ("mechanism", "words", "tools", "commands", "class")}
-    write_jsonl(drafts_path(v), all_d)
+    write_jsonl(drafts_path(v), fresh)
     return n
 
 
@@ -226,6 +340,9 @@ def approve(v: Vault, draft_id: str, *, rule: str = "", mechanism: str = "", not
     d = next((x for x in all_d if x["id"] == draft_id), None)
     if d is None:
         raise KeyError(f"no draft {draft_id}")
+    group_ids = next((
+        {x["id"] for x in g} for g in groups([x for x in all_d if x.get("status") == "open"])
+        if any(x["id"] == draft_id for x in g)), {draft_id})
     sug = d.get("suggest") or {}
     rule = rule or d.get("rule") or ""
     if not rule:
@@ -250,17 +367,21 @@ def approve(v: Vault, draft_id: str, *, rule: str = "", mechanism: str = "", not
         since=today(), evidence=short(d.get("quote", ""), 140).replace("\n", " "),
         klass=klass or sug.get("class") or "")
     write_lesson(v, note_path, lesson)
-    d["status"] = "approved"
-    d["lesson"] = lesson.id
+    for x in all_d:
+        if x["id"] in group_ids:  # the whole group of similar corrections is answered by this lesson
+            x["status"] = "approved"
+            x["lesson"] = lesson.id
     write_jsonl(drafts_path(v), all_d)
     return lesson
 
 
 def reject(v: Vault, draft_id: str, block_words: list[str] | None = None, reason: str = "") -> bool:
     all_d = read_jsonl(drafts_path(v))
+    ids = next(({x["id"] for x in g} for g in groups([x for x in all_d if x.get("status") == "open"])
+                if any(x["id"] == draft_id for x in g)), {draft_id})
     ok = False
     for d in all_d:
-        if d["id"] == draft_id:
+        if d["id"] in ids:
             d["status"] = "rejected"
             ok = True
     write_jsonl(drafts_path(v), all_d)

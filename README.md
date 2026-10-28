@@ -13,7 +13,7 @@ and <b>measures whether your agent actually makes fewer mistakes</b>, week after
 
 <p>
 <a href="https://github.com/ursalfas11/self-improving-brain/actions/workflows/ci.yml"><img src="https://github.com/ursalfas11/self-improving-brain/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-<img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
+<img src="https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python 3.9+">
 <img src="https://img.shields.io/badge/dependencies-0-7cf7d4" alt="Zero dependencies">
 <img src="https://img.shields.io/badge/server-none-8b9bff" alt="No server">
 <img src="https://img.shields.io/badge/license-MIT-f08cff" alt="MIT license">
@@ -47,7 +47,7 @@ Most agent-memory tools store **facts** and hope the model looks them up. But mo
 <td width="33%" valign="top">
 
 ### 🧠 Learns from you
-`brain learn` reads your Claude Code and Codex transcripts. It finds every *"no, …"*, every rejected tool call and every *"from now on …"*, and turns each into a lesson draft. You approve the draft in one line.
+`brain learn` reads your Claude Code and Codex transcripts. It finds every *"why did you…"*, every rejected tool call and every *"from now on…"*. Answers to the agent's own questions and accidental rejections are skipped, and repeats are grouped. You approve each lesson in one line.
 
 </td>
 <td width="33%" valign="top">
@@ -67,7 +67,7 @@ A lesson is shown when its trigger matches: prompt words, a tool, a shell comman
 <td valign="top">
 
 ### 🏠 Laptop only
-No server, no API key, no vector DB, no dependencies. It needs Python 3.10+. A nightly job runs via launchd or cron, and git handles sync between machines.
+No server, no API key, no vector DB, no dependencies; it needs only Python 3.9+ (the `python3` that ships with macOS is enough). A nightly job runs via launchd, cron or Task Scheduler. Your brain is backed up to a **private** git repo, so a dead laptop never takes it with it.
 
 </td>
 <td valign="top">
@@ -88,13 +88,33 @@ Nothing becomes a lesson without your OK, and nothing is deleted automatically. 
 ## 🚀 Quickstart
 
 ```bash
-git clone https://github.com/ursalfas11/self-improving-brain && cd self-improving-brain
-./brain init ~/brain --git        # your vault (optionally its own private git repo)
-./brain install claude            # or: codex | gemini | agents | print
-./brain schedule install          # nightly self-improvement, on this laptop
+curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/main/install.sh | sh
 ```
 
-That's all. Want `brain` on your PATH? Run `pipx install .`
+One line, no root, nothing to compile. You need git and Python 3.9+; the `python3` that ships with macOS works. The installer starts `brain setup`, which walks you through seven short questions:
+
+```text
+1/7  Your vault                      ~/brain, with its own git history and a secret-scan pre-commit hook
+2/7  Connect your agents             finds Claude Code, Codex and Gemini CLI on this machine
+3/7  The `brain` command             links it into ~/.local/bin
+4/7  Learn from past sessions        "127 sessions · 1,664 of your messages · 64 corrections → 59 lesson candidates"
+5/7  Smarter judging (optional)      uses a CLI you already have (claude, codex, ollama), no API key stored
+6/7  Backup                          creates a PRIVATE GitHub repo for your brain, so a dead laptop never kills it
+7/7  Nightly self-improvement        launchd (macOS), cron (Linux) or Task Scheduler (Windows)
+```
+
+Step 4 gives you value on day one: the brain reads the sessions you already had, finds the mistakes you corrected and gives you a baseline for `brain stats`.
+
+<details>
+<summary>Other ways to install</summary>
+
+```bash
+pipx install git+https://github.com/ursalfas11/self-improving-brain && brain setup
+# or, from a clone, no install at all:
+git clone https://github.com/ursalfas11/self-improving-brain && cd self-improving-brain && ./brain setup
+```
+`brain setup --yes` accepts every default (it still creates nothing public). `--no-github`, `--no-llm` and `--no-schedule` skip those steps. Update any time with `brain update`.
+</details>
 
 Your next agent session starts with:
 
@@ -122,6 +142,7 @@ The model itself never learns. What improves is **what your agent is told, and w
 | A lesson was shown and the mistake came back anyway | 🔧 flagged: *sharpen the rule or make it a guard* |
 | The mistake came back and the lesson wasn't shown | 🎯 flagged: *widen its triggers* |
 | A lesson never fired in 30 days | 💤 flagged: *dormant* |
+| A clear correction ("why did you…", "I told you…") or a lasting preference wasn't saved | 💾 at the end of that answer, the agent is asked **once** to store it with `brain remember`; weaker signals wait quietly for your review |
 
 ```text
 $ brain stats
@@ -145,7 +166,15 @@ LESSONS
 2. **Wiki.** Markdown notes with a tiny frontmatter, hubs and `[[wikilinks]]`, kept to *one truth per fact*. `brain distill` works the inbox in, done by your agent or, with `llm_cmd`, by the nightly run. A patch that fails lint or the secret scan is rolled back, and a contradiction is never auto-resolved.
 3. **Interface.** A CLI your agent calls instead of `cat`-ing whole files. `brain search` returns the 3–5 best *sections* with dates. `brain read note "section"` returns an outline with token counts, or exactly one section.
 
-Recall combines **BM25 over sections**, **learned terms** and **graph spreading** over your `[[links]]`. It is fast, explainable and has zero dependencies. The details are in [docs/architecture.md](docs/architecture.md).
+Recall combines **BM25 over sections**, **learned terms** and **graph spreading** over your `[[links]]`. It is explainable and has zero dependencies. The parsed vault is cached and rebuilt only when a note changes, so the hooks stay fast:
+
+| Hook (600-note vault, Apple Silicon, incl. Python start) | Time |
+|---|---|
+| session start | ~60 ms |
+| every prompt (recall + word lessons) | ~70 ms |
+| every tool call (reflexes, guards, secret block) | ~50 ms |
+
+The details are in [docs/architecture.md](docs/architecture.md).
 
 ## 🎯 Lessons
 
@@ -263,6 +292,12 @@ No, and nothing running on your laptop can do that. What improves is *what the a
 </details>
 
 <details>
+<summary><b>How accurate is the mistake detection?</b></summary>
+
+We tested it on 127 real sessions with 1,664 user messages. Pattern matching found 64 corrections. In a sample, roughly half of the candidates were real, reusable mistakes; the rest were one-off steering ("no, the other file"). That is why nothing becomes a lesson on its own: the optional LLM judge (`llm_cmd`) or your `/brain-review` sorts the candidates, and the strongest, most repeated ones come first. Bare answers to the agent's own questions ("no, just the new one") and accidental rejections ("sorry, go on") are filtered out before you ever see them.
+</details>
+
+<details>
 <summary><b>Why a CLI and not an MCP server?</b></summary>
 
 MCP tool schemas cost tokens in every session; a CLI costs one line of instructions. Most of the savings come from reading one section instead of a whole file, and that is the engine's job, not the protocol's. A thin MCP wrapper for shell-less clients is welcome as a contribution.
@@ -281,9 +316,9 @@ Yes: `brain init ~/notes --force`. It adds `.brain/`, a generated `INDEX.md` and
 </details>
 
 <details>
-<summary><b>Multiple machines?</b></summary>
+<summary><b>What if my laptop dies? Multiple machines?</b></summary>
 
-Make the vault a git repo with a private remote. The nightly run syncs it. Every machine writes its own event file, so there are no merge conflicts, and every laptop learns from all the others.
+`brain setup` offers to create a **private** GitHub repo for your brain (with the `gh` CLI), or shows you the one git command to use any other private remote. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>`. Every machine writes its own event file, so there are no merge conflicts, and every laptop learns from all the others.
 </details>
 
 ## 🗺️ Roadmap

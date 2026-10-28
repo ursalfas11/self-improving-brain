@@ -1,6 +1,6 @@
 # Architecture
 
-self-improving-brain is ~2k lines of standard-library Python. This page explains the moving parts so you
+self-improving-brain is ~4k lines of standard-library Python (3.9+). This page explains the moving parts so you
 can change them with confidence.
 
 ## Design principles
@@ -31,7 +31,9 @@ can change them with confidence.
 | `learn.py` | correction & preference mining, LLM refinement, approve/reject, lesson writing |
 | `distill.py` | inbox → wiki: agent work packet or `--auto` via `llm_cmd`, with lint + rollback |
 | `metrics.py` | learned recall model, weekly correction curve, lesson health, threshold autotune |
-| `hooks.py` | Claude Code hook protocol: session-start, prompt, pre-tool, post-tool, session-end |
+| `hooks.py` | Claude Code hook protocol: session-start (with repo notes), prompt, pre-tool, post-tool, stop (knowledge check), session-end |
+| `cache.py` | parsed vault + BM25 index cached in `~/.cache/self-improving-brain/`, keyed by a fingerprint of every note's size and mtime plus the code version |
+| `setup.py` | `brain setup`: vault, agents, PATH, history backfill, optional LLM, private GitHub backup, nightly schedule |
 | `adapters.py` | install/uninstall into Claude Code, Codex, Gemini, project `AGENTS.md` |
 | `nightly.py` | the autonomous loop and its launchd/cron scheduling, git sync |
 | `lint.py` | MUST: secrets, dead links, duplicate lesson ids. SHOULD: orphans, stale projects, near-duplicates, trigger-less lessons |
@@ -78,3 +80,50 @@ so the triggers need to be wider.
 2. **Transcripts:** add a parser in `transcripts.py` that yields `Turn`s and a glob in `config.DEFAULTS["transcripts"]`.
 3. **Native hooks:** map the agent's hook payload onto the five handlers in `hooks.py`. They only need
    `session_id`, `prompt`, `tool_name`, `tool_input` and `transcript_path`.
+
+## Mistake detection
+
+Every user message (and every rejected tool call) gets a confidence score:
+
+| signal | score |
+|---|---|
+| strong phrase in the opening ("why did you", "I told you", "you should have", "you did it again?!", "warum hast du", "nicht schon wieder") | 0.85 |
+| rejected tool call followed by a correction | ≥ 0.75 |
+| medium phrase ("that's wrong", "doesn't work", "you forgot", "du solltest", "schon wieder") | 0.55 |
+| answer-like opener ("no", "nein", "stop", "no, that…", "yes, but", "ja aber", "actually,") | 0.45, or 0.15 if the agent had just asked a question |
+| rejected tool call followed by "sorry, go on" | ignored (accident) |
+| lasting preference ("from now on", "always", "never", "ab jetzt") | 0.8; a plain "remember to…" is a to-do (0.35) |
+
+Candidates ≥ 0.4 become drafts and count for `brain stats`. Similar drafts are grouped (the 500
+strongest, so a review backlog never slows a session start), and groups are ranked by their best
+score plus a bonus for every repeat. Transcripts of our own
+headless LLM calls start with `[self-improving-brain:internal]` and are never mined.
+
+## Knowledge check (Stop hook)
+
+After each answer, the tail of the transcript (≤ 400 KB) is scanned for an unmistakable signal
+(score ≥ 0.8: a strong correction or a lasting preference) that was not followed by
+`brain remember`/`approve`/`lesson`. Weaker signals never interrupt the agent; they wait for
+`brain review`. If there is one, the agent gets a single `decision: block` with the quote and the
+exact command to save it. Each moment is checked once (`checked_ts` per session; a resumed session
+starts after its old turns), `stop_hook_active` prevents loops, and the hook's own message carries
+`[self-improving-brain:check]` so it is never mistaken for a user turn. Turn it off with
+`brain config capture_on_stop false`.
+
+## Backup safety
+
+- `brain init` records whether it created the vault's git repo (`git_owned`). Only then does sync
+  stage everything; in a repo the brain joined it stages only `*.md`, `.brain/` and `.gitignore`,
+  and sync starts switched off until you turn it on.
+- Before every push the remote's visibility is checked (`gh`, or an anonymous `git ls-remote`
+  without one): the brain never pushes to a public repo unless `allow_public_remote` is set.
+- `gh` always runs against github.com (`GH_HOST`), so a company GHE login never receives your brain.
+- "Backed up" means pushed: `brain doctor` compares `HEAD` with its upstream.
+- `llm_cmd` and `llm_timeout` describe the machine, not the vault: they live in
+  `~/.config/self-improving-brain/config.json` and are never synced to your other laptops.
+
+## Repo awareness
+
+At session start the hook resolves the git repo of `cwd` and injects up to three notes that declare
+`repo: <name>` in their frontmatter, are tagged with it, or are named after it.
+
