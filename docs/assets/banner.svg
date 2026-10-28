@@ -1,86 +1,70 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="self-improving-brain — your coding agent forgets, this brain gets smarter every session">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0b1020"/>
-      <stop offset="0.55" stop-color="#151a3a"/>
-      <stop offset="1" stop-color="#2a1245"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#7cf7d4"/>
-      <stop offset="0.5" stop-color="#8b9bff"/>
-      <stop offset="1" stop-color="#f08cff"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#8b9bff" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#8b9bff" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.035"/>
-    </pattern>
-    <style>
-      .t { font-family: -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif; }
-      .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-      .edge { stroke: #8b9bff; stroke-opacity: .45; stroke-width: 1.6; }
-      .node { fill: #c9d1ff; }
-      .hot { fill: #7cf7d4; animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-      .hot2 { animation-delay: .8s; } .hot3 { animation-delay: 1.6s; }
-      @keyframes pulse { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.6); } }
-      .draw { stroke-dasharray: 700; stroke-dashoffset: 0; animation: draw 3.2s ease-out .4s backwards; }
-      @keyframes draw { from { stroke-dashoffset: 700; } to { stroke-dashoffset: 0; } }
-      @media (prefers-reduced-motion: reduce) { .draw, .hot { animation: none; } }
-    </style>
-  </defs>
+<style>
 
-  <rect width="1280" height="420" rx="24" fill="url(#bg)"/>
-  <rect width="1280" height="420" rx="24" fill="url(#grid)"/>
-
-  <!-- brain as a knowledge graph -->
-  <g transform="translate(170 210)">
-    <circle r="150" fill="url(#glow)"/>
-    <path d="M-92,-30 C-118,-92 -48,-128 -10,-104 C10,-140 88,-128 92,-74 C140,-62 140,8 104,26 C124,70 76,112 34,96 C10,128 -58,124 -70,86 C-124,84 -136,8 -92,-30 Z"
-          fill="none" stroke="url(#accent)" stroke-width="3" stroke-linejoin="round" opacity=".9"/>
-    <path d="M-6,-100 C-20,-50 20,-30 0,10 C-18,46 16,70 4,100" fill="none" stroke="url(#accent)" stroke-width="2" opacity=".5"/>
-    <g class="edge">
-      <line x1="-70" y1="-40" x2="-28" y2="-62"/><line x1="-28" y1="-62" x2="30" y2="-70"/>
-      <line x1="30" y1="-70" x2="70" y2="-30"/><line x1="70" y1="-30" x2="40" y2="10"/>
-      <line x1="40" y1="10" x2="80" y2="50"/><line x1="-70" y1="-40" x2="-50" y2="20"/>
-      <line x1="-50" y1="20" x2="-10" y2="40"/><line x1="-10" y1="40" x2="40" y2="10"/>
-      <line x1="-10" y1="40" x2="-30" y2="80"/><line x1="-28" y1="-62" x2="-10" y2="40"/>
-      <line x1="30" y1="-70" x2="40" y2="10"/><line x1="-30" y1="80" x2="30" y2="72"/>
-      <line x1="30" y1="72" x2="80" y2="50"/>
-    </g>
-    <circle class="node" cx="-70" cy="-40" r="5"/><circle class="node" cx="-28" cy="-62" r="5"/>
-    <circle class="node" cx="70" cy="-30" r="5"/><circle class="node" cx="80" cy="50" r="5"/>
-    <circle class="node" cx="-50" cy="20" r="5"/><circle class="node" cx="-30" cy="80" r="5"/>
-    <circle class="node" cx="30" cy="72" r="5"/>
-    <circle class="hot" cx="30" cy="-70" r="6"/>
-    <circle class="hot hot2" cx="-10" cy="40" r="6"/>
-    <circle class="hot hot3" cx="40" cy="10" r="6"/>
-  </g>
-
-  <!-- title -->
-  <text class="t" x="360" y="150" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1.5">self-improving-brain</text>
-  <text class="t" x="362" y="198" font-size="25" fill="#c9d1ff">Your coding agent forgets everything between sessions.</text>
-  <text class="t" x="362" y="232" font-size="25" font-weight="700" fill="url(#accent)">This brain gets smarter with every one.</text>
-
-  <!-- chips -->
-  <g class="m" font-size="15" fill="#e8ebff">
-    <g transform="translate(362 270)"><rect width="132" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="66" y="22" text-anchor="middle">Claude Code</text></g>
-    <g transform="translate(504 270)"><rect width="84" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="42" y="22" text-anchor="middle">Codex</text></g>
-    <g transform="translate(598 270)"><rect width="118" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="59" y="22" text-anchor="middle">Gemini CLI</text></g>
-    <g transform="translate(726 270)"><rect width="84" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="42" y="22" text-anchor="middle">Cursor</text></g>
-    <g transform="translate(820 270)"><rect width="72" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="36" y="22" text-anchor="middle">Grok</text></g>
-    <g transform="translate(902 270)"><rect width="78" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><text x="39" y="22" text-anchor="middle">Aider</text></g>
-  </g>
-  <text class="m" x="362" y="350" font-size="16" fill="#9aa3d6">no server · no API key · no vector DB · zero dependencies · plain Markdown</text>
-
-  <!-- mistakes curve -->
-  <g transform="translate(1030 110)">
-    <text class="m" x="0" y="0" font-size="13" fill="#9aa3d6">mistakes / 100 msgs</text>
-    <line x1="0" y1="150" x2="200" y2="150" stroke="#ffffff" stroke-opacity=".2"/>
-    <path class="draw" d="M0,22 C30,30 40,60 70,70 C100,80 110,105 140,112 C165,118 180,128 200,132" fill="none" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="0" cy="22" r="5" fill="#f08cff"/><circle cx="200" cy="132" r="5" fill="#7cf7d4"/>
-    <text class="m" x="0" y="172" font-size="13" fill="#9aa3d6">week 1</text>
-    <text class="m" x="200" y="172" font-size="13" fill="#9aa3d6" text-anchor="end">week 8</text>
-  </g>
+.t{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif}.m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.edge{stroke:#8b9bff;stroke-opacity:.45;stroke-width:1.6}.node{fill:#c9d1ff}
+.hot{fill:#7cf7d4;animation:pulse 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.hot2{animation-delay:.8s}.hot3{animation-delay:1.6s}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.6)}}
+.lit{fill:#7cf7d4;opacity:0;animation:lit 5s ease-in-out infinite}
+@keyframes lit{0%,100%{opacity:0}10%{opacity:.95}26%{opacity:0}}
+.alt{opacity:0;animation:alt 7s ease-in-out infinite}@keyframes alt{0%,100%{opacity:0}50%{opacity:.9}}
+.breath{animation:breath 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes breath{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.1);opacity:1}}
+.tw{opacity:.2;animation:tw 3.2s ease-in-out infinite}@keyframes tw{0%,100%{opacity:.15}50%{opacity:.85}}
+.chip{opacity:0;animation:chip 6s ease-in-out infinite}@keyframes chip{0%,100%{opacity:0}5%{opacity:1}16%{opacity:0}}
+.shine{animation:shine 6s cubic-bezier(.45,0,.25,1) infinite}
+@keyframes shine{0%{transform:translateX(-240px)}42%,100%{transform:translateX(620px)}}
+.curve{stroke-dasharray:100;animation:curve 8s infinite}
+@keyframes curve{0%{stroke-dashoffset:100;opacity:1;animation-timing-function:cubic-bezier(.3,.6,.3,1)}
+40%{stroke-dashoffset:0;opacity:1}88%{stroke-dashoffset:0;opacity:1;animation-timing-function:linear}96%,100%{stroke-dashoffset:0;opacity:0}}
+.c1,.c2,.c3{opacity:0}.c1{animation:c1 8s steps(1,end) infinite}.c2{animation:c2 8s steps(1,end) infinite}
+.c3{animation:c3 8s steps(1,end) infinite}.c4{animation:c4 8s steps(1,end) infinite}
+@keyframes c1{0%{opacity:1}6.7%,100%{opacity:0}}@keyframes c2{0%{opacity:0}6.7%{opacity:1}13.9%,100%{opacity:0}}
+@keyframes c3{0%{opacity:0}13.9%{opacity:1}25%,100%{opacity:0}}@keyframes c4{0%{opacity:0}25%{opacity:1}96%,100%{opacity:0}}
+.badge{animation:badge 8s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes badge{0%,38%{opacity:0;transform:scale(.6)}46%{opacity:1;transform:scale(1.08)}50%,88%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.fx{display:none}}
+</style>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1020"/><stop offset=".55" stop-color="#151a3a"/><stop offset="1" stop-color="#2a1245"/></linearGradient>
+<linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cf7d4"/><stop offset=".5" stop-color="#8b9bff"/><stop offset="1" stop-color="#f08cff"/></linearGradient>
+<linearGradient id="accent2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f08cff"/><stop offset=".5" stop-color="#7cf7d4"/><stop offset="1" stop-color="#8b9bff"/></linearGradient>
+<linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#8b9bff" stop-opacity=".55"/><stop offset="1" stop-color="#8b9bff" stop-opacity="0"/></radialGradient>
+<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".035"/></pattern>
+<clipPath id="tag"><text class="t" x="362" y="232" font-size="25" font-weight="700">This brain gets smarter with every one.</text></clipPath>
+</defs>
+<rect width="1280" height="420" rx="24" fill="url(#bg)"/><rect width="1280" height="420" rx="24" fill="url(#grid)"/>
+<circle class="tw" cx="300" cy="54" r="1.20" fill="#c9d1ff" style="animation-delay:0.00s"/><circle class="tw" cx="520" cy="36" r="1.55" fill="#c9d1ff" style="animation-delay:0.37s"/><circle class="tw" cx="760" cy="62" r="1.90" fill="#c9d1ff" style="animation-delay:0.74s"/><circle class="tw" cx="985" cy="44" r="1.20" fill="#c9d1ff" style="animation-delay:1.11s"/><circle class="tw" cx="1190" cy="70" r="1.55" fill="#c9d1ff" style="animation-delay:1.48s"/><circle class="tw" cx="1245" cy="300" r="1.90" fill="#c9d1ff" style="animation-delay:1.85s"/><circle class="tw" cx="1150" cy="392" r="1.20" fill="#c9d1ff" style="animation-delay:2.22s"/><circle class="tw" cx="905" cy="388" r="1.55" fill="#c9d1ff" style="animation-delay:2.59s"/><circle class="tw" cx="640" cy="398" r="1.90" fill="#c9d1ff" style="animation-delay:2.96s"/><circle class="tw" cx="322" cy="384" r="1.20" fill="#c9d1ff" style="animation-delay:0.13s"/><circle class="tw" cx="38" cy="58" r="1.55" fill="#c9d1ff" style="animation-delay:0.50s"/><circle class="tw" cx="52" cy="372" r="1.90" fill="#c9d1ff" style="animation-delay:0.87s"/><circle class="tw" cx="1240" cy="160" r="1.20" fill="#c9d1ff" style="animation-delay:1.24s"/><circle class="tw" cx="700" cy="24" r="1.55" fill="#c9d1ff" style="animation-delay:1.61s"/>
+<g transform="translate(170 210)">
+<circle class="breath" r="150" fill="url(#glow)"/>
+<path d="M-92,-30 C-118,-92 -48,-128 -10,-104 C10,-140 88,-128 92,-74 C140,-62 140,8 104,26 C124,70 76,112 34,96 C10,128 -58,124 -70,86 C-124,84 -136,8 -92,-30 Z" fill="none" stroke="url(#accent)" stroke-width="3" stroke-linejoin="round" opacity=".9"/>
+<path class="alt" d="M-92,-30 C-118,-92 -48,-128 -10,-104 C10,-140 88,-128 92,-74 C140,-62 140,8 104,26 C124,70 76,112 34,96 C10,128 -58,124 -70,86 C-124,84 -136,8 -92,-30 Z" fill="none" stroke="url(#accent2)" stroke-width="3" stroke-linejoin="round"/>
+<path d="M-6,-100 C-20,-50 20,-30 0,10 C-18,46 16,70 4,100" fill="none" stroke="url(#accent)" stroke-width="2" opacity=".5"/>
+<g class="edge"><line x1="-70" y1="-40" x2="-28" y2="-62"/><line x1="-28" y1="-62" x2="30" y2="-70"/><line x1="30" y1="-70" x2="70" y2="-30"/><line x1="70" y1="-30" x2="40" y2="10"/><line x1="40" y1="10" x2="80" y2="50"/><line x1="-70" y1="-40" x2="-50" y2="20"/><line x1="-50" y1="20" x2="-10" y2="40"/><line x1="-10" y1="40" x2="40" y2="10"/><line x1="-10" y1="40" x2="-30" y2="80"/><line x1="-28" y1="-62" x2="-10" y2="40"/><line x1="30" y1="-70" x2="40" y2="10"/><line x1="-30" y1="80" x2="30" y2="72"/><line x1="30" y1="72" x2="80" y2="50"/></g>
+<circle class="node" cx="-70" cy="-40" r="5"/><circle class="node" cx="-28" cy="-62" r="5"/><circle class="node" cx="70" cy="-30" r="5"/><circle class="node" cx="80" cy="50" r="5"/><circle class="node" cx="-50" cy="20" r="5"/><circle class="node" cx="-30" cy="80" r="5"/><circle class="node" cx="30" cy="72" r="5"/><circle class="lit" cx="-70" cy="-40" r="5.5" style="animation-delay:0.09s"/><circle class="lit" cx="-28" cy="-62" r="5.5" style="animation-delay:0.45s"/><circle class="lit" cx="30" cy="-70" r="5.5" style="animation-delay:0.96s"/><circle class="lit" cx="70" cy="-30" r="5.5" style="animation-delay:1.31s"/><circle class="lit" cx="40" cy="10" r="5.5" style="animation-delay:1.05s"/><circle class="lit" cx="80" cy="50" r="5.5" style="animation-delay:1.40s"/><circle class="lit" cx="-50" cy="20" r="5.5" style="animation-delay:0.26s"/><circle class="lit" cx="-10" cy="40" r="5.5" style="animation-delay:0.61s"/><circle class="lit" cx="-30" cy="80" r="5.5" style="animation-delay:0.44s"/><circle class="lit" cx="30" cy="72" r="5.5" style="animation-delay:0.96s"/>
+<circle class="hot" cx="30" cy="-70" r="6"/><circle class="hot hot2" cx="-10" cy="40" r="6"/><circle class="hot hot3" cx="40" cy="10" r="6"/>
+<g class="fx"><g opacity="0"><circle r="7" fill="#7cf7d4" opacity=".25"/><circle r="3.2" fill="#eafffa"/><animateMotion dur="3.0s" begin="0.0s" repeatCount="indefinite" path="M-70,-40 L-28,-62 L30,-70 L70,-30 L40,10 L80,50"/><animate attributeName="opacity" dur="3.0s" begin="0.0s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;.12;.82;1"/></g><g opacity="0"><circle r="7" fill="#7cf7d4" opacity=".25"/><circle r="3.2" fill="#eafffa"/><animateMotion dur="2.2s" begin="0.9s" repeatCount="indefinite" path="M-50,20 L-10,40 L40,10 L70,-30"/><animate attributeName="opacity" dur="2.2s" begin="0.9s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;.12;.82;1"/></g><g opacity="0"><circle r="7" fill="#7cf7d4" opacity=".25"/><circle r="3.2" fill="#eafffa"/><animateMotion dur="2.8s" begin="1.7s" repeatCount="indefinite" path="M-30,80 L30,72 L80,50 L40,10 L30,-70"/><animate attributeName="opacity" dur="2.8s" begin="1.7s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;.12;.82;1"/></g><g opacity="0"><circle r="7" fill="#7cf7d4" opacity=".25"/><circle r="3.2" fill="#eafffa"/><animateMotion dur="2.4s" begin="2.6s" repeatCount="indefinite" path="M-28,-62 L-10,40 L-30,80 L30,72"/><animate attributeName="opacity" dur="2.4s" begin="2.6s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;.12;.82;1"/></g><g opacity="0"><circle r="7" fill="#7cf7d4" opacity=".25"/><circle r="3.2" fill="#eafffa"/><animateMotion dur="2.9s" begin="3.4s" repeatCount="indefinite" path="M-70,-40 L-50,20 L-10,40 L40,10 L80,50"/><animate attributeName="opacity" dur="2.9s" begin="3.4s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;.12;.82;1"/></g></g>
+</g>
+<text class="t" x="360" y="150" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1.5">self-improving-brain</text>
+<text class="t" x="362" y="198" font-size="25" fill="#c9d1ff">Your coding agent forgets everything between sessions.</text>
+<text class="t" x="362" y="232" font-size="25" font-weight="700" fill="url(#accent)">This brain gets smarter with every one.</text>
+<g class="fx" clip-path="url(#tag)"><rect class="shine" x="362" y="200" width="210" height="44" fill="url(#shine)"/></g>
+<g class="m" font-size="15" fill="#e8ebff"><g transform="translate(362 270)"><rect width="132" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="132" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:0.00s"/><text x="66" y="22" text-anchor="middle">Claude Code</text></g><g transform="translate(504 270)"><rect width="84" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="84" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:0.32s"/><text x="42" y="22" text-anchor="middle">Codex</text></g><g transform="translate(598 270)"><rect width="118" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="118" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:0.64s"/><text x="59" y="22" text-anchor="middle">Gemini CLI</text></g><g transform="translate(726 270)"><rect width="84" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="84" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:0.96s"/><text x="42" y="22" text-anchor="middle">Cursor</text></g><g transform="translate(820 270)"><rect width="72" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="72" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:1.28s"/><text x="36" y="22" text-anchor="middle">Grok</text></g><g transform="translate(902 270)"><rect width="78" height="34" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".15"/><rect class="chip" width="78" height="34" rx="17" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".9" style="animation-delay:1.60s"/><text x="39" y="22" text-anchor="middle">Aider</text></g></g>
+<text class="m" x="362" y="350" font-size="16" fill="#9aa3d6">no server · no API key · no vector DB · zero dependencies · plain Markdown</text>
+<g transform="translate(1030 110)">
+<text class="m" x="0" y="0" font-size="13" fill="#9aa3d6">mistakes / 100 msgs</text>
+<text class="m c1" x="0" y="-22" font-size="30" font-weight="800" fill="#f08cff">12.4</text><text class="m c2" x="0" y="-22" font-size="30" font-weight="800" fill="#c39cff">9.8</text><text class="m c3" x="0" y="-22" font-size="30" font-weight="800" fill="#8b9bff">7.1</text><text class="m c4" x="0" y="-22" font-size="30" font-weight="800" fill="#7cf7d4">5.3</text>
+<line x1="0" y1="150" x2="200" y2="150" stroke="#ffffff" stroke-opacity=".2"/>
+<path class="curve" pathLength="100" d="M0,22 C30,30 40,60 70,70 C100,80 110,105 140,112 C165,118 180,128 200,132" fill="none" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
+<circle cx="0" cy="22" r="5" fill="#f08cff"/><circle cx="200" cy="132" r="5" fill="#7cf7d4"/>
+<g class="fx" opacity="0"><circle r="9" fill="#7cf7d4" opacity=".3"/><circle r="4.5" fill="#eafffa"/>
+<animateMotion dur="8s" repeatCount="indefinite" path="M0,22 C30,30 40,60 70,70 C100,80 110,105 140,112 C165,118 180,128 200,132" keyPoints="0;1;1;1" keyTimes="0;.4;.96;1" calcMode="spline" keySplines=".3 .6 .3 1;0 0 1 1;0 0 1 1"/>
+<animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;.88;.96;1"/></g>
+<g class="badge"><rect x="128" y="76" width="72" height="26" rx="13" fill="#7cf7d4" fill-opacity=".16" stroke="#7cf7d4" stroke-opacity=".7"/>
+<text class="m" x="164" y="94" font-size="14" font-weight="700" fill="#7cf7d4" text-anchor="middle">−57 %</text></g>
+<text class="m" x="0" y="172" font-size="13" fill="#9aa3d6">week 1</text>
+<text class="m" x="200" y="172" font-size="13" fill="#9aa3d6" text-anchor="end">week 8</text>
+</g>
 </svg>

@@ -40,26 +40,26 @@ and <b>measures whether your agent actually makes fewer mistakes</b>, week after
 
 You told your agent *"no, don't paper over flaky tests with retries"* last Tuesday. Today it adds a retry again.
 
-Most agent-memory tools store **facts** and hope the model looks them up. But most agent mistakes don't come from missing facts. They come from a rule the agent *knew* and didn't apply **at the moment it mattered**. self-improving-brain works on exactly that moment, and then it checks whether the mistake ever comes back.
+Agent mistakes rarely come from missing facts. They come from a rule the agent *knew* but didn't apply **at the moment it mattered**. This brain works on exactly that moment, and then it checks whether the mistake comes back.
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
 ### 🧠 Learns from you
-`brain learn` reads your Claude Code and Codex transcripts. It finds every *"why did you…"*, every rejected tool call and every *"from now on…"*. Answers to the agent's own questions and accidental rejections are skipped, and repeats are grouped. You approve each lesson in one line.
+`brain learn` turns every *"no, why did you…"* and every rejected tool call in your transcripts into a lesson draft. You OK it in one line.
 
 </td>
 <td width="33%" valign="top">
 
 ### ⚡ Fires at the right moment
-A lesson is shown when its trigger matches: prompt words, a tool, a shell command or a file path. A `guard` lesson makes the agent **ask you** before `git push --force`, `rm -rf` or a deploy.
+Prompt words, a tool, a shell command or a path trigger it. A `guard` makes the agent **ask you** before `git push --force`.
 
 </td>
 <td width="33%" valign="top">
 
 ### 📉 Proves it works
-`brain stats` shows mistakes per 100 messages week by week, whether each lesson fired and whether the mistake came back anyway. Recall tunes its own threshold from what the agent really opens.
+`brain stats` shows mistakes per 100 messages week by week, and whether each lesson fired.
 
 </td>
 </tr>
@@ -67,19 +67,19 @@ A lesson is shown when its trigger matches: prompt words, a tool, a shell comman
 <td valign="top">
 
 ### 🏠 Laptop only
-No server, no API key, no vector DB, no dependencies; it needs only Python 3.9+ (the `python3` that ships with macOS is enough). A nightly job runs via launchd, cron or Task Scheduler. Your brain is backed up to a **private** git repo, so a dead laptop never takes it with it.
+No server, no API key, no vector DB, zero dependencies. Python 3.9+ is all it needs.
 
 </td>
 <td valign="top">
 
 ### 📝 Plain Markdown
-Your brain is an ordinary Obsidian vault: notes, hubs and `[[links]]`, all of it diffable and yours. Lessons live **inside** the note that owns the topic.
+An ordinary Obsidian vault with `[[links]]`. Diffable, and yours.
 
 </td>
 <td valign="top">
 
 ### 🔒 Never behind your back
-Nothing becomes a lesson without your OK, and nothing is deleted automatically. Secrets are blocked at three points: when you save one, when the agent writes one, and at git commit.
+Nothing becomes a lesson without your OK. Secrets are blocked on save, on write and at commit.
 
 </td>
 </tr>
@@ -91,19 +91,11 @@ Nothing becomes a lesson without your OK, and nothing is deleted automatically. 
 curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/main/install.sh | sh
 ```
 
-One line, no root, nothing to compile. You need git and Python 3.9+; the `python3` that ships with macOS works. The installer starts `brain setup`, which walks you through seven short questions:
+<p align="center">
+  <img src="docs/assets/setup.svg" alt="brain setup in seven steps: vault, agents, the brain command, learning from past sessions, optional LLM judge, private GitHub backup, nightly run" width="92%">
+</p>
 
-```text
-1/7  Your vault                      ~/brain, with its own git history and a secret-scan pre-commit hook
-2/7  Connect your agents             finds Claude Code, Codex and Gemini CLI on this machine
-3/7  The `brain` command             links it into ~/.local/bin
-4/7  Learn from past sessions        "127 sessions · 1,664 of your messages · 64 corrections → 59 lesson candidates"
-5/7  Smarter judging (optional)      uses a CLI you already have (claude, codex, ollama), no API key stored
-6/7  Backup                          creates a PRIVATE GitHub repo for your brain, so a dead laptop never kills it
-7/7  Nightly self-improvement        launchd (macOS), cron (Linux) or Task Scheduler (Windows)
-```
-
-Step 4 gives you value on day one: the brain reads the sessions you already had, finds the mistakes you corrected and gives you a baseline for `brain stats`.
+No root, nothing to compile: git and Python 3.9+ are enough, and the `python3` that ships with macOS works. Step 4 reads the sessions you already had, so you get lesson candidates and a baseline on day one.
 
 <details>
 <summary>Other ways to install</summary>
@@ -116,7 +108,8 @@ git clone https://github.com/ursalfas11/self-improving-brain && cd self-improvin
 `brain setup --yes` accepts every default (it still creates nothing public). `--no-github`, `--no-llm` and `--no-schedule` skip those steps. Update any time with `brain update`.
 </details>
 
-Your next agent session starts with:
+<details>
+<summary>What your agent sees at session start</summary>
 
 ```text
 SELF-IMPROVING-BRAIN vault: ~/brain — before answering from memory, run `brain search "<question>"` …
@@ -124,6 +117,7 @@ LESSONS (apply in every session):
 - L-result-first: Lead with the result in a few lines; details only when asked …
 - L-verify-before-done: Before saying something works or is done, run it or test it and show the output …
 ```
+</details>
 
 ## 🔁 How it gets smarter
 
@@ -131,7 +125,16 @@ LESSONS (apply in every session):
   <img src="docs/assets/loop.svg" alt="The learning loop: you work, it learns, you approve, the right rule fires at the right moment, it measures" width="92%">
 </p>
 
-The model itself never learns. What improves is **what your agent is told, and when**. Every signal below is logged locally, and the nightly run acts on it:
+The model itself never learns. What improves is **what your agent is told, and when**, and the brain measures the effect:
+
+<p align="center">
+  <img src="docs/assets/stats.svg" alt="Example: mistakes per 100 messages fall from 12.4 to 5.3 over eight weeks (−57 %); recall precision rises from 41 % to 64 %" width="92%">
+</p>
+
+<details>
+<summary><b>Every signal it learns from</b></summary>
+
+<br>
 
 | Signal | What the brain does |
 |---|---|
@@ -144,23 +147,12 @@ The model itself never learns. What improves is **what your agent is told, and w
 | A lesson never fired in 30 days | 💤 flagged: *dormant* |
 | A clear correction ("why did you…", "I told you…") or a lasting preference wasn't saved | 💾 at the end of that answer, the agent is asked **once** to store it with `brain remember`; weaker signals wait quietly for your review |
 
-```text
-$ brain stats
-RECALL (30 days)
-  prompts 412 · injections 96 · opened 61 · found without recall 14 · precision 0.64 · threshold 4.6
-CORRECTIONS per 100 user messages (lower = smarter agent)
-  2026-W41   12.4  ████████████  (31/250)
-  2026-W42    9.8  █████████  (22/224)
-  2026-W43    7.1  ███████  (17/239)
-  2026-W44    5.3  █████  (11/208)
-LESSONS
-  L-fix-flaky-tests-root         reflex  shown  11 · ignored 0 · missed 0  → ok
-  L-ask-before-force-push        guard   shown   3 · ignored 0 · missed 0  → ok
-  L-use-pnpm-not-npm             reflex  shown   7 · ignored 2 · missed 0  → sharpen rule or use guard
-```
-<sub>Example output. Your numbers come from your own sessions.</sub>
+</details>
 
-### Three layers, all local
+<details>
+<summary><b>Under the hood: three layers, all local</b></summary>
+
+<br>
 
 1. **Inbox.** Anything new becomes one self-contained claim first (`fact`, `decision`, `pitfall`, `preference`, `todo`, `status`), never a note directly. It is secret-scanned and de-duplicated on entry.
 2. **Wiki.** Markdown notes with a tiny frontmatter, hubs and `[[wikilinks]]`, kept to *one truth per fact*. `brain distill` works the inbox in, done by your agent or, with `llm_cmd`, by the nightly run. A patch that fails lint or the secret scan is rolled back, and a contradiction is never auto-resolved.
@@ -175,10 +167,11 @@ Recall combines **BM25 over sections**, **learned terms** and **graph spreading*
 | every tool call (reflexes, guards, secret block) | ~50 ms |
 
 The details are in [docs/architecture.md](docs/architecture.md).
+</details>
 
 ## 🎯 Lessons
 
-A lesson is a callout **in the note that owns the topic**. There is no separate rules file that drifts.
+A lesson is a callout **in the note that owns the topic**, so there is no separate rules file that drifts.
 
 ```markdown
 > [!lesson]- L-fix-flaky-tests-root
@@ -188,19 +181,14 @@ A lesson is a callout **in the note that owns the topic**. There is no separate 
 > since: 2026-10-28
 ```
 
-| Mechanism | Effect | Use for |
-|---|---|---|
-| `always` | in every session start (max 8) | rules that apply everywhere |
-| `reflex` | once per session when a trigger matches | the normal case |
-| `guard` | the tool call needs your OK | irreversible actions: force-push, `rm -rf`, deploys |
-| `skill` | like reflex; the rule names a playbook to load | whole procedures |
+| Mechanism | Effect |
+|---|---|
+| `always` | in every session start (max 8) |
+| `reflex` | once per session when a trigger matches: the normal case |
+| `guard` | the tool call needs your OK: force-push, `rm -rf`, deploys |
+| `skill` | like reflex; the rule names a playbook to load |
 
-**Triggers**
-
-- `words`: two hits, or one exact phrase. A single common word never fires.
-- `tools`: the tool-name suffix, so `media_upload` matches any `mcp__*__media_upload`.
-- `commands`: a regex on the shell command head; heredoc bodies are ignored.
-- `paths`: a regex on file paths.
+**Triggers:** `words` (two hits, or one exact phrase) · `tools` (a name suffix: `deploy` matches any `mcp__*__deploy`) · `commands` (a regex on the shell command) · `paths` (a regex on file paths).
 
 ## 🤝 Works with every agent
 
@@ -214,19 +202,17 @@ A lesson is a callout **in the note that owns the topic**. There is no separate 
 
 ## 🌙 Autonomous, on your laptop
 
-`brain schedule install` registers a nightly job: **launchd** on macOS, which runs a missed job when the Mac wakes up, or **cron** on Linux. Every run goes through these steps:
+Every night (launchd, cron or Task Scheduler), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
 learn → distill* → refresh recall model → autotune threshold → lesson health → INDEX.md → lint → git sync
 ```
 
-\*Want it to think on its own? Point it at the LLM CLI you already use. self-improving-brain never holds an API key:
+\*To let it think on its own, point it at an LLM CLI you already use. It never holds an API key:
 
 ```bash
 brain config llm_cmd "claude -p --model haiku"     # or "codex exec -", or "ollama run llama3.1"
 ```
-
-Without `llm_cmd`, your agent does the thinking the next time you run `/brain-review`.
 
 <details>
 <summary><b>📋 All commands</b></summary>
@@ -332,7 +318,7 @@ Yes: `brain init ~/notes --force`. It adds `.brain/`, a generated `INDEX.md` and
 
 ## 💜 Contributing
 
-Issues and PRs are very welcome, above all adapters for more agents. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`.
+Issues and PRs are very welcome, above all adapters for more agents. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`. The README images are built by `python3 docs/assets/src/build.py`.
 
 <div align="center">
 

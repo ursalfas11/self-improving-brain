@@ -1,76 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="470" viewBox="0 0 1100 470" role="img" aria-label="The learning loop: session, learn, approve, inject, measure">
-  <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#7cf7d4"/><stop offset=".5" stop-color="#8b9bff"/><stop offset="1" stop-color="#f08cff"/>
-    </linearGradient>
-    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#8b9bff"/>
-    </marker>
-    <style>
-      .t{font-family:-apple-system,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
-      .m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-      .card{fill:#141a38;stroke:#2b3366;stroke-width:1.5}
-      .h{fill:#ffffff;font-size:19px;font-weight:700}
-      .s{fill:#aab2e0;font-size:13.5px}
-      .c{fill:#7cf7d4;font-size:13px}
-      .flow{fill:none;stroke:#8b9bff;stroke-width:2.2;stroke-dasharray:7 7;animation:dash 1.2s linear infinite}
-      @keyframes dash{to{stroke-dashoffset:-14}}
-      .dot{fill:#7cf7d4;animation:p 2.5s ease-in-out infinite}
-      @keyframes p{0%,100%{opacity:.35}50%{opacity:1}}
-    </style>
-  </defs>
-  <rect width="1100" height="470" rx="22" fill="#0b1020"/>
-
-  <!-- center -->
-  <circle cx="550" cy="235" r="92" fill="#141a38" stroke="url(#a)" stroke-width="2.5"/>
-  <text class="t" x="550" y="222" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">your vault</text>
-  <text class="t" x="550" y="246" text-anchor="middle" fill="#aab2e0" font-size="14">Markdown · [[links]]</text>
-  <text class="t" x="550" y="266" text-anchor="middle" fill="#aab2e0" font-size="14">lessons live in notes</text>
-
-  <!-- 1 session -->
-  <g transform="translate(60 40)">
-    <rect class="card" width="250" height="118" rx="16"/>
-    <circle class="dot" cx="26" cy="30" r="6"/>
-    <text class="t h" x="44" y="37">1 · You work</text>
-    <text class="t s" x="22" y="68">Claude Code, Codex, Gemini …</text>
-    <text class="t s" x="22" y="90">you correct it: "no, …"</text>
-  </g>
-  <!-- 2 learn -->
-  <g transform="translate(790 40)">
-    <rect class="card" width="250" height="118" rx="16"/>
-    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:.5s"/>
-    <text class="t h" x="44" y="37">2 · It learns</text>
-    <text class="m c" x="22" y="68">brain learn</text>
-    <text class="t s" x="22" y="90">corrections → lesson drafts</text>
-  </g>
-  <!-- 3 approve -->
-  <g transform="translate(850 300)">
-    <rect class="card" width="210" height="118" rx="16"/>
-    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1s"/>
-    <text class="t h" x="44" y="37">3 · You OK it</text>
-    <text class="m c" x="22" y="68">brain approve</text>
-    <text class="t s" x="22" y="90">nothing without you</text>
-  </g>
-  <!-- 4 inject -->
-  <g transform="translate(330 360)">
-    <rect class="card" width="440" height="92" rx="16"/>
-    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1.5s"/>
-    <text class="t h" x="44" y="37">4 · Right rule, right moment</text>
-    <text class="t s" x="22" y="68">prompt words · tool · shell command · path  →  reflex or guard</text>
-  </g>
-  <!-- 5 measure -->
-  <g transform="translate(40 300)">
-    <rect class="card" width="230" height="118" rx="16"/>
-    <circle class="dot" cx="26" cy="30" r="6" style="animation-delay:2s"/>
-    <text class="t h" x="44" y="37">5 · It measures</text>
-    <text class="m c" x="22" y="68">brain stats</text>
-    <text class="t s" x="22" y="90">mistakes ↓ · recall tunes itself</text>
-  </g>
-
-  <!-- arrows -->
-  <path class="flow" d="M310,95 C450,70 650,70 788,95" marker-end="url(#arr)"/>
-  <path class="flow" d="M960,160 C985,210 985,250 965,298" marker-end="url(#arr)"/>
-  <path class="flow" d="M850,380 C820,400 800,405 772,405" marker-end="url(#arr)"/>
-  <path class="flow" d="M330,405 C300,405 285,400 272,385" marker-end="url(#arr)"/>
-  <path class="flow" d="M150,300 C135,240 140,200 170,160" marker-end="url(#arr)"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="470" viewBox="0 0 1100 470" role="img" aria-label="The learning loop: you work, it learns, you approve, the right rule fires at the right moment, it measures">
+<style>
+.t{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif}.m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.card{fill:#141a38;stroke:#2b3366;stroke-width:1.5}.h{fill:#fff;font-size:19px;font-weight:700}
+.s{fill:#aab2e0;font-size:13.5px}.c{fill:#7cf7d4;font-size:13px}
+.flow{fill:none;stroke:#8b9bff;stroke-width:2.2;stroke-dasharray:7 7;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-14}}
+.dot{fill:#7cf7d4;animation:p 2.5s ease-in-out infinite}@keyframes p{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes l1{0.000%{opacity:0;transform:scale(1);animation-timing-function:steps(1,end)}43.500%{opacity:.9;transform:scale(1);animation-timing-function:cubic-bezier(.2,.7,.3,1)}56.000%{opacity:0;transform:scale(1.45);animation-timing-function:steps(1,end)}100.000%{opacity:0;transform:scale(1.45);animation-timing-function:steps(1,end)}}.l1{animation:l1 10.00s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes l2{0.000%{opacity:0;transform:translateY(10px);animation-timing-function:steps(1,end)}44.000%{opacity:0;transform:translateY(10px);animation-timing-function:ease-out}48.000%{opacity:1;transform:translateY(0px);animation-timing-function:steps(1,end)}59.000%{opacity:1;transform:translateY(-6px);animation-timing-function:ease-in}64.000%{opacity:0;transform:translateY(-12px);animation-timing-function:steps(1,end)}100.000%{opacity:0;transform:translateY(-12px);animation-timing-function:steps(1,end)}}.l2{animation:l2 10.00s infinite}
+@keyframes l3{0.000%{opacity:1;animation-timing-function:steps(1,end)}9.500%{opacity:1;animation-timing-function:ease-in}12.500%{opacity:0;animation-timing-function:steps(1,end)}97.000%{opacity:0;animation-timing-function:ease-out}100.000%{opacity:1;animation-timing-function:steps(1,end)}}.l3{animation:l3 10.00s infinite}
+@keyframes l4{0.000%{opacity:0;animation-timing-function:steps(1,end)}20.000%{opacity:0;animation-timing-function:ease-out}23.000%{opacity:1;animation-timing-function:steps(1,end)}29.500%{opacity:1;animation-timing-function:ease-in}32.500%{opacity:0;animation-timing-function:steps(1,end)}100.000%{opacity:0;animation-timing-function:steps(1,end)}}.l4{animation:l4 10.00s infinite}
+@keyframes l5{0.000%{opacity:0;animation-timing-function:steps(1,end)}40.000%{opacity:0;animation-timing-function:ease-out}43.000%{opacity:1;animation-timing-function:steps(1,end)}49.500%{opacity:1;animation-timing-function:ease-in}52.500%{opacity:0;animation-timing-function:steps(1,end)}100.000%{opacity:0;animation-timing-function:steps(1,end)}}.l5{animation:l5 10.00s infinite}
+@keyframes l6{0.000%{opacity:0;animation-timing-function:steps(1,end)}60.000%{opacity:0;animation-timing-function:ease-out}63.000%{opacity:1;animation-timing-function:steps(1,end)}69.500%{opacity:1;animation-timing-function:ease-in}72.500%{opacity:0;animation-timing-function:steps(1,end)}100.000%{opacity:0;animation-timing-function:steps(1,end)}}.l6{animation:l6 10.00s infinite}
+@keyframes l7{0.000%{opacity:0;animation-timing-function:steps(1,end)}80.000%{opacity:0;animation-timing-function:ease-out}83.000%{opacity:1;animation-timing-function:steps(1,end)}89.500%{opacity:1;animation-timing-function:ease-in}92.500%{opacity:0;animation-timing-function:steps(1,end)}100.000%{opacity:0;animation-timing-function:steps(1,end)}}.l7{animation:l7 10.00s infinite}
+@keyframes l8{0.000%{stroke-dashoffset:100;animation-timing-function:steps(1,end)}81.000%{stroke-dashoffset:100;animation-timing-function:cubic-bezier(.3,.6,.3,1)}90.000%{stroke-dashoffset:0;animation-timing-function:steps(1,end)}97.000%{stroke-dashoffset:0;animation-timing-function:linear}100.000%{stroke-dashoffset:100;animation-timing-function:steps(1,end)}}.l8{animation:l8 10.00s infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.fx{display:none}}
+</style>
+<defs><linearGradient id="la" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cf7d4"/><stop offset=".5" stop-color="#8b9bff"/><stop offset="1" stop-color="#f08cff"/></linearGradient><marker id="larr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b9bff"/></marker><filter id="lblur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7"/></filter><pattern id="lgrid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".03"/></pattern></defs>
+<rect width="1100" height="470" rx="22" fill="#0b1020"/>
+<rect width="1100" height="470" rx="22" fill="url(#lgrid)"/>
+<circle cx="550" cy="235" r="92" fill="#141a38" stroke="url(#la)" stroke-width="2.5"/>
+<circle class="l1" cx="550" cy="235" r="92" fill="none" stroke="#7cf7d4" stroke-width="3" opacity="0"/>
+<text class="t" x="550" y="222" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">your vault</text>
+<text class="t" x="550" y="246" text-anchor="middle" fill="#aab2e0" font-size="14">Markdown · [[links]]</text>
+<text class="t" x="550" y="266" text-anchor="middle" fill="#aab2e0" font-size="14">lessons live in notes</text>
+<g class="l2" opacity="0"><rect x="496" y="112" width="108" height="26" rx="13" fill="#7cf7d4" fill-opacity=".14" stroke="#7cf7d4" stroke-opacity=".8"/><text class="m" x="550" y="130" text-anchor="middle" fill="#7cf7d4" font-size="13" font-weight="700">+1 lesson</text></g>
+<g transform="translate(60 40)"><rect class="l3" x="-3" y="-3" width="256" height="124" rx="18" fill="none" stroke="#7cf7d4" stroke-width="6" opacity="0" filter="url(#lblur)"/><rect class="card" width="250" height="118" rx="16"/><rect class="l3" width="250" height="118" rx="16" fill="#7cf7d4" fill-opacity=".05" stroke="#7cf7d4" stroke-width="1.8" opacity="0"/><circle class="dot" cx="26" cy="30" r="6" style="animation-delay:0.0s"/><text class="t h" x="44" y="37">1 · You work</text>
+<text class="t s" x="22" y="68">Claude Code, Codex, Gemini …</text>
+<text class="t s" x="22" y="90">you correct it: &quot;no, …&quot;</text>
+</g>
+<g transform="translate(790 40)"><rect class="l4" x="-3" y="-3" width="256" height="124" rx="18" fill="none" stroke="#7cf7d4" stroke-width="6" opacity="0" filter="url(#lblur)"/><rect class="card" width="250" height="118" rx="16"/><rect class="l4" width="250" height="118" rx="16" fill="#7cf7d4" fill-opacity=".05" stroke="#7cf7d4" stroke-width="1.8" opacity="0"/><circle class="dot" cx="26" cy="30" r="6" style="animation-delay:0.5s"/><text class="t h" x="44" y="37">2 · It learns</text>
+<text class="m c" x="22" y="68">brain learn</text>
+<text class="t s" x="22" y="90">corrections → lesson drafts</text>
+</g>
+<g transform="translate(850 300)"><rect class="l5" x="-3" y="-3" width="216" height="124" rx="18" fill="none" stroke="#7cf7d4" stroke-width="6" opacity="0" filter="url(#lblur)"/><rect class="card" width="210" height="118" rx="16"/><rect class="l5" width="210" height="118" rx="16" fill="#7cf7d4" fill-opacity=".05" stroke="#7cf7d4" stroke-width="1.8" opacity="0"/><circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1.0s"/><text class="t h" x="44" y="37">3 · You OK it</text>
+<text class="m c" x="22" y="68">brain approve</text>
+<text class="t s" x="22" y="90">nothing without you</text>
+</g>
+<g transform="translate(330 360)"><rect class="l6" x="-3" y="-3" width="446" height="98" rx="18" fill="none" stroke="#7cf7d4" stroke-width="6" opacity="0" filter="url(#lblur)"/><rect class="card" width="440" height="92" rx="16"/><rect class="l6" width="440" height="92" rx="16" fill="#7cf7d4" fill-opacity=".05" stroke="#7cf7d4" stroke-width="1.8" opacity="0"/><circle class="dot" cx="26" cy="30" r="6" style="animation-delay:1.5s"/><text class="t h" x="44" y="37">4 · Right rule, right moment</text>
+<text class="t s" x="22" y="68">prompt words · tool · shell command · path  →  reflex or guard</text>
+</g>
+<g transform="translate(40 300)"><rect class="l7" x="-3" y="-3" width="236" height="124" rx="18" fill="none" stroke="#7cf7d4" stroke-width="6" opacity="0" filter="url(#lblur)"/><rect class="card" width="230" height="118" rx="16"/><rect class="l7" width="230" height="118" rx="16" fill="#7cf7d4" fill-opacity=".05" stroke="#7cf7d4" stroke-width="1.8" opacity="0"/><circle class="dot" cx="26" cy="30" r="6" style="animation-delay:2.0s"/><text class="t h" x="44" y="37">5 · It measures</text>
+<text class="m c" x="22" y="68">brain stats</text>
+<text class="t s" x="22" y="90">mistakes ↓ · recall tunes itself</text>
+<path class="l8" pathLength="100" d="M128,47 C142,49 146,57 158,58 C170,59 174,67 186,68 C194,69 200,72 208,73" fill="none" stroke="#7cf7d4" stroke-width="2.5" stroke-linecap="round" style="stroke-dasharray:100"/>
+</g>
+<path class="flow" d="M310,95 C450,70 650,70 788,95" marker-end="url(#larr)"/>
+<path class="flow" d="M960,160 C985,210 985,250 965,298" marker-end="url(#larr)"/>
+<path class="flow" d="M850,380 C820,400 800,405 772,405" marker-end="url(#larr)"/>
+<path class="flow" d="M330,405 C300,405 285,400 272,385" marker-end="url(#larr)"/>
+<path class="flow" d="M150,300 C135,240 140,200 170,160" marker-end="url(#larr)"/>
+<g class="fx"><g opacity="0"><circle r="11" fill="#7cf7d4" opacity=".25"/><circle r="5" fill="#eafffa"/><animateMotion dur="10.0s" repeatCount="indefinite" path="M310,95 C450,70 650,70 788,95" keyPoints="0;0;1;1" keyTimes="0;0.105;0.200;1" calcMode="spline" keySplines="0 0 1 1;.45 0 .25 1;0 0 1 1"/><animate attributeName="opacity" dur="10.0s" repeatCount="indefinite" values="0;1;0" keyTimes="0;0.105;0.200" calcMode="discrete"/></g><g opacity="0"><circle r="11" fill="#7cf7d4" opacity=".25"/><circle r="5" fill="#eafffa"/><animateMotion dur="10.0s" repeatCount="indefinite" path="M960,160 C985,210 985,250 965,298" keyPoints="0;0;1;1" keyTimes="0;0.305;0.400;1" calcMode="spline" keySplines="0 0 1 1;.45 0 .25 1;0 0 1 1"/><animate attributeName="opacity" dur="10.0s" repeatCount="indefinite" values="0;1;0" keyTimes="0;0.305;0.400" calcMode="discrete"/></g><g opacity="0"><circle r="11" fill="#7cf7d4" opacity=".25"/><circle r="5" fill="#eafffa"/><animateMotion dur="10.0s" repeatCount="indefinite" path="M850,380 C820,400 800,405 772,405" keyPoints="0;0;1;1" keyTimes="0;0.505;0.600;1" calcMode="spline" keySplines="0 0 1 1;.45 0 .25 1;0 0 1 1"/><animate attributeName="opacity" dur="10.0s" repeatCount="indefinite" values="0;1;0" keyTimes="0;0.505;0.600" calcMode="discrete"/></g><g opacity="0"><circle r="11" fill="#7cf7d4" opacity=".25"/><circle r="5" fill="#eafffa"/><animateMotion dur="10.0s" repeatCount="indefinite" path="M330,405 C300,405 285,400 272,385" keyPoints="0;0;1;1" keyTimes="0;0.705;0.800;1" calcMode="spline" keySplines="0 0 1 1;.45 0 .25 1;0 0 1 1"/><animate attributeName="opacity" dur="10.0s" repeatCount="indefinite" values="0;1;0" keyTimes="0;0.705;0.800" calcMode="discrete"/></g><g opacity="0"><circle r="11" fill="#7cf7d4" opacity=".25"/><circle r="5" fill="#eafffa"/><animateMotion dur="10.0s" repeatCount="indefinite" path="M150,300 C135,240 140,200 170,160" keyPoints="0;0;1;1" keyTimes="0;0.905;1.000;1" calcMode="spline" keySplines="0 0 1 1;.45 0 .25 1;0 0 1 1"/><animate attributeName="opacity" dur="10.0s" repeatCount="indefinite" values="0;1;0" keyTimes="0;0.905;1.000" calcMode="discrete"/></g></g>
 </svg>
