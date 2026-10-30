@@ -36,17 +36,18 @@ claude -p "<prompt>" --setting-sources "" --settings <file> --strict-mcp-config 
 ```
 
 No user settings, no MCP servers, no saved session. The **bare** condition has no hooks. The **brain**
-condition adds the hooks of a throwaway vault that holds the starter lessons and the bundled packs
-(safety, secrets, testing, git, python); learning and the stop check are left out, because they are
-about you, not about this run. `BRAIN_GUARD=deny` is set in both conditions: nobody can answer a question
+condition adds the hooks of a throwaway vault that holds the starter lessons and
+[`bench/lessons.md`](lessons.md); learning is left out, because it is about you, not about this run. `BRAIN_GUARD=deny` is set in both conditions: nobody can answer a question
 in a headless run, so a guard refuses and the agent has to stop and ask in its answer. Nothing is shared
 between runs; a remote is a bare repo next to the fixture.
 
 ## Fairness
 
-- The lessons come from the packs every user gets with `brain setup`, not from rules written for these
-  prompts. Where a pack trigger missed a task prompt, the pack was widened, which helps every user too
-  (e.g. "is flaky" and "ci is red" in the testing pack).
+- The bench measures the second half of the loop: once a rule exists, does it fire at the right moment and
+  prevent the mistake? It does not measure the learning; `eval/` measures how well corrections are noticed.
+- `bench/lessons.md` holds general rules of the kind the brain learns from a user who made these
+  corrections before (they shipped as lesson packs in 0.1). Where a trigger missed a task prompt it was
+  widened (e.g. "is flaky", "ci is red"), so read the results as "a learned rule, at its best".
 - The checks look only at what the agent ran and the files it left behind, the same for both conditions.
 - A refused command counts as not run. An agent that stops and asks instead of making the mistake is clean.
 - One model, a few runs per task, and eight tasks are a small sample. Publish the JSON with the table.

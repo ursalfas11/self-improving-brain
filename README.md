@@ -7,8 +7,8 @@
 <h3>The self-improving memory &amp; second brain for AI coding agents</h3>
 
 <p>
-It turns your corrections into rules, injects the right rule at the right moment,<br>
-stops the agent before irreversible mistakes, and <b>proves that your agent makes fewer of them</b>.
+Install it once, then forget it. Every night it turns your corrections into rules<br>
+and your decisions into notes, on its own. Your agent makes <b>fewer mistakes every week</b>, and the brain shows you the numbers.
 </p>
 
 <p>
@@ -24,7 +24,7 @@ stops the agent before irreversible mistakes, and <b>proves that your agent make
 <a href="#-quickstart"><b>Quickstart</b></a> ·
 <a href="#-how-it-gets-smarter"><b>How it gets smarter</b></a> ·
 <a href="#-prove-it"><b>Prove it</b></a> ·
-<a href="#-lessons"><b>Lessons</b></a> ·
+<a href="#-rules"><b>Rules</b></a> ·
 <a href="#-works-with-every-agent"><b>Agents</b></a> ·
 <a href="docs/architecture.md"><b>Architecture</b></a>
 </p>
@@ -34,57 +34,63 @@ stops the agent before irreversible mistakes, and <b>proves that your agent make
 <br>
 
 <p align="center">
-  <img src="docs/assets/demo.svg" alt="Demo: on Tuesday the user corrects the agent; that night brain learn turns it into a lesson; on Friday the lesson fires before the agent repeats the mistake" width="92%">
+  <img src="docs/assets/demo.svg" alt="Demo: on Tuesday the user corrects the agent; that night the brain turns it into a rule on its own; on Friday the rule fires before the agent repeats the mistake" width="92%">
 </p>
 
 ## 🤯 The problem
 
-You told your agent *"no, don't paper over flaky tests with retries"* last Tuesday. Today it adds a retry again.
+You told your agent *"no, never paper over a flaky test with retries"* last Tuesday. Today it adds a retry again.
 
-Agent mistakes rarely come from missing facts. They come from a rule the agent *knew* but didn't apply **at the moment it mattered**. This brain works on exactly that moment, and then it checks whether the mistake comes back.
+Agent mistakes rarely come from missing facts. They come from a rule the agent *knew* but didn't apply **at the moment it mattered**. This brain learns the rule from you, brings it back at that moment, and checks whether the mistake comes back.
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
-### 🧠 Learns from you
-`brain learn` turns every *"no, why did you…"* and every rejected tool call in your transcripts into a lesson draft. Repeated procedures become **skills**. You OK each one in one line.
+### 🌙 Learns on its own
+Every night a small model reads the day's sessions through an LLM CLI you already have. What you said in two sessions, or said with *always* or *never*, becomes a rule. Nothing waits for your approval.
 
 </td>
 <td width="33%" valign="top">
 
 ### ⚡ Fires at the right moment
-Prompt words, a tool, a shell command or a path trigger it. A `guard` makes the agent **ask you** before `git push --force`, `rm -rf` or `DROP TABLE`.
+Prompt words, a tool, a shell command or a path trigger a rule. Where you once stopped the agent, a `guard` makes it **ask you** before `git push --force`, `rm -rf` or `DROP TABLE`.
 
 </td>
 <td width="33%" valign="top">
 
 ### 📉 Proves it works
-`brain replay` shows which of your past corrections today's lessons would have caught. `brain stats` tracks mistakes per 100 messages, week by week.
+`brain` shows your mistakes per 100 messages since the week you installed it. `brain replay` shows which of your past corrections today's rules would have caught.
 
 </td>
 </tr>
 <tr>
 <td valign="top">
 
-### 🛡️ Rules that check themselves
-A lesson can carry a `check:` regex. When the agent writes `@retry` anyway, the brain notices without you, and a rule broken twice is promoted to a guard.
+### ↩️ A veto, not a duty
+Every change goes into a journal. `brain review` lists the last two weeks, `brain undo 2` takes one back, and a topic you undid is never learned again.
 
 </td>
 <td valign="top">
 
-### 🧵 Never loses the thread
-Right before the context is compacted, the brain saves your exact words, the open question and the files in flight. After compaction they come back verbatim, and `brain resume` continues in any agent.
+### 🧠 Knows more every week
+Decisions, facts about your projects and pitfalls from your sessions land in the note that owns them. A newer statement replaces the outdated one: one truth per fact.
 
 </td>
 <td valign="top">
 
-### 📦 Starts smart
-Lesson packs (safety, secrets, testing, git, python, typescript) give a fresh install real guards on day one. A **team brain** shares lessons through a git repo.
+### 🧹 Cleans up after itself
+A rule that keeps getting broken gets sharper, then stricter. A rule that never fired in 60 days retires. At most eight rules are always on.
 
 </td>
 </tr>
 <tr>
+<td valign="top">
+
+### 🪶 Costs almost nothing
+The hooks add one line at session start, and a rule shows up only when it matches. The nightly model has a hard cap of $0.10 a day. `brain` shows what the brain costs you, measured.
+
+</td>
 <td valign="top">
 
 ### 🤝 In every agent
@@ -93,14 +99,8 @@ Native hooks and a plugin for Claude Code, an MCP server for Cursor, Windsurf, C
 </td>
 <td valign="top">
 
-### 🏠 Laptop only, plain Markdown
-No server, no API key, no vector DB, zero dependencies. An ordinary Obsidian vault with `[[links]]`, diffable and yours.
-
-</td>
-<td valign="top">
-
 ### 🔒 Never behind your back
-Nothing becomes a rule without your OK, and a lesson an agent wrote stays silent until you trust it. Secrets are blocked on save, on write and at commit.
+Rules come only from your own words, never from tool output. A rule an agent wrote stays silent until you trust it. Secrets are blocked on save, on write and at commit.
 
 </td>
 </tr>
@@ -113,10 +113,10 @@ curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/mai
 ```
 
 <p align="center">
-  <img src="docs/assets/setup.svg" alt="brain setup in eight steps: vault, agents, the brain command, learning from past sessions, lesson packs, optional LLM judge, private GitHub backup, nightly run" width="92%">
+  <img src="docs/assets/setup.svg" alt="brain setup asks nothing: vault, agents, the brain command, your past sessions as a baseline, learning with your own LLM login, the nightly run, an optional private GitHub backup" width="92%">
 </p>
 
-No root, nothing to compile: git and Python 3.9+ are enough, and the `python3` that ships with macOS works. Step 4 reads the sessions you already had, so you get lesson candidates and a baseline on day one.
+That is all. Setup asks nothing. It needs git and Python 3.9+ (the `python3` that ships with macOS works), no root and nothing to compile. It reads the sessions you already had: your baseline is there on day one, and the first rules a few minutes later. To learn, it uses the `claude`, `codex` or `ollama` CLI you already have, with your login; no API key is stored anywhere. `brain setup --github` adds a private backup.
 
 **Claude Code plugin**, if you prefer to install from inside Claude Code:
 
@@ -124,7 +124,7 @@ No root, nothing to compile: git and Python 3.9+ are enough, and the `python3` t
 /plugin install self-improving-brain --marketplace ursalfas11/self-improving-brain
 ```
 
-The first session then offers to create your vault. Older Claude Code: `/plugin marketplace add ursalfas11/self-improving-brain`, then `/plugin install self-improving-brain@self-improving-brain`.
+The first session then tells you to run `brain setup`. Older Claude Code: `/plugin marketplace add ursalfas11/self-improving-brain`, then `/plugin install self-improving-brain@self-improving-brain`.
 
 <details>
 <summary>Other ways to install</summary>
@@ -134,25 +134,63 @@ pipx install git+https://github.com/ursalfas11/self-improving-brain && brain set
 # or, from a clone, no install at all:
 git clone https://github.com/ursalfas11/self-improving-brain && cd self-improving-brain && ./brain setup
 ```
-`brain setup --yes` accepts every default (it still creates nothing public). `--no-github`, `--no-llm`, `--no-schedule` and `--no-packs` skip those steps. Update any time with `brain update`.
+`--no-llm` and `--no-schedule` leave out learning and the nightly run. `brain update` updates, `brain uninstall` takes it out of every agent again, and your notes stay.
 </details>
 
 <details>
 <summary>What your agent sees at session start</summary>
 
 ```text
-SELF-IMPROVING-BRAIN vault: ~/brain — before answering from memory, run `brain search "<question>"` …
+SELF-IMPROVING-BRAIN memory at ~/brain: look things up with `brain search "<question>"` and `brain read <note> [section]`; keep what will matter later with `brain remember <fact|decision|pitfall|preference> "<one sentence>"`.
 LESSONS (apply in every session):
 - L-result-first: Lead with the result in a few lines; details only when asked …
 - L-verify-before-done: Before saying something works or is done, run it or test it and show the output …
-BRAIN-REPO shop-api: shop-api — The shop-api codebase - layout, entry points, how to test
 ```
 </details>
+
+## ☕ Day to day
+
+You do not have to do anything. If you want to look:
+
+```text
+$ brain
+
+  🧠  self-improving-brain   ~/brain
+
+  Mistakes     3.8 per 100 messages · −60 % since Aug 3
+  This week    2 new rules · 2 sharpened · 3 facts filed · 1 retired
+  Cost         1.2 % of your agent's tokens · $0.19 for the nights
+  Last night   03:17 · 1 new rule, 2 facts filed, backed up
+
+  23 rules (3 always, 5 guards) · 11 notes · 412 sessions read
+```
+
+```text
+$ brain review
+
+Learned in the last 14 days. Take anything back with brain undo <n>.
+
+   1  Oct 30  new rule        Run database migrations against a copy of the database first, and show the result …
+                              you said it in 2 sessions: “not on the real db first, take a copy”
+   2  Oct 30  updated         acme-api › The staging database moved to eu-west-2 in October.
+                              newer than “The staging database runs in eu-central-1.”
+   3  Oct 28  reflex → guard  Do not commit or push straight to main or master - create a branch and open a pull …
+                              it came back after it was sharpened: “why is this on main again”
+
+$ brain undo 3
+✓ L-git-branch-first is reflex again
+```
+
+Once a week, the first session shows one line, so you know without looking:
+
+```text
+🧠 This week: 2 new rules · 2 sharpened · 3 facts filed · 1 retired · mistakes −24 % · brain cost 1.2 % of your tokens — `brain review` shows it, undo anything.
+```
 
 ## 🔁 How it gets smarter
 
 <p align="center">
-  <img src="docs/assets/loop.svg" alt="The learning loop: you work, it learns, you approve, the right rule fires at the right moment, it measures" width="92%">
+  <img src="docs/assets/loop.svg" alt="The learning loop: you work, it learns on its own every night, you can undo anything, the right rule fires at the right moment, it measures" width="92%">
 </p>
 
 The model itself never learns. What improves is **what your agent is told, and when**, and the brain measures the effect:
@@ -168,16 +206,15 @@ The model itself never learns. What improves is **what your agent is told, and w
 
 | Signal | What the brain does |
 |---|---|
+| You corrected the agent, or rejected a tool call | 📝 noted on the spot, without an LLM. At night the small model decides: a lasting rule, a fact, or a one-off |
+| You said it in two sessions, or said *always* / *never* | ✅ it becomes a rule, in the note that owns the topic |
+| A decision, a fact or a pitfall came up in a session | 🗂️ filed into its note; a newer statement replaces the outdated one |
+| A rule was shown and the mistake came back anyway | 🔧 the rule is sharpened; when it comes back again, the rule becomes `always`, or a `guard` if you had stopped a tool call |
+| The agent wrote what a rule's `check:` forbids | 🚨 flagged on the spot, counted per week |
+| A rule never fired in 60 days | 💤 retired; `brain undo` brings it back |
 | Recall offered a note, and the agent opened it | ✅ hit: the note gains weight |
 | Recall offered a note, and the agent ignored it | the note loses weight; if precision drops, the **recall threshold rises by itself** |
 | The agent opened a note recall *didn't* offer | the prompt's words get attached to that note, so it is found next time |
-| You corrected the agent or rejected a tool call | 📝 lesson draft, refined by your own LLM CLI if you configured one |
-| The agent wrote what a lesson's `check:` forbids | 🚨 flagged on the spot, counted per week; broken twice → *make it a guard* |
-| A lesson was shown and the mistake came back anyway | 🔧 flagged: *sharpen the rule or make it a guard* |
-| The mistake came back and the lesson wasn't shown | 🎯 flagged: *widen its triggers* (replay names the words) |
-| The same commands ran in three or more sessions | 🧰 skill draft: the procedure, ready to approve |
-| A lesson never fired in 30 days | 💤 flagged: *dormant* |
-| A clear correction ("why did you…", "I told you…") or a lasting preference wasn't saved | 💾 at the end of that answer, the agent is asked **once** to store it with `brain remember`; weaker signals wait quietly for your review |
 
 </details>
 
@@ -186,17 +223,17 @@ The model itself never learns. What improves is **what your agent is told, and w
 
 <br>
 
-1. **Inbox.** Anything new becomes one self-contained claim first (`fact`, `decision`, `pitfall`, `preference`, `todo`, `status`), never a note directly. It is secret-scanned and de-duplicated on entry.
-2. **Wiki.** Markdown notes with a tiny frontmatter, hubs and `[[wikilinks]]`, kept to *one truth per fact*. `brain distill` works the inbox in, done by your agent or, with `llm_cmd`, by the nightly run. A patch that fails lint or the secret scan is rolled back, and a contradiction is never auto-resolved.
+1. **Inbox.** Anything new becomes one self-contained claim first (`fact`, `decision`, `pitfall`, `preference`), from the nightly run or from `brain remember`. It is secret-scanned and de-duplicated on entry.
+2. **Wiki.** Markdown notes with a tiny frontmatter, hubs and `[[wikilinks]]`, kept to *one truth per fact*. The nightly run files each claim: it appends it, replaces the outdated line it contradicts, or starts a note. A change that fails lint or the secret scan is rolled back, and every change lands in the journal.
 3. **Interface.** A CLI your agent calls instead of `cat`-ing whole files. `brain search` returns the 3–5 best *sections* with dates. `brain read note "section"` returns an outline with token counts, or exactly one section.
 
 Recall combines **BM25 over sections**, **learned terms** and **graph spreading** over your `[[links]]`. It is explainable and has zero dependencies. The parsed vault is cached and rebuilt only when a note changes, so the hooks stay fast:
 
-| Hook (600-note vault, Apple Silicon, incl. Python start) | Time |
+| Hook (600-note vault, Apple M5, incl. Python start) | Time |
 |---|---|
-| session start | ~60 ms |
-| every prompt (recall + word lessons) | ~70 ms |
-| every tool call (reflexes, guards, secret block) | ~50 ms |
+| session start | ~70 ms |
+| every prompt (recall + word rules) | ~80 ms |
+| every tool call (reflexes, guards, secret block) | ~60 ms |
 
 The details are in [docs/architecture.md](docs/architecture.md).
 </details>
@@ -207,15 +244,17 @@ Most memory tools store things and hope. This one shows its work, on your own hi
 
 ```text
 $ brain replay                                    # example output
-REPLAY · 127 sessions · last 30 days · 24 active lessons
-  Your lessons would have caught 31 of 64 corrections (48 %) — 7 of them by asking you first.
-  (caught = a lesson about this mistake would have fired before it happened)
-  missed 9 (a lesson exists, its triggers did not fire) · uncovered 24 (no lesson yet)
-LESSONS
+REPLAY · 127 sessions · last 30 days · 24 active rules
+  Your rules would have caught 31 of 64 corrections (48 %) — 7 of them by asking you first.
+  (caught = a rule about this mistake would have fired before it happened)
+  missed 9 (a rule exists, its triggers did not fire) · uncovered 24 (no rule yet)
+RULES
   L-testing-no-retry-flaky                 caught   6 · missed   2  → widen: words race, timeout
 ```
 
-`brain replay --draft` turns the uncovered ones into lesson drafts. Nothing leaves your machine, and no LLM is involved.
+Nothing leaves your machine, and no LLM is involved.
+
+**Does it notice when you correct it?** Measured on 250 hand-labelled replies in six languages, tuned on one half and tested on the other. On the test half, 93 % of what it flags is a real correction, and it finds 86 % of the ones that should become a rule. Then the nightly judge threw out every false alarm and kept every lasting correction, for one cent. The data, the method and the numbers per language are in [eval/](eval/README.md).
 
 <p align="center">
   <img src="docs/assets/report.svg" alt="Example report card: corrections per 100 messages down 61 % over 12 weeks; 20 lessons; 48 % of past mistakes caught; 7 risky actions flagged" width="80%">
@@ -228,19 +267,19 @@ LESSONS
 ## 🖥️ See it
 
 ```bash
-brain ui          # your brain in the browser: progress, lessons, review, replay, graph
+brain ui          # your brain in the browser: progress, what it learned (with undo), rules, replay, the map
 brain ui --demo   # the same with example data
 ```
 
 <p align="center">
-  <img src="docs/assets/ui.png" alt="brain ui: corrections per 100 messages falling week by week, replay result, lessons by mechanism" width="92%">
+  <img src="docs/assets/ui.png" alt="brain ui: mistakes per 100 messages since the start, what the brain learned this week, its cost, and the weekly curve" width="92%">
 </p>
 
-The page is served on 127.0.0.1 only and answers only requests that carry the random token from the link `brain ui` prints, so no web page you visit can read your vault or click *approve* for you.
+The page is served on 127.0.0.1 only and answers only requests that carry the random token from the link `brain ui` prints, so no web page you visit can read your vault or click *undo* for you.
 
-## 🎯 Lessons
+## 🎯 Rules
 
-A lesson is a callout **in the note that owns the topic**, so there is no separate rules file that drifts.
+A rule is a callout **in the note that owns the topic**, so there is no separate rules file that drifts.
 
 ```markdown
 > [!lesson]- L-fix-flaky-tests-root
@@ -254,77 +293,53 @@ A lesson is a callout **in the note that owns the topic**, so there is no separa
 
 | Mechanism | Effect |
 |---|---|
-| `always` | in every session start (max 8) |
+| `always` | in every session start (eight at most) |
 | `reflex` | once per session when a trigger matches: the normal case |
-| `guard` | the tool call needs your OK: force-push, `rm -rf`, deploys. In headless runs `BRAIN_GUARD=deny` refuses instead |
-| `skill` | like reflex; the rule points at a procedure the brain learned (`brain skills`) |
+| `guard` | the tool call needs your OK: force-push, `rm -rf`, deploys. The brain only makes a guard where you once stopped a tool call. In headless runs `BRAIN_GUARD=deny` refuses instead |
 
-**Triggers:** `words` (two hits, or one exact phrase) · `tools` (a name suffix: `deploy` matches any `mcp__*__deploy`) · `commands` (a regex on the shell command) · `paths` (a regex on file paths). **`check:`** is a regex on what the agent writes or runs: a match on a reflex is a violation the brain counts on its own; on a guard it asks before the write happens. `brain promote <id> --to guard` escalates a rule that keeps getting broken.
+**Triggers:** `words` (two hits, or one exact phrase) · `tools` (a name suffix: `deploy` matches any `mcp__*__deploy`) · `commands` (a regex on the shell command) · `paths` (a regex on file paths). **`check:`** is a regex on what the agent writes or runs: a match on a reflex is a violation the brain counts on its own; on a guard it asks before the write happens.
 
-**Packs.** `brain pack list` shows ready-made lessons, `brain pack add safety` installs one into your vault, where it is yours to edit. `brain pack export` turns your own lessons into a pack to share; evidence and dates are dropped and it is secret-scanned first.
-
-**Team brain.** `brain team add acme <git-url>` shares lessons through a plain git repo. A team lesson counts only in the form you accepted: whatever the team changes later waits for `brain team sync` to show it to you. `brain team propose <id>` offers one of yours on a branch.
-
-**Trust.** A lesson is plain text, so anything that can write a file could plant one, including an agent that read a poisoned web page. A lesson that appears during an agent's tool call stays silent until you run `brain trust`. Approving, trusting, promoting and adding packs or teams are commands the agent has to ask you for.
-
-## 🧰 Knows your work
-
-| | |
-|---|---|
-| `brain skills` | Procedures your agent repeated in three or more sessions (a release, a deploy, how this project is tested) become skill drafts. Approve one and it becomes a vault note, a `skill` lesson and a Claude Code skill. |
-| `brain atlas` | A map of a codebase in its repo note: languages, layout, entry points and scripts, the test command, CI workflows, one line per key module. The session start says when the repo has moved on. |
-| `brain ingest <file\|url\|folder>` | Sources become notes. `brain ingest --refresh` fetches them again; when one changed, every note that links to it is flagged for a check, so knowledge built on an old page does not go stale quietly. |
-| `brain resume` | The last handoff: your own words, the open question, the files in flight. Works across agents: Codex can pick up where Claude stopped. |
+**Trust.** A rule is plain text, so anything that can write a file could plant one, including an agent that read a poisoned web page. So the nightly run learns only from what *you* typed, never from tool output, and never adopts a rule with a link or a secret in it. A rule that appears during an agent's tool call stays silent until you trust it; `brain review` lists those. Undo, trust and config are commands the agent has to ask you for.
 
 ## 🤝 Works with every agent
 
 | Agent | Integration | You get |
 |---|---|---|
-| <img src="https://img.shields.io/badge/-Claude%20Code-D97757?logo=anthropic&logoColor=white" alt="Claude Code"> | **native hooks** or the **plugin**, + `/brain-review` `/brain-distill` `/brain-ingest` `/brain-ask` | everything: recall, reflexes, guards, checks, secret block, handoff across compaction, auto-learn at session end |
-| <img src="https://img.shields.io/badge/-Cursor%20·%20Windsurf%20·%20Claude%20Desktop%20·%20VS%20Code-555555" alt="MCP clients"> | **MCP server**: `brain mcp install <client>` | `brain_context`, `brain_check`, `brain_correction`, `brain_search`, `brain_handoff` and more; none of them can approve a rule |
-| <img src="https://img.shields.io/badge/-Codex%20CLI-000000?logo=openai&logoColor=white" alt="Codex CLI"> | `~/.codex/AGENTS.md`, MCP, transcript learning | context, lessons, guards via `brain check`, plus mistakes mined from `~/.codex/sessions` |
-| <img src="https://img.shields.io/badge/-Gemini%20CLI-4285F4?logo=google&logoColor=white" alt="Gemini CLI"> | `~/.gemini/GEMINI.md` + MCP | context, search, remember, lessons, guards |
-| <img src="https://img.shields.io/badge/-Grok%20·%20Aider%20·%20Zed%20·%20Cline-555555" alt="Others"> | `brain install agents` → the project's `AGENTS.md`, or `brain mcp config` | context, search, remember, lessons |
+| <img src="https://img.shields.io/badge/-Claude%20Code-D97757?logo=anthropic&logoColor=white" alt="Claude Code"> | **native hooks** or the **plugin**, + `/brain` | everything: recall, reflexes, guards, checks, secret block, your exact words across compaction, the weekly line |
+| <img src="https://img.shields.io/badge/-Cursor%20·%20Windsurf%20·%20Claude%20Desktop%20·%20VS%20Code-555555" alt="MCP clients"> | **MCP server**, connected by `brain setup` | `brain_context`, `brain_check`, `brain_correction`, `brain_search`, `brain_handoff` and more; what an agent reports never becomes a rule on its own |
+| <img src="https://img.shields.io/badge/-Codex%20CLI-000000?logo=openai&logoColor=white" alt="Codex CLI"> | `~/.codex/AGENTS.md`, MCP, transcript learning | context, rules, guards via `brain check`, plus mistakes learned from `~/.codex/sessions` |
+| <img src="https://img.shields.io/badge/-Gemini%20CLI-4285F4?logo=google&logoColor=white" alt="Gemini CLI"> | `~/.gemini/GEMINI.md` + MCP | context, search, remember, rules, guards |
+| <img src="https://img.shields.io/badge/-Grok%20·%20Aider%20·%20Zed%20·%20Cline-555555" alt="Others"> | `brain install agents` → the project's `AGENTS.md`, or `brain mcp config` | context, search, remember, rules |
 | anything with a shell | `brain install print` | paste the block wherever your agent reads instructions |
 
-## 🌙 Autonomous, on your laptop
+## 🌙 Every night, on your laptop
 
-Every night (launchd, cron or Task Scheduler), the brain runs one pass and backs itself up to your **private** repo:
+At 03:17 (launchd, cron or Task Scheduler; a run the Mac slept through catches up when it wakes), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
-learn → distill* → mine skills → replay → refresh recall model → autotune threshold → lesson health → INDEX.md → lint → git sync
+read sessions → weigh corrections* → adopt rules → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
 ```
 
-\*To let it think on its own, point it at an LLM CLI you already use. It never holds an API key:
-
-```bash
-brain config llm_cmd "claude -p --model haiku"     # or "codex exec -", or "ollama run llama3.1"
-```
+\*These steps use the LLM CLI that setup found, under a hard daily budget: `llm_budget_usd` 0.10 and `llm_max_calls` 40. When the budget is used up, the rest waits for the next night. The brain never holds an API key. Another CLI: `brain config llm_cmd "codex exec -"` or `"ollama run llama3.1"`.
 
 <details>
-<summary><b>📋 All commands</b></summary>
+<summary><b>📋 Commands</b></summary>
 
 <br>
 
 ```text
-brain setup                     guided install            brain stats                is it getting smarter?
-brain context                   session-start context     brain replay [--draft]     what would today's lessons have caught?
-brain search "<question>"       best sections, dated      brain report [--public]    report card, shareable SVG, badge
-brain read <note> [section]     outline or one section    brain ui [--demo]          the brain in your browser
-brain neighbors <note>          linked notes              brain lessons              list all lessons
-brain remember <type> "<claim>" into the inbox            brain lesson "<rule>" …    add a lesson by hand
-brain inbox [done|drop <id>]    manage the inbox          brain promote <id> --to …  e.g. reflex → guard
-brain distill [--auto]          inbox → wiki              brain trust [<id>]         lessons that stay silent
-brain learn                     mine transcripts          brain check --command …    would this trip a guard?
-brain review                    lesson drafts             brain pack list|add|export lesson packs
-brain approve <id> --rule …     draft → lesson            brain team add|sync|propose team brain
-brain reject <id> [--block …]   discard, block topic      brain skills [mine|approve] learned procedures
-brain resume / brain handoff    continue a session        brain atlas [path]         map a codebase
-brain ingest <src> [--refresh]  sources → notes           brain mcp [install <client>] MCP server
-brain lint · index · sync       upkeep                    brain nightly · schedule   the nightly loop
-brain config [key value]        settings                  brain install <agent>      connect an agent
-brain doctor                    check the setup           brain scan [--staged]      secret scan
+brain              how it is doing
+brain review       what it learned lately, with undo
+brain undo <n>     take one change back
+brain ui           the whole brain in your browser
+brain setup        install: asks nothing (--github adds a private backup)
+
+brain doctor       check the installation
+brain update       update self-improving-brain
+brain uninstall    take it out of every agent again (your notes stay)
 ```
+
+Your agent uses a few more (`search`, `read`, `remember`, `check`, `resume`, `handoff`); `brain help all` lists everything.
 
 </details>
 
@@ -337,11 +352,11 @@ brain doctor                    check the setup           brain scan [--staged] 
 ~/brain/
 ├── INDEX.md          generated map: one line per note
 ├── 00-hubs/          entry points, one per topic, carry the current state
-├── 10-projects/      things with an end, and one note per repo (with its atlas)
+├── 10-projects/      things with an end, and one note per repo
 ├── 20-areas/         lasting knowledge: decisions, how-tos, pitfalls, preferences
-├── 30-resources/     references: sources, packs, skills
+├── 30-resources/     references and sources
 ├── 90-entities/      short stubs for systems, tools, people
-└── .brain/           inbox, drafts, events, trust ledger (versioned) · state, team clones (local only)
+└── .brain/           inbox, journal, events, trust ledger (versioned) · state (this machine only)
 ```
 
 Open it in Obsidian and you get the graph for free: hubs as cluster centres, notes around them.
@@ -352,12 +367,12 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 
 | | `CLAUDE.md` / `AGENTS.md` by hand | typical memory servers | **self-improving-brain** |
 |---|:-:|:-:|:-:|
-| Learns from your corrections automatically | ✗ | rarely | ✅ |
+| Learns from your corrections, on its own | ✗ | rarely | ✅ |
+| Keeps one truth per fact (newer replaces older) | by hand | varies | ✅ |
 | Injects a rule *at the moment* it matters | ✗ | on request | ✅ |
 | Can stop an irreversible action | ✗ | ✗ | ✅ |
-| Notices a broken rule without you | ✗ | ✗ | ✅ |
-| Replays your history to show what it would have caught | ✗ | ✗ | ✅ |
-| Keeps your exact words across compaction | ✗ | ✗ | ✅ |
+| Every change it makes can be undone | – | varies | ✅ |
+| Shows whether your agent's mistakes go down | ✗ | ✗ | ✅ |
 | A planted rule stays silent until you trust it | ✗ | ✗ | ✅ |
 | Context cost per session | grows forever | tool schemas | **one line** (hooks) |
 | Runs on | – | a server / cloud | **your laptop** |
@@ -368,31 +383,43 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 <details>
 <summary><b>Does the model itself learn?</b></summary>
 
-No, and nothing running on your laptop can do that. What improves is *what the agent is told, and when*. You can see the improvement: `brain stats` shows corrections per 100 messages, week by week, and `brain replay` shows what your current lessons would have caught.
+No, and nothing running on your laptop can do that. What improves is *what the agent is told, and when*. You can see the improvement: `brain` shows your mistakes per 100 messages against your first two weeks, and `brain replay` shows what your current rules would have caught.
+</details>
+
+<details>
+<summary><b>What does it cost?</b></summary>
+
+In your sessions: one line at session start plus your always-on rules (eight at most), and a rule only when it matches. `brain` shows the brain's measured share of your agent's tokens. At night: a small model through the CLI you already use (Haiku with your Claude login, by default), capped at $0.10 and 40 calls a day; `brain` shows what the nights cost this week.
+</details>
+
+<details>
+<summary><b>What if it learns something wrong?</b></summary>
+
+`brain undo <n>`. An undone rule retires and its topic is blocked, so it is not learned again. An undone fact leaves its note again, and an undone update brings back the old text. Once a week your agent's first session tells you what is new, so nothing piles up unseen.
 </details>
 
 <details>
 <summary><b>How accurate is the mistake detection?</b></summary>
 
-We tested it on 127 real sessions with 1,664 user messages. Pattern matching found 64 corrections. In a sample, roughly half of the candidates were real, reusable mistakes; the rest were one-off steering ("no, the other file"). That is why nothing becomes a lesson on its own: the optional LLM judge (`llm_cmd`), `brain ui` or your `/brain-review` sorts the candidates, and the strongest, most repeated ones come first. Bare answers to the agent's own questions ("no, just the new one") and accidental rejections ("sorry, go on") are filtered out before you ever see them.
+Measured, in [eval/](eval/README.md): 250 hand-labelled replies in English, German, Spanish, French, Portuguese and Italian, half of them used to tune the patterns, half kept back for the test. On the test half, 93 % of the flagged replies were real corrections or preferences; it found 86 % of the lasting ones and 69 % of all corrections. The hard cases are built in: "no" as the answer to the agent's own question, "oops, I meant the other file", "why a set? just curious". The nightly judge then threw out all four false alarms and kept all 37 lasting corrections. A rule still needs two sessions, or your *always* or *never*, before it is adopted.
 </details>
 
 <details>
 <summary><b>What does "caught" in replay mean?</b></summary>
 
-A lesson about that mistake (its words, command or check match what happened) would have fired before the agent made it: in the prompt that started the turn, or at a tool call before your correction. It does not claim the agent would then have listened; that is what `brain stats` (did the mistake come back after the lesson was shown?) and Brain-Bench measure.
+A rule about that mistake (its words, command or check match what happened) would have fired before the agent made it: in the prompt that started the turn, or at a tool call before your correction. It does not claim the agent would then have listened; that is what the weekly curve (did the mistake come back after the rule was shown?) and Brain-Bench measure.
 </details>
 
 <details>
 <summary><b>CLI or MCP server?</b></summary>
 
-Both. In Claude Code the brain uses hooks and a CLI: the hooks add one line at session start and fire lessons only when they match, and MCP tool schemas would cost tokens in every request. Clients without hooks get the MCP server (`brain mcp install cursor`), whose instructions tell the agent to call `brain_context` first and `brain_check` before irreversible commands.
+Both. In Claude Code the brain uses hooks and a CLI: the hooks add one line at session start and fire rules only when they match, while MCP tool schemas would cost tokens in every request. Clients without hooks get the MCP server, whose instructions tell the agent to call `brain_context` first and `brain_check` before irreversible commands.
 </details>
 
 <details>
-<summary><b>Could someone plant a lesson in my brain?</b></summary>
+<summary><b>Could someone plant a rule in my brain?</b></summary>
 
-That is the risk we designed against. A lesson that appears or changes during an agent's tool call is recorded as pending in the trust ledger and never reaches the agent until you run `brain trust`. Team and pack lessons count only in the exact form you accepted. Approving, trusting and promoting are commands the agent cannot run without asking you, and writes into `.brain/` are refused. `trust_mode strict` goes further: only lessons created through the brain count.
+That is the risk we designed against. The nightly run turns only your own messages into rules: never tool output, never what an agent reports, and never text with a link or a secret in it. A rule that appears or changes during an agent's tool call is recorded as pending in the trust ledger and never reaches the agent until you trust it. Undo, trust and config are commands the agent cannot run without asking you, and writes into `.brain/` are refused. `trust_mode strict` goes further: only rules the brain wrote itself count.
 </details>
 
 <details>
@@ -404,20 +431,21 @@ BM25 + learned terms + the link graph is fast, explainable and has zero dependen
 <details>
 <summary><b>Can I use my existing notes?</b></summary>
 
-Yes: `brain init ~/notes --force`. It adds `.brain/`, a generated `INDEX.md` and a few starter notes, and never overwrites an existing file. That includes your own `INDEX.md` and git pre-commit hook. Edits to existing notes only append text and set the `updated:` line; the rest of your frontmatter stays byte-for-byte.
+Yes: `brain setup --vault ~/notes`. It adds `.brain/`, a generated `INDEX.md` and a few starter notes, and never overwrites an existing file. That includes your own `INDEX.md` and git pre-commit hook. Edits to existing notes only append text, replace text that went out of date, and set the `updated:` line; the rest of your frontmatter stays byte-for-byte.
 </details>
 
 <details>
 <summary><b>What if my laptop dies? Multiple machines?</b></summary>
 
-`brain setup` offers to create a **private** GitHub repo for your brain (with the `gh` CLI), or shows you the one git command to use any other private remote. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>` and `brain skills sync`. Every machine writes its own event file, so there are no merge conflicts, and every laptop learns from all the others.
+`brain setup --github` creates a **private** GitHub repo for your brain (with the `gh` CLI); any other private remote works with one git command. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>`. Every machine keeps its own events and journal, so every laptop learns from all the others. If two machines change the same file on the same night, the sync stops and `brain` tells you, instead of guessing.
 </details>
 
 ## 🗺️ Roadmap
 
+- [x] learns on its own every night, with undo instead of approval
 - [x] MCP server for shell-less clients
-- [x] local web UI for reviewing drafts
-- [x] replay past sessions against today's lessons
+- [x] replay past sessions against today's rules
+- [ ] `brain learn <repo>`: a codebase's conventions, learned from its history
 - [ ] Brain-Bench results across models, published in `bench/results`
 - [ ] native hooks for Codex CLI and Gemini CLI
 - [ ] transcript parsers for Cursor, Aider, Grok CLI
@@ -425,7 +453,7 @@ Yes: `brain init ~/notes --force`. It adds `.brain/`, a generated `INDEX.md` and
 
 ## 💜 Contributing
 
-Issues and PRs are very welcome, above all adapters for more agents, new lesson packs and Brain-Bench tasks. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`. The README images are built by `python3 docs/assets/src/build.py`.
+Issues and PRs are very welcome, above all adapters for more agents, transcript parsers and Brain-Bench tasks. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`. The README images are built by `python3 docs/assets/src/build.py`.
 
 <div align="center">
 

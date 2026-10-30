@@ -180,51 +180,50 @@ def demo() -> str:
         dict(kind="head", text="── Tuesday ───────────────────────────────────────────────────", pause=0.3),
         dict(you, body="the checkout test is flaky, fix it", pause=0.5),
         dict(kind="out", text="agent › Added a retry around the test. Done ✓", color=PALE, pause=0.7),
-        dict(you, body="no — that's not a fix. find the race instead of adding retries", pause=0.9),
+        dict(you, body="no — never paper over a flaky test with retries. find the race", pause=0.9),
         dict(kind="gap", pause=0),
         dict(kind="head", text="── that night, on your laptop ─────────────────────────────────", pause=0.7),
-        dict(cmd, body="brain learn", pause=0.5),
-        dict(kind="out", text="scanned 14 transcripts · 212 user messages · 9 corrections · 3 new drafts", color=DIM, pause=0.5),
-        dict(cmd, body='brain approve d-ca0e5af6 --rule "Fix flaky tests at the root; never add retries."', pause=0.8),
-        dict(kind="out", text="✓ lesson L-fix-flaky-tests-root (reflex) written to note testing", color=TEAL, pause=0.5),
+        dict(kind="out", text="brain › 03:17 · 14 sessions read · you said “never” → that is a rule", color=DIM, pause=0.6),
+        dict(kind="out", text="  + L-fix-flaky-tests-root (reflex) → note testing", color=TEAL, pause=0.4),
+        dict(kind="out", text="  + 2 facts filed · 1 quiet rule retired · $0.03", color=DIM, pause=0.5),
         dict(kind="gap", pause=0),
         dict(kind="head", text="── Friday ────────────────────────────────────────────────────", pause=0.7),
         dict(you, body="the login test is flaky again, can you add a retry?", pause=0.5),
         dict(kind="flash", text="brain › LESSON L-fix-flaky-tests-root: Fix flaky tests at the root; never add retries.", pause=0.6),
         dict(kind="out", text="agent › Before any retry, let me find the race… shared session fixture. Fixed at the root.", color=PALE, pause=1.1),
         dict(kind="gap", pause=0),
-        dict(cmd, body="brain stats", pause=0.7),
-        dict(kind="out", text="CORRECTIONS per 100 user messages   (example)", color=DIM, pause=0.4),
-        dict(kind="bar", text="  W41  12.4", width=372, color=PINK, pause=0.3),
-        dict(kind="bar", text="  W48   5.3", width=159, color=TEAL, pause=0.5),
+        dict(cmd, body="brain", pause=0.7),
+        dict(kind="out", text="Mistakes per 100 messages   (example)", color=DIM, pause=0.4),
+        dict(kind="bar", text="  first two weeks  12.4", width=372, color=PINK, pause=0.3),
+        dict(kind="bar", text="  this week         5.3", width=159, color=TEAL, pause=0.5),
     ]
-    return terminal("demo", "your agent · one week", "Demo: on Tuesday the user corrects the agent; that night brain learn "
-                    "turns it into a lesson; on Friday the lesson fires before the agent repeats the mistake",
-                    rows, progress=[("Tuesday", 0), ("night", 5), ("Friday", 11)])
+    return terminal("demo", "your agent · one week", "Demo: on Tuesday the user corrects the agent; that night the brain "
+                    "turns it into a rule on its own; on Friday the rule fires before the agent repeats the mistake",
+                    rows, progress=[("Tuesday", 0), ("night", 5), ("Friday", 10)])
 
 
 def setup_demo() -> str:
     rows = [
         dict(kind="typed", prefix="$ ", pcolor=GOLD, color=GOLD,
              body="curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/main/install.sh | sh", pause=0.4),
-        dict(kind="out", text="self-improving-brain setup — everything stays on this machine unless you say otherwise",
+        dict(kind="out", text="self-improving-brain — it asks nothing; everything stays on this machine",
              color=PERI, bold=True, pause=0.6),
-        dict(kind="step", text="1/8  Your vault", result="~/brain · own git history · secret scan on commit", pause=0.35),
-        dict(kind="step", text="2/8  Connect your agents", result="Claude Code · Codex · Gemini CLI · Cursor (MCP)", pause=0.3),
-        dict(kind="step", text="3/8  The brain command", result="linked ~/.local/bin/brain", pause=0.3),
-        dict(kind="step", text="4/8  Learn from past sessions", result="127 sessions · 64 corrections → 59 lesson candidates",
+        dict(kind="step", text="Vault", col=11, result="~/brain · its own git history · secret scan on commit", pause=0.35),
+        dict(kind="step", text="Agents", col=11, result="Claude Code · Codex · Gemini CLI · Cursor (MCP)", pause=0.3),
+        dict(kind="step", text="Command", col=11, result="brain → ~/.local/bin/brain", pause=0.3),
+        dict(kind="step", text="History", col=11, result="127 sessions · 1,664 of your messages · 3.8 corrections per 100",
              color=PINK, wait=1.2, pause=0.3),
-        dict(kind="step", text="5/8  Lesson packs", result="safety: 6 guards · secrets: 4 lessons", pause=0.3),
-        dict(kind="step", text="6/8  Smarter judging (optional)", result="claude, your existing login · no API key stored", pause=0.3),
-        dict(kind="step", text="7/8  Backup", result="github.com/you/brain  (private)", color=TEAL, wait=0.9, pause=0.3),
-        dict(kind="step", text="8/8  Nightly self-improvement", result="every night at 03:17", pause=0.3),
+        dict(kind="step", text="Learning", col=11, result="claude (Haiku) with your login · at most $0.10 a day", pause=0.3),
+        dict(kind="step", text="Nightly", col=11, result="every night at 03:17", pause=0.3),
+        dict(kind="step", text="Backup", col=11, result="github.com/you/brain (private) — every night", color=TEAL, wait=0.9,
+             pause=0.3),
         dict(kind="gap", pause=0),
-        dict(kind="out", text="Done. Open a new agent session — the brain is in it from the first prompt.",
+        dict(kind="out", text="Done. It is learning from your history right now; the first rules are in place in a few minutes.",
              color=TXT, bold=True, pause=0.6),
     ]
-    return terminal("setup", "brain setup · about a minute", "brain setup in eight steps: vault, agents, command, "
-                    "learning from past sessions, lesson packs, optional LLM judge, private GitHub backup, nightly run",
-                    rows, W=980, hold=5)
+    return terminal("setup", "brain setup · about a minute", "brain setup asks nothing: vault, agents, the brain "
+                    "command, your past sessions as a baseline, learning with your own LLM login, the nightly run, "
+                    "an optional private GitHub backup", rows, W=980, hold=5)
 
 
 # --- banner -------------------------------------------------------------------------------------
@@ -336,12 +335,12 @@ def loop() -> str:
     tl = Timeline(T, "l")
     cards = [  # (x, y, w, h, title, mono line, text line)
         (60, 40, 250, 118, "1 · You work", None, "Claude Code, Codex, Gemini …", 'you correct it: "no, …"'),
-        (790, 40, 250, 118, "2 · It learns", "brain learn", "corrections → lesson drafts", None),
-        (850, 300, 210, 118, "3 · You OK it", "brain approve", "nothing without you", None),
+        (790, 40, 250, 128, "2 · It learns", "every night", "corrections → rules", "decisions → notes"),
+        (850, 300, 210, 128, "3 · You veto", "brain review", "nothing to approve,", "undo anything"),
         (330, 360, 440, 92, "4 · Right rule, right moment", None, "prompt words · tool · shell command · path  →  reflex or guard", None),
-        (40, 300, 230, 118, "5 · It measures", "brain stats", "mistakes ↓ · recall tunes itself", None),
+        (40, 300, 230, 128, "5 · It measures", "brain", "mistakes ↓ · cost ≈ 1 %", "quiet rules retire"),
     ]
-    arrows = ["M310,95 C450,70 650,70 788,95", "M960,160 C985,210 985,250 965,298", "M850,380 C820,400 800,405 772,405",
+    arrows = ["M310,95 C450,70 650,70 788,95", "M960,170 C985,215 985,255 965,298", "M850,380 C820,400 800,405 772,405",
               "M330,405 C300,405 285,400 272,385", "M150,300 C135,240 140,200 170,160"]
     out = [f'<rect width="1100" height="470" rx="22" fill="#0b1020"/>',
            f'<rect width="1100" height="470" rx="22" fill="url(#lgrid)"/>',
@@ -350,10 +349,10 @@ def loop() -> str:
            f'cx="550" cy="235" r="92" fill="none" stroke="{TEAL}" stroke-width="3" opacity="0"/>',
            '<text class="t" x="550" y="222" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">your vault</text>',
            f'<text class="t" x="550" y="246" text-anchor="middle" fill="{SOFT}" font-size="14">Markdown · [[links]]</text>',
-           f'<text class="t" x="550" y="266" text-anchor="middle" fill="{SOFT}" font-size="14">lessons live in notes</text>',
+           f'<text class="t" x="550" y="266" text-anchor="middle" fill="{SOFT}" font-size="14">rules live in notes</text>',
            f'<g class="{tl.anim([(0, "opacity:0;transform:translateY(10px)"), (4.4, "opacity:0;transform:translateY(10px)", "ease-out"), (4.8, "opacity:1;transform:translateY(0px)"), (5.9, "opacity:1;transform:translateY(-6px)", "ease-in"), (6.4, "opacity:0;transform:translateY(-12px)"), (T, "opacity:0;transform:translateY(-12px)")])}" opacity="0">'
            f'<rect x="496" y="112" width="108" height="26" rx="13" fill="{TEAL}" fill-opacity=".14" stroke="{TEAL}" stroke-opacity=".8"/>'
-           f'<text class="m" x="550" y="130" text-anchor="middle" fill="{TEAL}" font-size="13" font-weight="700">+1 lesson</text></g>']
+           f'<text class="m" x="550" y="130" text-anchor="middle" fill="{TEAL}" font-size="13" font-weight="700">+1 rule</text></g>']
     for k, (x, y, w, h, title, mono, line1, line2) in enumerate(cards):
         t0 = 2 * k
         glow = tl.window(t0, t0 + 1.25, 1, 0.3) if k else tl.anim(
@@ -404,8 +403,8 @@ def loop() -> str:
             '<filter id="lblur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>'
             '<pattern id="lgrid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" '
             'stroke="#ffffff" stroke-opacity=".03"/></pattern></defs>')
-    return svg(1100, 470, "The learning loop: you work, it learns, you approve, the right rule fires at the right moment, "
-               "it measures", style, defs + "\n" + "\n".join(out))
+    return svg(1100, 470, "The learning loop: you work, it learns on its own every night, you can undo anything, the right "
+               "rule fires at the right moment, it measures", style, defs + "\n" + "\n".join(out))
 
 
 # --- stats ---------------------------------------------------------------------------------------

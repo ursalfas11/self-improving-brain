@@ -2,50 +2,75 @@
 
 ## 0.2.0 (unreleased)
 
+Install once, then forget it. The brain now learns on its own every night, and you keep a veto instead
+of a review queue.
+
+### Learns on its own
+- Every night a small model reads the day's sessions through the LLM CLI you already have (Haiku with your
+  `claude` login by default, or codex/ollama; no API key is stored). It sorts each correction: a lasting rule,
+  a fact, a one-off, or noise.
+- Fixed rules decide what changes. A rule needs **two sessions**, or your explicit *always*/*never*/*from now on*.
+  Rules come only from your own words, never from tool output, an agent's MCP report, or text with a link or
+  a secret. At most five new rules a night.
+- A rule that comes back although it exists is **sharpened**, then **escalated**: to `always`, or to a `guard`
+  where you had stopped a tool call. A guard needs a command regex that stays silent on everyday commands.
+- **Knowledge, too.** Decisions, facts, pitfalls and preferences from your sessions (your words and the agent's
+  answers, never tool output) are filed into the note that owns them; a newer statement replaces the outdated
+  one.
+- **Cleans up.** A rule that has not fired for 60 days retires; at most eight `always` rules and 60 rules in all.
+- **Hard budget:** `llm_budget_usd` 0.10 and `llm_max_calls` 40 a day, booked per call. When it is used up, the
+  rest waits for the next night.
+
+### A veto, not a duty
+- Every change the brain makes on its own goes into `.brain/journal/<host>.jsonl`. `brain review` lists the
+  last two weeks, `brain undo <n>` takes one back, and an undone topic is never learned again.
+- Once a week the first session shows one line: what was learned, the trend, what the brain costs you.
+- `brain ui`: Overview, Learned (with undo), Rules, Replay, Map.
+
+### Measures itself
+- `brain` shows mistakes per 100 messages against your first two weeks. Corrections the judge called noise
+  leave the curve.
+- The brain's share of your agent's tokens: what the hooks injected against the session tokens in your
+  transcripts (Claude Code and Codex).
+- `eval/`: 250 hand-labelled replies in six languages. The correction detector learned Spanish, French,
+  Portuguese and Italian. On the held-out half it now flags with 93 % precision and finds 86 % of the
+  lasting corrections, up from 12 %.
+
+### Quiet and small
+- `brain setup` asks nothing: vault, agents, the `brain` command, your past sessions as a baseline, learning,
+  the nightly run. `--github` adds a private backup.
+- `brain` alone shows how it is doing. Eight visible commands; the ones agents use are in `brain help all`.
+- `brain uninstall` takes it out of every agent and the schedule; your notes stay.
+- The session start is one line plus your `always` rules. The Stop hook is gone.
+- One `/brain` command for Claude Code replaces `/brain-review`, `/brain-distill`, `/brain-ingest` and `/brain-ask`.
+
 ### Prove it
-- `brain replay` runs your past corrections against today's lessons: caught, missed (with the words that
-  would have triggered), uncovered. `--draft` turns the uncovered ones into lesson drafts.
+- `brain replay` runs your past corrections against today's rules: caught, missed (with the words that
+  would have triggered), uncovered.
 - `brain report` draws a report card; `--public` keeps only numbers, `--badge` makes a README badge.
 - Brain-Bench (`bench/run.py`): eight tasks that tempt an agent into a known mistake, run with and
   without the brain, fully isolated. Without `--run` it only prints the plan and a cost ceiling.
 
-### Lessons
-- `check:` on a lesson: a regex on what the agent writes or runs. A match is a violation the brain
-  counts on its own; on a guard it asks before the write.
-- `brain promote <id> --to guard` escalates a rule that keeps getting broken; `brain check` asks
-  whether a command would trip a guard.
+### Rules
+- `check:` on a rule: a regex on what the agent writes or runs. A match is a violation the brain counts on its
+  own; on a guard it asks before the write.
 - `BRAIN_GUARD=deny` refuses instead of asking in headless runs.
-- Lesson packs: safety, secrets, testing, git, python, typescript. `brain pack add|remove|export`.
-- Team brain: share lessons through a git repo (`brain team add|sync|propose|remove`).
-- Trust ledger: a lesson that appears during an agent's tool call stays silent until `brain trust`;
-  team and pack lessons count only in the form you accepted.
+- Trust ledger: a rule that appears during an agent's tool call stays silent until you trust it. Undo, trust and
+  config are commands an agent has to ask you for.
 
 ### Never lose the thread
 - PreCompact handoff: your last words verbatim, the open question, the files in flight. They come back
   after compaction; `brain resume` continues in any agent, `brain handoff` writes one from a transcript for agents
   without hooks.
 
-### Knows your work
-- `brain skills`: procedures repeated in three or more sessions become skill drafts; approved, they become
-  a note, a `skill` lesson and a Claude Code skill.
-- `brain atlas`: a codebase map in the repo note; the session start says when it is stale.
-- `brain ingest <file|url|folder>` and `--refresh`: sources become notes, and a changed source flags the
-  notes built on it.
-
 ### Every agent
-- MCP server (`brain mcp serve`) and `brain mcp install` for Cursor, Windsurf, Claude Desktop, VS Code,
-  Gemini CLI and Codex.
-- Claude Code plugin with `/brain-review`, `/brain-distill`, `/brain-ingest`, `/brain-ask`. It steps aside
-  when the hooks are already installed in `settings.json`.
+- MCP server (`brain mcp serve`). `brain setup` connects Cursor, Windsurf, Claude Desktop and VS Code;
+  `brain mcp install` also Gemini CLI and Codex.
 
-### See it
-- `brain ui`: progress, lessons, review, replay and the graph in your browser, on 127.0.0.1 with a token.
-  `brain ui --demo` shows example data.
-
-### Other
-- `brain setup` has eight steps; step 5 installs lesson packs (`--no-packs` skips it).
-- The nightly run also mines skills and runs replay.
-- The secret scanner knows PyPI and npm tokens and secrets passed as `--password`/`--token` flags.
+### Removed
+- Lesson packs, the team brain, `brain skills`, `brain atlas` and `brain ingest`. Each did one thing well; together
+  they made the brain wider than it should be. Your own sessions replace the packs.
+- The review queue: `approve` and `reject` remain as hidden commands for doing it by hand.
 
 ## 0.1.0
 
