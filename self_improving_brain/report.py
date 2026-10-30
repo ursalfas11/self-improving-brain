@@ -35,7 +35,6 @@ def numbers(st: dict) -> dict:
         "lessons": sum(mech.values()), "mechanisms": dict(mech),
         "replay": {k: r.get(k) for k in ("corrections", "caught", "would_ask", "caught_pct", "sessions", "days")} if r else None,
         "violations_change": vio, "precision": (st.get("recall") or {}).get("precision"),
-        "packs": [p["name"] for p in st.get("packs") or [] if p.get("installed")],
     }
 
 
@@ -47,19 +46,18 @@ def text(st: dict) -> str:
     n = numbers(st)
     out = [f"REPORT CARD · {st['vault']['name']} · {n['weeks']} weeks"]
     if n["change"] is None:
-        out.append("  corrections per 100 messages: not enough data yet (two weeks of `brain learn`)")
+        out.append("  corrections per 100 messages: not enough data yet (two weeks of sessions)")
     else:
         out.append(f"  corrections per 100 messages: {n['first']['per100']} ({n['first']['week']}) → "
                    f"{n['last']['per100']} ({n['last']['week']})  {_pct(n['change'])}")
     m = n["mechanisms"]
-    out.append(f"  lessons: {n['lessons']} ({', '.join(f'{v} {k}' for k, v in sorted(m.items(), key=lambda x: -x[1]))})"
-               + (f" · packs: {', '.join(n['packs'])}" if n["packs"] else ""))
+    out.append(f"  lessons: {n['lessons']} ({', '.join(f'{v} {k}' for k, v in sorted(m.items(), key=lambda x: -x[1]))})")
     r = n["replay"]
     if r and r.get("corrections"):
         out.append(f"  replay: today's lessons would have caught {r['caught']} of {r['corrections']} past corrections "
                    f"({r['caught_pct']} %), {r['would_ask']} by asking first")
     else:
-        out.append("  replay: not run yet → `brain replay`")
+        out.append("  replay: not run yet (the nightly run does it)")
     if n["violations_change"] is not None:
         out.append(f"  rule-check violations per checked action: {_pct(n['violations_change'])}")
     if n["precision"] is not None:

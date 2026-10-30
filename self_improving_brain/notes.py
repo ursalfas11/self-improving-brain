@@ -21,7 +21,7 @@ LINK = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]*)?(?:\|[^\]]*)?\]\]")
 LESSON_HEAD = re.compile(r"^>\s*\[!lesson\][+-]?\s*(\S+)?\s*(.*)$", re.I)
 LESSON_FIELD = re.compile(r"^>\s*([a-z_]+)\s*:\s*(.*)$", re.I)
 
-LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "check", "since", "evidence", "class")
+LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "check", "since", "evidence", "class", "retired")
 MECHANISMS = ("always", "reflex", "guard", "skill")
 
 
@@ -50,6 +50,7 @@ class Lesson:
     since: str = ""
     evidence: str = ""
     klass: str = ""
+    retired: str = ""    # "<date> · <why>": kept in the note for the record, never injected
 
     def as_callout(self) -> str:
         lines = [f"> [!lesson]- {self.id}", f"> rule: {self.rule}", f"> mechanism: {self.mechanism}"]
@@ -69,6 +70,8 @@ class Lesson:
             lines.append(f"> since: {self.since}")
         if self.evidence:
             lines.append(f"> evidence: {self.evidence}")
+        if self.retired:
+            lines.append(f"> retired: {self.retired}")
         return "\n".join(lines)
 
 
@@ -300,6 +303,8 @@ def parse_lessons(body: str, note_name: str) -> list[Lesson]:
             cur.evidence = v
         elif k == "class":
             cur.klass = v
+        elif k == "retired":
+            cur.retired = v
     return [l for l in lessons if l.rule]
 
 
@@ -365,11 +370,9 @@ class Library:
     def resolve(self, link: str) -> Note | None:
         return self.notes.get(link) or self.notes.get(self.by_stem.get(link.lower(), ""), None)
 
-    def lessons(self) -> list[Lesson]:
-        out = []
-        for n in self.notes.values():
-            out.extend(n.lessons)
-        return out
+    def lessons(self, retired: bool = False) -> list[Lesson]:
+        """Active lessons; retired=True includes the ones the brain (or you) retired."""
+        return [l for n in self.notes.values() for l in n.lessons if retired or not l.retired]
 
     def neighbors(self) -> dict[str, set[str]]:
         """Undirected link graph without hubs (hubs would connect everything to everything)."""

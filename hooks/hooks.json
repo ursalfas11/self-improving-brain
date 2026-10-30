@@ -1,5 +1,5 @@
 {
-  "description": "self-improving-brain: lessons at the right moment, guards, recall, handoffs",
+  "description": "self-improving-brain: rules from your corrections at the right moment, guards, recall, handoffs",
   "hooks": {
     "SessionStart": [
       {
@@ -54,17 +54,6 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/brain\" hook pre-compact --plugin",
             "timeout": 20
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/brain\" hook stop --plugin",
-            "timeout": 10
           }
         ]
       }

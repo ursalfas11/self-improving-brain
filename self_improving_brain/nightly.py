@@ -1,15 +1,19 @@
-"""The autonomous loop. Runs on your laptop via launchd (macOS) or cron (Linux) — no server.
+"""The autonomous loop. Runs on your laptop via launchd (macOS), cron (Linux) or the Task Scheduler — no server.
 
-  learn      mine new transcripts for corrections -> lesson drafts (refined by llm_cmd if set)
-  distill    inbox -> wiki (only with llm_cmd; otherwise your agent does it on `brain distill`)
-  cache      rebuild the learned recall model from events
-  autotune   adjust the recall threshold from measured precision
-  health     flag lessons that are ignored, never triggered or dormant
-  index      regenerate INDEX.md
-  lint       MUST findings go into the next session start
+  learn      mine new transcripts for your corrections (no LLM)
+  judge      the LLM sorts them: lasting rule, one-off steering, fact to remember, or noise   (budgeted)
+  adopt      policy, no LLM: what you said twice or as "always/never" becomes a rule; a rule that comes
+             back gets sharpened, then escalated
+  extract    the LLM reads what is new in your sessions for decisions, facts, pitfalls       (budgeted)
+  distill    files them into the notes; a newer statement replaces an outdated one           (budgeted)
+  curate     quiet rules retire, the rule set stays within its caps
+  replay     past corrections against today's rules: would they have been caught?
+  cache      rebuild the learned recall model; autotune the recall threshold from its precision
+  index      regenerate INDEX.md, lint the vault
   sync       git commit + pull --rebase + push (if the vault is a git repo with a remote)
 
-Nothing here ever deletes knowledge or approves a lesson. That stays your call.
+Every change it makes is in the journal: `brain review` shows it, `brain undo` takes it back.
+The LLM steps stop when the day's budget (`llm_budget_usd`, `llm_max_calls`) is used up.
 """
 from __future__ import annotations
 
@@ -23,11 +27,11 @@ import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from . import distill, inbox, learn, llm, maplib, metrics
+from . import curate, distill, extract, inbox, learn, llm, maplib, metrics
 from .config import Vault
 from .lint import lint
 from .notes import Library
-from .util import now_iso, save_json
+from .util import day_label, days_since, now_iso, save_json
 
 LABEL = "dev.self-improving-brain.nightly"
 
@@ -106,7 +110,35 @@ def sync(v: Vault, message: str = "brain: sync") -> str:
     return "synced" if push.returncode == 0 else "push failed: " + push.stderr.strip()[:200]
 
 
+def _locked(v: Vault) -> bool:
+    """Another run is busy (the one `brain setup` starts, and launchd at night, must not overlap)."""
+    import time
+    lock = v.path("state", "nightly.lock")
+    try:
+        pid, started = lock.read_text().split()
+        os.kill(int(pid), 0)
+        return time.time() - float(started) < 3 * 3600
+    except (OSError, ValueError):
+        return False
+
+
 def run(v: Vault, quick: bool = False) -> dict:
+    import time
+    if _locked(v):
+        return {"t": now_iso(), "skipped": "another nightly run is busy"}
+    lock = v.path("state", "nightly.lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_text(f"{os.getpid()} {time.time()}")
+    try:
+        return _run(v, quick)
+    finally:
+        try:
+            lock.unlink()
+        except OSError:
+            pass
+
+
+def _run(v: Vault, quick: bool) -> dict:
     rep: dict = {"t": now_iso(), "steps": {}, "attention": []}
     s = rep["steps"]
 
@@ -117,32 +149,24 @@ def run(v: Vault, quick: bool = False) -> dict:
             s[name] = fn()
         except Exception as e:  # noqa: BLE001
             s[name] = f"error: {type(e).__name__}: {e}"[:300]
-            rep["attention"].append(f"nightly step {name} failed → `brain nightly` shows why")
+            rep["attention"].append(f"the nightly step {name} failed → `brain doctor`")
             return None
         return s[name]
 
     step("learn", lambda: learn.scan(v))
-    if llm.available(v) and not quick:
-        def _distill():
-            try:
-                return distill.auto(v)
-            except llm.NoLLM as e:
-                return str(e)
-        step("distill", _distill)
+    think = llm.available(v) and not quick
+    if think:
+        step("judge", lambda: learn.judge(v))
+    step("adopt", lambda: learn.adopt(v))
+    if think:
+        step("extract", lambda: extract.run(v))
+        step("distill", lambda: distill.auto(v, limit=int(v.get("distill_max"))))
+    step("curate", lambda: curate.run(v))
     if not quick:
-        from . import replay, skills
-        fresh = step("skills", lambda: len(skills.mine(v)))
-        if fresh:
-            rep["attention"].append(f"{fresh} repeated procedures could become skills → `brain skills`")
-        r = step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
-        if r and r.get("missed"):
-            rep["attention"].append(f"replay: {r['missed']} past corrections had a lesson whose trigger did not fire → `brain replay`")
+        from . import replay
+        step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
     step("cache", lambda: metrics.refresh_cache(v))
     step("autotune", lambda: metrics.autotune(v))
-    health = step("lessons_needing_care",
-                  lambda: [h for h in metrics.lesson_health(v, Library(v.root)) if h["verdict"] != "ok"])
-    if health:
-        rep["attention"].append(f"{len(health)} lessons need care → `brain stats`")
     step("index_changed", lambda: maplib.write(v))
 
     def _lint():
@@ -151,13 +175,33 @@ def run(v: Vault, quick: bool = False) -> dict:
     step("lint", _lint)
     conflicts = [i for i in inbox.items(v) if i.get("conflict")]
     if conflicts:
-        rep["attention"].append(f"{len(conflicts)} inbox conflicts wait for your decision → `brain inbox`")
+        rep["attention"].append(f"{len(conflicts)} facts could not be filed on their own → `brain inbox`")
     if v.get("git_sync") and not quick:
         res = step("sync", lambda: sync(v, "brain: nightly"))
         if isinstance(res, str) and not res.startswith(("synced", "committed (no remote)", "no git repo")):
             rep["attention"].append(f"backup: {res[:160]}")
+    rep["llm"] = llm.spent(v)
     save_json(v.path("state", "nightly.json"), rep)
     return rep
+
+
+def summary(rep: dict) -> str:
+    """One line for `brain` and the UI: what the last run did."""
+    s = rep.get("steps") or {}
+    ad = s.get("adopt") if isinstance(s.get("adopt"), dict) else {}
+    cu = s.get("curate") if isinstance(s.get("curate"), dict) else {}
+    filed = sum(1 for line in s.get("distill") or [] if isinstance(line, str) and ": " in line
+                and line.split(": ", 1)[1].startswith(("append", "update", "new")))
+    rules = len(ad.get("rules") or [])
+    parts = [f"{rules} new rule{'s' * (rules != 1)}" if rules else "",
+             f"{len(ad.get('sharpened') or []) + len(ad.get('escalated') or [])} sharpened"
+             if ad.get("sharpened") or ad.get("escalated") else "",
+             f"{filed} fact{'s' * (filed != 1)} filed" if filed else "",
+             f"{len(cu.get('retired') or [])} retired" if cu.get("retired") else "",
+             "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
+    t = str(rep.get("t", ""))
+    when = t[11:16] if days_since(t[:10]) in (0, 1) else day_label(t)
+    return f"{when} · " + (", ".join(x for x in parts if x) or "nothing new")
 
 
 # --- scheduling -----------------------------------------------------------------------------
@@ -213,6 +257,19 @@ def schedule_install(v: Vault, hour: int = 3) -> str:
     subprocess.run(["launchctl", "unload", str(p)], capture_output=True)
     subprocess.run(["launchctl", "load", str(p)], capture_output=True)
     return f"installed {p} (launchd runs a missed job when the Mac wakes up)"
+
+
+def schedule_installed() -> bool:
+    try:
+        if platform.system() == "Windows":
+            return subprocess.run(["schtasks", "/Query", "/TN", TASK], capture_output=True).returncode == 0
+        if platform.system() == "Darwin":
+            return (Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist").exists()
+        if shutil.which("crontab"):
+            return LABEL in subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
+    except OSError:
+        pass
+    return False
 
 
 def schedule_remove() -> str:

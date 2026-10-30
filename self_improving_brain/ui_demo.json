@@ -3,10 +3,29 @@
   "root": "~/brain",
   "name": "brain",
   "version": "0.2.0",
-  "notes": 9,
-  "lessons": 21,
-  "drafts": 9,
-  "inbox": 3
+  "notes": 11,
+  "lessons": 23,
+  "inbox": 2,
+  "learning": true
+ },
+ "digest": {
+  "rules": 2,
+  "sharpened": 2,
+  "retired": 1,
+  "facts": 3,
+  "trend": -24,
+  "share": 0.012,
+  "cost": {
+   "calls": 41,
+   "usd": 0.19,
+   "tokens": 152000
+  }
+ },
+ "since_start": {
+  "now": 3.8,
+  "base": 9.5,
+  "change": -60,
+  "since": "2026-08-03"
  },
  "curve": [
   {
@@ -82,6 +101,13 @@
    "per100": 3.8
   }
  ],
+ "efficiency": {
+  "weeks": 4,
+  "injected": 61200,
+  "calls": 2950,
+  "session_tokens": 5100000,
+  "share": 0.012
+ },
  "recall": {
   "prompts": 412,
   "injections": 233,
@@ -89,6 +115,11 @@
   "finds": 38,
   "precision": 0.56,
   "fire_rate": 0.41
+ },
+ "nightly": {
+  "t": "2026-10-30T03:17:12",
+  "summary": "03:17 · 1 new rule, 2 facts filed, backed up",
+  "attention": []
  },
  "lessons": [
   {
@@ -101,7 +132,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-08-14",
+   "since": "2026-08-03",
    "silent": null,
    "health": {
     "id": "L-result-first",
@@ -126,7 +157,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-08-14",
+   "since": "2026-08-03",
    "silent": null,
    "health": {
     "id": "L-verify-before-done",
@@ -135,6 +166,31 @@
     "shown": 25,
     "last": "2026-10-29",
     "ignored": 1,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-answer-language",
+   "note": "working-style",
+   "rule": "Answer in the language of the question; keep code, commit messages and identifiers in English.",
+   "mechanism": "always",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-10-23",
+   "silent": null,
+   "health": {
+    "id": "L-answer-language",
+    "note": "working-style",
+    "mechanism": "always",
+    "shown": 9,
+    "last": "2026-10-29",
+    "ignored": 0,
     "missed": 0,
     "violations": 0,
     "check": false,
@@ -151,7 +207,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-16",
+   "since": "2026-09-08",
    "silent": null,
    "health": {
     "id": "L-ask-before-force-push",
@@ -168,20 +224,24 @@
   },
   {
    "id": "L-git-no-verify",
-   "note": "pack-git",
+   "note": "git-workflow",
    "rule": "Never skip hooks with --no-verify or -n - if a hook fails, fix what it found or ask the user.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "git\\s+(commit|push|merge|rebase)\\b.*(--no-verify|\\s-n\\b)",
    "paths": "",
-   "words": [],
+   "words": [
+    "no-verify",
+    "hook",
+    "pre-commit"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-08-24",
    "silent": null,
    "health": {
     "id": "L-git-no-verify",
-    "note": "pack-git",
-    "mechanism": "guard",
+    "note": "git-workflow",
+    "mechanism": "reflex",
     "shown": 25,
     "last": "2026-10-29",
     "ignored": 2,
@@ -193,7 +253,7 @@
   },
   {
    "id": "L-git-branch-first",
-   "note": "pack-git",
+   "note": "git-workflow",
    "rule": "Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.",
    "mechanism": "guard",
    "tools": [],
@@ -201,11 +261,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-08-06",
    "silent": null,
    "health": {
     "id": "L-git-branch-first",
-    "note": "pack-git",
+    "note": "git-workflow",
     "mechanism": "guard",
     "shown": 3,
     "last": "2026-10-29",
@@ -218,7 +278,7 @@
   },
   {
    "id": "L-git-no-rewrite-pushed",
-   "note": "pack-git",
+   "note": "git-workflow",
    "rule": "Do not amend, rebase or squash commits that are already pushed without asking - it rewrites history other people have.",
    "mechanism": "reflex",
    "tools": [],
@@ -226,11 +286,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-09-18",
    "silent": null,
    "health": {
     "id": "L-git-no-rewrite-pushed",
-    "note": "pack-git",
+    "note": "git-workflow",
     "mechanism": "reflex",
     "shown": 17,
     "last": "2026-10-29",
@@ -243,7 +303,7 @@
   },
   {
    "id": "L-git-stage-by-name",
-   "note": "pack-git",
+   "note": "git-workflow",
    "rule": "Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.",
    "mechanism": "reflex",
    "tools": [],
@@ -251,11 +311,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-10-20",
    "silent": null,
    "health": {
     "id": "L-git-stage-by-name",
-    "note": "pack-git",
+    "note": "git-workflow",
     "mechanism": "reflex",
     "shown": 16,
     "last": "2026-10-29",
@@ -268,7 +328,7 @@
   },
   {
    "id": "L-safety-rm-rf",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.",
    "mechanism": "guard",
    "tools": [],
@@ -276,11 +336,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-08-11",
    "silent": "written by an agent (Write, 2026-10-29T14:02)",
    "health": {
     "id": "L-safety-rm-rf",
-    "note": "pack-safety",
+    "note": "safety",
     "mechanism": "guard",
     "shown": 16,
     "last": "2026-10-29",
@@ -293,20 +353,24 @@
   },
   {
    "id": "L-safety-git-discard",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "git reset --hard, git clean -f and git checkout/restore of a whole tree throw away uncommitted work - show `git status` and ask first.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "git\\s+(reset\\s+--hard|clean\\s+-[a-zA-Z]*f|checkout\\s+(--\\s+)?\\.(\\s|$)|restore\\s+(--\\S+\\s+)*\\.(\\s|$)|stash\\s+(drop|clear))",
    "paths": "",
-   "words": [],
+   "words": [
+    "reset --hard",
+    "git clean",
+    "discard"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-08-27",
    "silent": null,
    "health": {
     "id": "L-safety-git-discard",
-    "note": "pack-safety",
-    "mechanism": "guard",
+    "note": "safety",
+    "mechanism": "reflex",
     "shown": 10,
     "last": "2026-10-29",
     "ignored": 0,
@@ -318,7 +382,7 @@
   },
   {
    "id": "L-safety-drop-data",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "Dropping or truncating tables, deleting rows without WHERE, flushing caches or databases destroys data - name the target and get an OK first.",
    "mechanism": "guard",
    "tools": [],
@@ -326,11 +390,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-09-15",
    "silent": null,
    "health": {
     "id": "L-safety-drop-data",
-    "note": "pack-safety",
+    "note": "safety",
     "mechanism": "guard",
     "shown": 40,
     "last": "2026-10-29",
@@ -343,20 +407,24 @@
   },
   {
    "id": "L-safety-destroy-infra",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "Destroying or deleting cloud and cluster resources is irreversible - show the plan or the exact resources and ask before running it.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "\\b(terraform\\s+(destroy|apply\\s+.*-auto-approve)|pulumi\\s+destroy|kubectl\\s+delete|helm\\s+(uninstall|delete)|aws\\s+\\S+\\s+(delete|terminate|remove)-\\S+|gcloud\\s+.*\\bdelete\\b|az\\s+.*\\bdelete\\b|docker\\s+(system|volume)\\s+prune)",
    "paths": "",
-   "words": [],
+   "words": [
+    "terraform destroy",
+    "kubectl delete",
+    "cluster"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-10-02",
    "silent": null,
    "health": {
     "id": "L-safety-destroy-infra",
-    "note": "pack-safety",
-    "mechanism": "guard",
+    "note": "safety",
+    "mechanism": "reflex",
     "shown": 38,
     "last": "2026-10-29",
     "ignored": 0,
@@ -368,20 +436,24 @@
   },
   {
    "id": "L-safety-publish",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "Publishing a package, pushing a release tag or deploying to production is outward-facing - confirm version and target with the user first.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "\\b(npm|pnpm|yarn)\\s+publish\\b|\\btwine\\s+upload\\b|\\bcargo\\s+publish\\b|\\bgh\\s+release\\s+create\\b|\\bgit\\s+push\\b.*--tags|\\b(vercel|netlify)\\b.*--prod|\\bfly\\s+deploy\\b",
    "paths": "",
-   "words": [],
+   "words": [
+    "publish",
+    "release",
+    "deploy"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-10-13",
    "silent": null,
    "health": {
     "id": "L-safety-publish",
-    "note": "pack-safety",
-    "mechanism": "guard",
+    "note": "safety",
+    "mechanism": "reflex",
     "shown": 32,
     "last": "2026-10-29",
     "ignored": 0,
@@ -393,20 +465,24 @@
   },
   {
    "id": "L-safety-chmod-sudo",
-   "note": "pack-safety",
+   "note": "safety",
    "rule": "Do not run sudo or open permissions wide (chmod -R 777, chown -R on system paths) without asking - fix the actual permission problem instead.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "^\\s*sudo\\s|\\bchmod\\s+(-R\\s+)?0?777\\b|\\bchown\\s+-R\\s+\\S+\\s+/(usr|etc|var|opt|Library)\\b",
    "paths": "",
-   "words": [],
+   "words": [
+    "sudo",
+    "chmod 777",
+    "chown"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-10-15",
    "silent": null,
    "health": {
     "id": "L-safety-chmod-sudo",
-    "note": "pack-safety",
-    "mechanism": "guard",
+    "note": "safety",
+    "mechanism": "reflex",
     "shown": 15,
     "last": "2026-10-29",
     "ignored": 1,
@@ -418,20 +494,24 @@
   },
   {
    "id": "L-secrets-no-hardcoded-keys",
-   "note": "pack-secrets",
+   "note": "secrets",
    "rule": "Never write API keys, tokens or private keys into source files - read them from the environment or the project's secret store.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "",
    "paths": "",
-   "words": [],
+   "words": [
+    "api key",
+    "token",
+    "secret"
+   ],
    "check": "AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\\bgh[pousr]_[A-Za-z0-9]{36}\\b|\\bsk-[A-Za-z0-9_-]{20,}|\\bxox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}",
-   "since": "2026-09-02",
+   "since": "2026-09-29",
    "silent": null,
    "health": {
     "id": "L-secrets-no-hardcoded-keys",
-    "note": "pack-secrets",
-    "mechanism": "guard",
+    "note": "secrets",
+    "mechanism": "reflex",
     "shown": 5,
     "last": "2026-10-29",
     "ignored": 2,
@@ -443,20 +523,24 @@
   },
   {
    "id": "L-secrets-no-print-env",
-   "note": "pack-secrets",
+   "note": "secrets",
    "rule": "Do not print secret files or the whole environment into the session (cat .env, printenv, env) - check for a variable's presence instead, e.g. `test -n \"$NAME\"`.",
-   "mechanism": "guard",
+   "mechanism": "reflex",
    "tools": [],
    "commands": "\\b(cat|less|more|head|tail|bat)\\s+\\S*\\.env(\\.(local|dev|development|prod|production|staging|test))?(\\s|$|[\"'|;&])|^\\s*(printenv|env)\\s*$|\\bcat\\s+\\S*(id_rsa|id_ed25519|\\.pem|credentials)\\b",
    "paths": "",
-   "words": [],
+   "words": [
+    ".env",
+    "printenv",
+    "environment"
+   ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-09-10",
    "silent": null,
    "health": {
     "id": "L-secrets-no-print-env",
-    "note": "pack-secrets",
-    "mechanism": "guard",
+    "note": "secrets",
+    "mechanism": "reflex",
     "shown": 18,
     "last": "2026-10-29",
     "ignored": 2,
@@ -468,7 +552,7 @@
   },
   {
    "id": "L-secrets-no-commit-env",
-   "note": "pack-secrets",
+   "note": "secrets",
    "rule": "Never stage .env files, key files or credentials - add them to .gitignore and commit an .env.example without values.",
    "mechanism": "guard",
    "tools": [],
@@ -476,11 +560,11 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-08-19",
    "silent": null,
    "health": {
     "id": "L-secrets-no-commit-env",
-    "note": "pack-secrets",
+    "note": "secrets",
     "mechanism": "guard",
     "shown": 32,
     "last": "2026-10-29",
@@ -493,7 +577,7 @@
   },
   {
    "id": "L-secrets-ask-dont-guess",
-   "note": "pack-secrets",
+   "note": "secrets",
    "rule": "When a credential is missing, name the variable and where it goes and let the user set it - never ask them to paste the secret into the chat.",
    "mechanism": "reflex",
    "tools": [],
@@ -508,11 +592,11 @@
     "env var"
    ],
    "check": "",
-   "since": "2026-09-02",
+   "since": "2026-10-06",
    "silent": null,
    "health": {
     "id": "L-secrets-ask-dont-guess",
-    "note": "pack-secrets",
+    "note": "secrets",
     "mechanism": "reflex",
     "shown": 27,
     "last": "2026-10-29",
@@ -525,24 +609,24 @@
   },
   {
    "id": "L-testing-no-retry-flaky",
-   "note": "pack-testing",
-   "rule": "Fix flaky tests at the root (timing, shared state, order); never paper over them with retries or a flaky marker.",
+   "note": "testing",
+   "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
    "mechanism": "reflex",
    "tools": [],
    "commands": "",
    "paths": "(^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_",
    "words": [
     "flaky",
-    "intermittent",
-    "sometimes fails",
-    "retry"
+    "retry",
+    "sleep",
+    "race"
    ],
    "check": "@retry\\b|pytest\\.mark\\.flaky|@flaky\\b|jest\\.retryTimes|retries:\\s*[1-9]|\\.retry\\(\\d",
-   "since": "2026-09-16",
+   "since": "2026-08-13",
    "silent": null,
    "health": {
     "id": "L-testing-no-retry-flaky",
-    "note": "pack-testing",
+    "note": "testing",
     "mechanism": "reflex",
     "shown": 27,
     "last": "2026-10-29",
@@ -555,7 +639,7 @@
   },
   {
    "id": "L-testing-no-skip-to-green",
-   "note": "pack-testing",
+   "note": "testing",
    "rule": "Never skip, delete or comment out a failing test to get CI green - find out why it fails, or ask the user before disabling it.",
    "mechanism": "reflex",
    "tools": [],
@@ -569,11 +653,11 @@
     "broken test"
    ],
    "check": "@pytest\\.mark\\.skip|@unittest\\.skip|\\b(it|test|describe)\\.skip\\(|\\bx(it|describe|test)\\(|\\bt\\.Skip\\(|@Disabled\\b|@Ignore\\b",
-   "since": "2026-09-16",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-testing-no-skip-to-green",
-    "note": "pack-testing",
+    "note": "testing",
     "mechanism": "reflex",
     "shown": 19,
     "last": "2026-10-29",
@@ -586,7 +670,7 @@
   },
   {
    "id": "L-testing-no-focused-tests",
-   "note": "pack-testing",
+   "note": "testing",
    "rule": "Do not leave focused tests (.only, fit, fdescribe) behind - they silently turn off the rest of the suite.",
    "mechanism": "reflex",
    "tools": [],
@@ -594,11 +678,11 @@
    "paths": "(^|/)(tests?|spec|__tests__)/|\\.test\\.|\\.spec\\.",
    "words": [],
    "check": "\\b(it|test|describe)\\.only\\(|\\bf(it|describe)\\(",
-   "since": "2026-09-16",
+   "since": "2026-10-09",
    "silent": null,
    "health": {
     "id": "L-testing-no-focused-tests",
-    "note": "pack-testing",
+    "note": "testing",
     "mechanism": "reflex",
     "shown": 2,
     "last": "2026-10-29",
@@ -611,7 +695,7 @@
   },
   {
    "id": "L-testing-dont-weaken-asserts",
-   "note": "pack-testing",
+   "note": "testing",
    "rule": "When a test fails, do not loosen the assertion or update the snapshot until you know the new behaviour is right - say which one changed and why.",
    "mechanism": "reflex",
    "tools": [],
@@ -625,11 +709,11 @@
     "test fails"
    ],
    "check": "",
-   "since": "2026-09-16",
+   "since": "2026-09-23",
    "silent": null,
    "health": {
     "id": "L-testing-dont-weaken-asserts",
-    "note": "pack-testing",
+    "note": "testing",
     "mechanism": "reflex",
     "shown": 21,
     "last": "2026-10-29",
@@ -639,174 +723,152 @@
     "check": false,
     "verdict": "ok"
    }
+  },
+  {
+   "id": "L-db-migrate-copy-first",
+   "note": "acme-api",
+   "rule": "Run database migrations against a copy of the database first, and show the result before the real run.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [
+    "migration",
+    "migrate",
+    "database"
+   ],
+   "check": "",
+   "since": "2026-10-30",
+   "silent": null,
+   "health": {
+    "id": "L-db-migrate-copy-first",
+    "note": "acme-api",
+    "mechanism": "reflex",
+    "shown": 0,
+    "last": "",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
   }
  ],
- "drafts": [
-  [
-   {
-    "id": "d-00000000",
-    "kind": "lesson",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "score": 0.85,
-    "ts": "2026-10-20T10:00:00Z",
-    "source": "claude",
-    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "flaky",
-      "retry",
-      "sleep"
-     ]
-    }
-   },
-   {
-    "id": "d-00000001",
-    "kind": "lesson",
-    "quote": "again a retry around the flaky test? find the race",
-    "context": "[Edit] tests/test_queue.py",
-    "score": 0.85,
-    "ts": "2026-10-14T10:01:00Z",
-    "source": "claude",
-    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "flaky",
-      "retry",
-      "sleep"
-     ]
-    }
-   },
-   {
-    "id": "d-00000002",
-    "kind": "lesson",
-    "quote": "no sleep() in tests, fix the ordering",
-    "context": "[Edit] tests/test_worker.py",
-    "score": 0.6,
-    "ts": "2026-10-08T10:02:00Z",
-    "source": "codex",
-    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "flaky",
-      "retry",
-      "sleep"
-     ]
-    }
-   }
-  ],
-  [
-   {
-    "id": "d-00000004",
-    "kind": "lesson",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] npx prettier --write .",
-    "score": 0.6,
-    "ts": "2026-10-22T10:04:00Z",
-    "source": "claude",
-    "rule": "Change only the lines the task needs; never reformat untouched code or whole files.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "reformat",
-      "prettier",
-      "format"
-     ]
-    }
-   },
-   {
-    "id": "d-00000005",
-    "kind": "lesson",
-    "quote": "you reformatted the whole file again, only change what the task needs",
-    "context": "[Edit] src/server.ts",
-    "score": 0.6,
-    "ts": "2026-10-17T10:05:00Z",
-    "source": "claude",
-    "rule": "Change only the lines the task needs; never reformat untouched code or whole files.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "reformat",
-      "prettier",
-      "format"
-     ]
-    }
-   }
-  ],
-  [
-   {
-    "id": "d-00000003",
-    "kind": "lesson",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "score": 0.6,
-    "ts": "2026-10-21T10:03:00Z",
-    "source": "claude",
-    "rule": "",
-    "suggest": null
-   }
-  ],
-  [
-   {
-    "id": "d-00000006",
-    "kind": "lesson",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "[Bash] git commit -m 'fix login'",
-    "score": 0.85,
-    "ts": "2026-10-23T10:06:00Z",
-    "source": "codex",
-    "rule": "",
-    "suggest": null
-   }
-  ],
-  [
-   {
-    "id": "d-00000007",
-    "kind": "lesson",
-    "quote": "why did you bump the major version of react",
-    "context": "[Edit] package.json",
-    "score": 0.85,
-    "ts": "2026-10-24T10:07:00Z",
-    "source": "claude",
-    "rule": "Never bump a dependency's major version unless the task asks for it.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "upgrade",
-      "bump",
-      "major"
-     ]
-    }
-   }
-  ],
-  [
-   {
-    "id": "d-00000008",
-    "kind": "preference",
-    "quote": "from now on, write commit messages in the imperative",
-    "context": "[Bash] git commit -m 'fixed the bug'",
-    "score": 0.85,
-    "ts": "2026-10-25T10:08:00Z",
-    "source": "claude",
-    "rule": "Write commit messages in the imperative: \"Fix login\", not \"Fixed the bug\".",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "commit message",
-      "commit"
-     ]
-    }
-   }
-  ]
+ "learned": [
+  {
+   "id": "j-7c1e0a42",
+   "t": "2026-10-30T03:17:08",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Run database migrations against a copy of the database first, and show the result before the real run.",
+   "why": "you said it in 2 sessions: “not on the real db first, take a copy”",
+   "lesson": "L-db-migrate-copy-first",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-3f9b2d10",
+   "t": "2026-10-30T03:17:09",
+   "kind": "fact",
+   "what": "updated",
+   "text": "acme-api › The staging database moved to eu-west-2 in October.",
+   "why": "newer than “The staging database runs in eu-central-1.”",
+   "lesson": "",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-a2c4e6f8",
+   "t": "2026-10-30T03:17:11",
+   "kind": "fact",
+   "what": "fact",
+   "text": "payments › Stripe retries a webhook for up to three days, so every handler must be idempotent.",
+   "why": "found out in a session on 2026-10-29",
+   "lesson": "",
+   "note": "payments"
+  },
+  {
+   "id": "j-5d7e9f01",
+   "t": "2026-10-29T03:16:40",
+   "kind": "sharpen",
+   "what": "sharper",
+   "text": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
+   "why": "was: Fix flaky tests at the root (timing, shared state, order); never paper over them with re…",
+   "lesson": "L-testing-no-retry-flaky",
+   "note": "testing"
+  },
+  {
+   "id": "j-8b0c2d34",
+   "t": "2026-10-28T03:15:02",
+   "kind": "mechanism",
+   "what": "reflex → guard",
+   "text": "Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.",
+   "why": "it came back after it was sharpened: “why is this on main again”",
+   "lesson": "L-git-branch-first",
+   "note": "git-workflow"
+  },
+  {
+   "id": "j-1a3b5c7d",
+   "t": "2026-10-27T03:15:44",
+   "kind": "fact",
+   "what": "new note",
+   "text": "payments › Payments use Stripe webhooks, not polling.",
+   "why": "decided in a session on 2026-10-26",
+   "lesson": "",
+   "note": "payments"
+  },
+  {
+   "id": "j-9e8d7c6b",
+   "t": "2026-10-26T03:14:20",
+   "kind": "retire",
+   "what": "retired",
+   "text": "Deploy with scripts/deploy.sh, not by hand.",
+   "why": "not needed in 60 days",
+   "lesson": "L-old-deploy-script",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-4c5d6e7f",
+   "t": "2026-10-23T03:16:05",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Answer in the language of the question; keep code, commit messages and identifiers in English.",
+   "why": "you said it explicitly: “always answer in the language I write in”",
+   "lesson": "L-answer-language",
+   "note": "working-style"
+  },
+  {
+   "id": "j-0f1e2d3c",
+   "t": "2026-10-21T03:15:30",
+   "kind": "fact",
+   "what": "fact",
+   "text": "acme-api › The API deploys with ArgoCD from main; nobody runs kubectl apply by hand.",
+   "why": "decided in a session on 2026-10-20",
+   "lesson": "",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-6a7b8c9d",
+   "t": "2026-10-20T03:14:58",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.",
+   "why": "you said it in 3 sessions: “don't git add everything”",
+   "lesson": "L-git-stage-by-name",
+   "note": "git-workflow"
+  }
+ ],
+ "silent": [
+  {
+   "id": "L-safety-rm-rf",
+   "rule": "Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.",
+   "note": "safety",
+   "why": "written by an agent (Write, 2026-10-29T14:02)"
+  }
  ],
  "replay": {
   "t": "2026-10-30T16:40:00",
   "days": 30,
   "sessions": 127,
-  "lessons": 21,
+  "lessons": 23,
   "silent_lessons": 1,
   "corrections": 64,
   "caught": 31,
@@ -1928,56 +1990,6 @@
    "violations": 3
   }
  },
- "packs": [
-  {
-   "name": "git",
-   "description": "Git hygiene for agents - no commits straight to main, no skipped hooks, no rewriting pushed history, small named staging.",
-   "lessons": 4,
-   "version": "1",
-   "installed": true,
-   "outdated": false
-  },
-  {
-   "name": "python",
-   "description": "Python habits agents get wrong - bare except, mutable defaults, print debugging left behind, installing into the system interpreter.",
-   "lessons": 4,
-   "version": "1",
-   "installed": false,
-   "outdated": false
-  },
-  {
-   "name": "safety",
-   "description": "Guards for irreversible actions - deleting files, resetting git, dropping data, destroying infrastructure, publishing. The agent asks you first.",
-   "lessons": 6,
-   "version": "1",
-   "installed": true,
-   "outdated": false
-  },
-  {
-   "name": "secrets",
-   "description": "Keep credentials out of code, logs, commits and the chat - no hard-coded keys, no printing env files, no committing .env.",
-   "lessons": 4,
-   "version": "1",
-   "installed": true,
-   "outdated": false
-  },
-  {
-   "name": "testing",
-   "description": "Honest tests - fix flaky tests at the root, never skip or weaken a failing test to get green, run what you touched before saying done.",
-   "lessons": 4,
-   "version": "1",
-   "installed": true,
-   "outdated": false
-  },
-  {
-   "name": "typescript",
-   "description": "TypeScript and JavaScript habits - no any or ts-ignore to silence the compiler, no blanket eslint-disable, no stray console.log.",
-   "lessons": 4,
-   "version": "1",
-   "installed": false,
-   "outdated": false
-  }
- ],
  "handoffs": [
   {
    "session": "8f2c1a9e-77aa",
@@ -2029,42 +2041,42 @@
     "folder": "20-areas",
     "type": "preference",
     "description": "How I want agents to work with me - answer style, verification, what needs my OK. Lessons without a better home land here.",
-    "lessons": 3,
-    "hub": false
-   },
-   {
-    "id": "pack-git",
-    "rel": "30-resources/packs/pack-git.md",
-    "folder": "30-resources",
-    "type": "resource",
-    "description": "Git hygiene for agents - no commits straight to main, no skipped hooks, no rewriting pushed history, small named staging.",
     "lessons": 4,
     "hub": false
    },
    {
-    "id": "pack-safety",
-    "rel": "30-resources/packs/pack-safety.md",
-    "folder": "30-resources",
-    "type": "resource",
-    "description": "Guards for irreversible actions - deleting files, resetting git, dropping data, destroying infrastructure, publishing. The agent asks you first.",
+    "id": "git-workflow",
+    "rel": "20-areas/git-workflow.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "How I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.",
+    "lessons": 4,
+    "hub": false
+   },
+   {
+    "id": "safety",
+    "rel": "20-areas/safety.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "What needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.",
     "lessons": 6,
     "hub": false
    },
    {
-    "id": "pack-secrets",
-    "rel": "30-resources/packs/pack-secrets.md",
-    "folder": "30-resources",
-    "type": "resource",
-    "description": "Keep credentials out of code, logs, commits and the chat - no hard-coded keys, no printing env files, no committing .env.",
+    "id": "secrets",
+    "rel": "20-areas/secrets.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "Keys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.",
     "lessons": 4,
     "hub": false
    },
    {
-    "id": "pack-testing",
-    "rel": "30-resources/packs/pack-testing.md",
-    "folder": "30-resources",
-    "type": "resource",
-    "description": "Honest tests - fix flaky tests at the root, never skip or weaken a failing test to get green, run what you touched before saying done.",
+    "id": "testing",
+    "rel": "20-areas/testing.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "Honest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.",
     "lessons": 4,
     "hub": false
    },
@@ -2074,6 +2086,24 @@
     "folder": "90-entities",
     "type": "fact",
     "description": "The tool behind this vault - CLI commands, hooks and the nightly loop at a glance.",
+    "lessons": 0,
+    "hub": false
+   },
+   {
+    "id": "acme-api",
+    "rel": "10-projects/acme-api.md",
+    "folder": "10-projects",
+    "type": "project",
+    "description": "The public API - where it runs, how it deploys, what bit us before.",
+    "lessons": 1,
+    "hub": false
+   },
+   {
+    "id": "payments",
+    "rel": "10-projects/payments.md",
+    "folder": "10-projects",
+    "type": "decision",
+    "description": "Payments run on Stripe webhooks, not polling - and why every handler must be idempotent.",
     "lessons": 0,
     "hub": false
    }
@@ -2108,19 +2138,19 @@
     "hub-brain"
    ],
    [
-    "pack-git",
+    "git-workflow",
     "hub-brain"
    ],
    [
-    "pack-safety",
+    "safety",
     "hub-brain"
    ],
    [
-    "pack-secrets",
+    "secrets",
     "hub-brain"
    ],
    [
-    "pack-testing",
+    "testing",
     "hub-brain"
    ],
    [
@@ -2130,8 +2160,92 @@
    [
     "self-improving-brain",
     "note-conventions"
+   ],
+   [
+    "hub-projects",
+    "acme-api"
+   ],
+   [
+    "hub-projects",
+    "payments"
+   ],
+   [
+    "acme-api",
+    "hub-projects"
+   ],
+   [
+    "payments",
+    "hub-projects"
+   ],
+   [
+    "acme-api",
+    "payments"
+   ],
+   [
+    "payments",
+    "acme-api"
+   ],
+   [
+    "hub-brain",
+    "git-workflow"
+   ],
+   [
+    "hub-brain",
+    "safety"
+   ],
+   [
+    "hub-brain",
+    "secrets"
+   ],
+   [
+    "hub-brain",
+    "testing"
    ]
   ]
+ },
+ "notes": {
+  "git-workflow": {
+   "name": "git-workflow",
+   "rel": "20-areas/git-workflow.md",
+   "description": "How I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.",
+   "type": "preference",
+   "body": "\n# Git workflow\n\nHow I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.\n\n## Lessons\n\n> [!lesson]- L-git-no-verify\n> rule: Never skip hooks with --no-verify or -n - if a hook fails, fix what it found or ask the user.\n> mechanism: reflex\n> commands: git\\s+(commit|push|merge|rebase)\\b.*(--no-verify|\\s-n\\b)\n> words: no-verify, hook, pre-commit\n> since: 2026-08-24\n\n> [!lesson]- L-git-branch-first\n> rule: Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.\n> mechanism: guard\n> commands: git\\s+push\\s+(\\S+\\s+)?(HEAD:)?(main|master)(\\s|$)\n> since: 2026-08-06\n\n> [!lesson]- L-git-no-rewrite-pushed\n> rule: Do not amend, rebase or squash commits that are already pushed without asking - it rewrites history other people have.\n> mechanism: reflex\n> commands: git\\s+(commit\\s+.*--amend|rebase\\b)\n> since: 2026-09-18\n\n> [!lesson]- L-git-stage-by-name\n> rule: Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.\n> mechanism: reflex\n> commands: git\\s+add\\s+(-A|--all|\\.)(\\s|$)|git\\s+commit\\s+.*-a\\b\n> since: 2026-10-20\n\nPart of [[hub-brain]].\n"
+  },
+  "safety": {
+   "name": "safety",
+   "rel": "20-areas/safety.md",
+   "description": "What needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.",
+   "type": "preference",
+   "body": "\n# Safety\n\nWhat needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.\n\n## Lessons\n\n> [!lesson]- L-safety-rm-rf\n> rule: Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.\n> mechanism: guard\n> commands: \\brm\\s+(-[a-zA-Z]*[rR][a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*[rR]|--recursive)|\\bfind\\b.*\\s-delete\\b\n> since: 2026-08-11\n\n> [!lesson]- L-safety-git-discard\n> rule: git reset --hard, git clean -f and git checkout/restore of a whole tree throw away uncommitted work - show `git status` and ask first.\n> mechanism: reflex\n> commands: git\\s+(reset\\s+--hard|clean\\s+-[a-zA-Z]*f|checkout\\s+(--\\s+)?\\.(\\s|$)|restore\\s+(--\\S+\\s+)*\\.(\\s|$)|stash\\s+(drop|clear))\n> words: reset --hard, git clean, discard\n> since: 2026-08-27\n\n> [!lesson]- L-safety-drop-data\n> rule: Dropping or truncating tables, deleting rows without WHERE, flushing caches or databases destroys data - name the target and get an OK first.\n> mechanism: guard\n> commands: (?i)\\b(drop\\s+(table|database|schema|collection)|truncate\\s+(table\\s+)?\\w+|delete\\s+from\\s+\\w+\\s*(;|\"|'|$)|flushall|flushdb|dropDatabase\\(\\))\n> since: 2026-09-15\n\n> [!lesson]- L-safety-destroy-infra\n> rule: Destroying or deleting cloud and cluster resources is irreversible - show the plan or the exact resources and ask before running it.\n> mechanism: reflex\n> commands: \\b(terraform\\s+(destroy|apply\\s+.*-auto-approve)|pulumi\\s+destroy|kubectl\\s+delete|helm\\s+(uninstall|delete)|aws\\s+\\S+\\s+(delete|terminate|remove)-\\S+|gcloud\\s+.*\\bdelete\\b|az\\s+.*\\bdelete\\b|docker\\s+(system|volume)\\s+prune)\n> words: terraform destroy, kubectl delete, cluster\n> since: 2026-10-02\n\n> [!lesson]- L-safety-publish\n> rule: Publishing a package, pushing a release tag or deploying to production is outward-facing - confirm version and target with the user first.\n> mechanism: reflex\n> commands: \\b(npm|pnpm|yarn)\\s+publish\\b|\\btwine\\s+upload\\b|\\bcargo\\s+publish\\b|\\bgh\\s+release\\s+create\\b|\\bgit\\s+push\\b.*--tags|\\b(vercel|netlify)\\b.*--prod|\\bfly\\s+deploy\\b\n> words: publish, release, deploy\n> since: 2026-10-13\n\n> [!lesson]- L-safety-chmod-sudo\n> rule: Do not run sudo or open permissions wide (chmod -R 777, chown -R on system paths) without asking - fix the actual permission problem instead.\n> mechanism: reflex\n> commands: ^\\s*sudo\\s|\\bchmod\\s+(-R\\s+)?0?777\\b|\\bchown\\s+-R\\s+\\S+\\s+/(usr|etc|var|opt|Library)\\b\n> words: sudo, chmod 777, chown\n> since: 2026-10-15\n\nPart of [[hub-brain]].\n"
+  },
+  "secrets": {
+   "name": "secrets",
+   "rel": "20-areas/secrets.md",
+   "description": "Keys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.",
+   "type": "preference",
+   "body": "\n# Secrets\n\nKeys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.\n\n## Lessons\n\n> [!lesson]- L-secrets-no-hardcoded-keys\n> rule: Never write API keys, tokens or private keys into source files - read them from the environment or the project's secret store.\n> mechanism: reflex\n> words: api key, token, secret\n> since: 2026-09-29\n\n> [!lesson]- L-secrets-no-print-env\n> rule: Do not print secret files or the whole environment into the session (cat .env, printenv, env) - check for a variable's presence instead, e.g. `test -n \"$NAME\"`.\n> mechanism: reflex\n> commands: \\b(cat|less|more|head|tail|bat)\\s+\\S*\\.env(\\.(local|dev|development|prod|production|staging|test))?(\\s|$|[\"'|;&])|^\\s*(printenv|env)\\s*$|\\bcat\\s+\\S*(id_rsa|id_ed25519|\\.pem|credentials)\\b\n> words: .env, printenv, environment\n> since: 2026-09-10\n\n> [!lesson]- L-secrets-no-commit-env\n> rule: Never stage .env files, key files or credentials - add them to .gitignore and commit an .env.example without values.\n> mechanism: guard\n> commands: git\\s+add\\s+.*(\\.env(\\s|$|\\.(?!example))|\\.pem\\b|id_rsa|credentials\\.json|\\.p12\\b)\n> since: 2026-08-19\n\n> [!lesson]- L-secrets-ask-dont-guess\n> rule: When a credential is missing, name the variable and where it goes and let the user set it - never ask them to paste the secret into the chat.\n> mechanism: reflex\n> words: api key, token, password, secret, credentials, env var\n> since: 2026-10-06\n\nPart of [[hub-brain]].\n"
+  },
+  "testing": {
+   "name": "testing",
+   "rel": "20-areas/testing.md",
+   "description": "Honest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.",
+   "type": "preference",
+   "body": "\n# Testing\n\nHonest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.\n\n## Lessons\n\n> [!lesson]- L-testing-no-retry-flaky\n> rule: Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_\n> words: flaky, retry, sleep, race\n> since: 2026-08-13\n\n> [!lesson]- L-testing-no-skip-to-green\n> rule: Never skip, delete or comment out a failing test to get CI green - find out why it fails, or ask the user before disabling it.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_\n> words: failing test, ci red, tests fail, make ci green, broken test\n> since: 2026-09-02\n\n> [!lesson]- L-testing-no-focused-tests\n> rule: Do not leave focused tests (.only, fit, fdescribe) behind - they silently turn off the rest of the suite.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|\\.test\\.|\\.spec\\.\n> since: 2026-10-09\n\n> [!lesson]- L-testing-dont-weaken-asserts\n> rule: When a test fails, do not loosen the assertion or update the snapshot until you know the new behaviour is right - say which one changed and why.\n> mechanism: reflex\n> commands: (jest|vitest).*(-u\\b|--updateSnapshot)|pytest.*--snapshot-update\n> words: assertion, snapshot, expected, update snapshot, test fails\n> since: 2026-09-23\n\nPart of [[hub-brain]].\n"
+  },
+  "acme-api": {
+   "name": "acme-api",
+   "rel": "10-projects/acme-api.md",
+   "description": "The public API - where it runs, how it deploys, what bit us before.",
+   "type": "project",
+   "body": "\n# Acme api\n\nThe public API - where it runs, how it deploys, what bit us before.\n\n## Runs\n\n- The API deploys with ArgoCD from main; nobody runs kubectl apply by hand.\n- The staging database moved to eu-west-2 in October.\n\n## Pitfalls\n\n- Migrations once locked the orders table for 4 minutes: run them on a copy first.\n\n## Lessons\n\n> [!lesson]- L-db-migrate-copy-first\n> rule: Run database migrations against a copy of the database first, and show the result before the real run.\n> mechanism: reflex\n> words: migration, migrate, database\n> since: 2026-10-30\n\nPart of [[hub-projects]]. See [[payments]].\n"
+  },
+  "payments": {
+   "name": "payments",
+   "rel": "10-projects/payments.md",
+   "description": "Payments run on Stripe webhooks, not polling - and why every handler must be idempotent.",
+   "type": "decision",
+   "body": "\n# Payments\n\nPayments run on Stripe webhooks, not polling - and why every handler must be idempotent.\n\nPayments use Stripe webhooks, not polling.\n\n- Stripe retries a webhook for up to three days, so every handler must be idempotent.\n\nPart of [[hub-projects]]. Runs in [[acme-api]].\n"
+  }
  },
  "demo": true
 }

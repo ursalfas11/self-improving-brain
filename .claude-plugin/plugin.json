@@ -1,7 +1,7 @@
 {
   "name": "self-improving-brain",
   "version": "0.2.0",
-  "description": "Your coding agent learns from your corrections: lessons fire at the right moment, guards ask before irreversible actions, handoffs survive compaction, and it measures whether mistakes go down. Local Markdown, zero dependencies.",
+  "description": "Install once, then forget it: every night it turns your corrections into rules and your decisions into notes, on its own. Rules fire at the right moment, guards ask before irreversible actions, every change can be undone, and it shows whether your agent's mistakes go down. Local Markdown, zero dependencies.",
   "author": {
     "name": "ursalfas11",
     "url": "https://github.com/ursalfas11"
@@ -11,8 +11,9 @@
   "license": "MIT",
   "keywords": [
     "memory",
-    "lessons",
+    "rules",
     "self-improving",
+    "autonomous",
     "obsidian",
     "hooks",
     "guardrails",

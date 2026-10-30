@@ -83,14 +83,14 @@ a{color:var(--indigo-ink)}
 .tab .count.hot{background:var(--mint-soft);color:var(--mint-ink)}
 
 main{padding:28px 0 72px;outline:none}
-.view{animation:rise .22s ease-out both}
+.view{animation:rise .22s ease-out both;outline:none}
 @keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .stack-v{display:grid;gap:20px}
 .banner{margin:16px 0 0;padding:12px 16px;border-radius:12px;border:1px solid var(--amber-line);background:var(--amber-soft);color:var(--text);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .banner strong{color:var(--amber-ink)}
 
 /* single-column grids must not grow with long nowrap content */
-.lessons,.lesson,.groups,.rows,.rrow,.stack-v,.g-left,.g-right,.pack,.hand,.field,.tile{grid-template-columns:minmax(0,1fr)}
+.lessons,.lesson,.rows,.rrow,.stack-v,.hand,.entry{grid-template-columns:minmax(0,1fr)}
 
 /* surfaces */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow);min-width:0}
@@ -145,20 +145,22 @@ button.chip{cursor:pointer}
 code.i{font-size:.92em;background:var(--raise);border:1px solid var(--line-soft);padding:1px 6px;border-radius:6px}
 
 /* overview */
-.hero{padding:28px 28px 20px;overflow:hidden}
-.hero-head{display:flex;justify-content:space-between;gap:20px 40px;flex-wrap:wrap;align-items:flex-end}
-.big{font-size:clamp(64px,15vw,112px);line-height:.95;font-weight:750;letter-spacing:-.045em;margin:10px 0 12px;color:var(--mint-ink)}
+.notices{display:grid;gap:8px}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;background:var(--raise);border:1px solid var(--line-soft);font-size:14.5px;line-height:1.5}
+.notice svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--amber-ink)}
+.notice .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.notice.warm{background:var(--amber-soft);border-color:var(--amber-line)}
+.hero{padding:30px 34px 24px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:22px 48px;align-items:center}
+@media (min-width:1021px){.hero-grid.has-chart{grid-template-columns:minmax(250px,.72fr) minmax(0,1.6fr)}}
+.hero-main{min-width:0}
+.big{font-size:clamp(60px,13vw,96px);line-height:.95;font-weight:750;letter-spacing:-.045em;margin:12px 0 14px;color:var(--mint-ink);white-space:nowrap}
 .big.up{color:var(--amber-ink)} .big.flat{color:var(--text)}
-.hero-text{font-size:18px;color:var(--text);max-width:46ch}
+.hero-text{font-size:19px;font-weight:500;line-height:1.35}
+.hero-sub{color:var(--muted);font-size:15px;margin-top:5px;font-variant-numeric:tabular-nums}
+.hero-measure{font-size:clamp(22px,3vw,30px);line-height:1.28;letter-spacing:-.018em;font-weight:650;margin-top:14px;max-width:24ch}
 .nw{white-space:nowrap}
-.hero-text .faint{display:block;font-size:14.5px;margin-top:4px;color:var(--muted)}
-.facts{display:flex;gap:28px;flex-wrap:wrap}
-@media (max-width:720px){.facts{width:100%;gap:16px}.fact{flex:1 1 42%}.fact b{font-size:26px}}
-.fact .eyebrow{display:block;margin-bottom:3px}
-.fact b{font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.fact b small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:5px}
-.fact span.s{display:block;font-size:13px;color:var(--muted)}
-.chart{position:relative;margin-top:18px;border-radius:12px}
+.chart{position:relative;border-radius:12px;min-width:0}
 .chart svg{display:block;max-width:none}
 .chart:focus-visible{outline-offset:4px}
 .g-line{stroke:var(--line-soft);stroke-width:1;shape-rendering:crispEdges}
@@ -176,47 +178,42 @@ code.i{font-size:.92em;background:var(--raise);border:1px solid var(--line-soft)
 .tip .m{color:var(--muted);font-size:12.5px}
 .tip .k{font-variant-numeric:tabular-nums}
 
-.replay-sum{padding:26px 28px}
-.replay-sum h2{font-size:clamp(20px,3.2vw,26px);line-height:1.25;font-weight:700;letter-spacing:-.015em;max-width:62ch}
-.replay-sum h2 em{font-style:normal;color:var(--mint-ink)}
-.replay-sum h2 .by,.sec-title .by{color:var(--muted);font-weight:600;display:inline-block}
+.duo{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px}
+.card{display:flex;flex-direction:column;gap:8px;padding:24px 28px;min-width:0}
+.digest{font-size:21px;line-height:1.5;font-weight:600;letter-spacing:-.012em;margin-top:2px}
+.digest .part{white-space:nowrap}
+.digest b{font-weight:750;font-variant-numeric:tabular-nums}
+.digest .tr{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:6px;color:var(--mint-ink)} .digest .tr.up{color:var(--amber-ink)} .digest .tr.flat{color:var(--muted)}
+.digest .tr small{font-size:14.5px;font-weight:500;color:var(--muted);letter-spacing:0}
+.card .go{padding-top:4px}
+.split{border-top:1px solid var(--line-soft);margin-top:16px;padding-top:16px;display:grid;gap:8px;min-width:0}
+.card .split:last-child{margin-top:auto}
+.ln{font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+.stat-big{font-size:46px;font-weight:700;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums;margin-top:2px}
+.stat-big small{font-size:17px;font-weight:600;color:var(--muted);letter-spacing:-.01em;margin-left:4px}
+.share{height:6px;border-radius:3px;background:var(--raise2);overflow:hidden;margin-top:6px}
+.share span{display:block;height:100%;min-width:4px;border-radius:3px;background:var(--mint)}
 .expl{color:var(--muted);font-size:14px;margin-top:8px;max-width:70ch}
 .expl b{color:var(--text)}
+.sec-title .by{color:var(--muted);font-weight:600;display:inline-block}
 .stackbar{display:flex;gap:2px;height:14px;margin:18px 0 12px;border-radius:7px;overflow:hidden}
 .stackbar span{display:block;min-width:3px;background:var(--c)}
 .stackbar span:first-child{border-radius:7px 3px 3px 7px}
 .stackbar span:last-child{border-radius:3px 7px 7px 3px}
 .stackbar span:only-child{border-radius:7px}
-.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13.5px;color:var(--muted)}
-.legend span{display:inline-flex;align-items:center;gap:8px}
-.legend i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
-.legend b{color:var(--text);font-variant-numeric:tabular-nums}
 .c-caught{--c:var(--mint)} .c-missed{--c:var(--amber)} .c-uncovered{--c:var(--neutral)}
-.row-end{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
 
-.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
-.tile{display:flex;flex-direction:column;gap:6px;padding:20px 22px}
-.tile .val{font-size:44px;font-weight:700;letter-spacing:-.035em;line-height:1.05;margin-top:6px;font-variant-numeric:normal}
-.tile .val small{font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:6px}
-.tile .sub{color:var(--muted);font-size:13.5px}
-.tile .vis{margin-top:auto;padding-top:14px}
-.mix{display:flex;gap:2px;height:8px}
-.mix span{flex:var(--n) 1 0;background:var(--c);border-radius:4px;min-width:3px}
-.mixlist{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;font-size:13px}
-.mixlist button{appearance:none;background:none;border:0;padding:2px 0;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:6px}
-.mixlist button:hover{color:var(--text)}
-.mixlist i{width:8px;height:8px;border-radius:50%;background:var(--c)}
-.mixlist b{color:var(--text)}
-.m-always{--c:var(--indigo)} .m-reflex{--c:var(--mint)} .m-guard{--c:var(--amber)} .m-skill{--c:var(--pink)} .m-x{--c:var(--neutral)}
-.meter{height:8px;border-radius:4px;background:var(--raise2);overflow:hidden}
-.meter span{display:block;height:100%;background:var(--mint);border-radius:4px}
-.checks-chart{position:relative}
-.onboard{text-align:center;padding:48px 24px}
-.onboard h2{font-size:24px;letter-spacing:-.02em}
-.onboard p{color:var(--muted);margin:8px auto 18px;max-width:46ch}
-.onboard .cmd{max-width:300px;margin:0 auto}
+/* pick up where you left off */
+.pick{padding:22px 26px 16px}
+.pick .sec-title{font-size:17px}
+.hand{display:grid;margin-top:8px}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:8px 20px;align-items:center;padding:12px 0;border-top:1px solid var(--line-soft)}
+.hrow:first-child{border-top:0}
+.hrow .repo{display:block;font-weight:650;overflow-wrap:anywhere}
+.hrow .when{display:block;color:var(--muted);font-size:13.5px}
+.hrow .cmd code{white-space:normal;overflow-wrap:anywhere}
 
-/* lessons */
+/* rules */
 .toolbar{display:flex;gap:12px 16px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 .toolbar .chips{flex:1 1 320px}
 .search{position:relative;flex:0 1 300px;min-width:200px;width:100%;max-width:340px}
@@ -231,7 +228,7 @@ input::placeholder,textarea::placeholder{color:var(--faint);opacity:1}
 .l-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
 .lid{font-family:var(--mono);font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
 .since{margin-left:auto;color:var(--faint);font-size:12.5px}
-.rule{font-size:16px;line-height:1.5;overflow-wrap:anywhere;max-width:80ch}
+.rule{font-size:16px;line-height:1.5;overflow-wrap:anywhere;max-width:80ch;text-wrap:pretty}
 .l-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px;padding-top:11px;border-top:1px solid var(--line-soft)}
 .health{display:flex;gap:6px 20px;flex-wrap:wrap}
 .stat{display:flex;align-items:baseline;gap:6px;font-size:13px;color:var(--muted)}
@@ -251,32 +248,35 @@ input::placeholder,textarea::placeholder{color:var(--faint);opacity:1}
 .empty{padding:40px 24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px}
 .empty h3{color:var(--text);font-size:18px;margin-bottom:6px}
 
-/* review */
-.promise{display:flex;gap:14px;align-items:flex-start}
-.promise svg{width:22px;height:22px;flex:none;color:var(--mint-ink);margin-top:2px}
-.promise p{max-width:70ch}
-.groups{display:grid;gap:16px;margin-top:20px}
-.group{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px 32px;box-shadow:var(--shadow)}
-.g-left{display:grid;gap:14px;align-content:start;min-width:0}
-.g-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.quote{border-left:3px solid var(--indigo);padding:2px 0 2px 13px;font-size:15.5px;overflow-wrap:anywhere}
-.quote + .quote{margin-top:10px}
-.quote .q-meta{display:block;font-size:12.5px;color:var(--faint);margin-top:3px}
-.q-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:7px;display:block}
-.ctx{font:12.5px/1.5 var(--mono);background:var(--raise);border:1px solid var(--line-soft);border-radius:9px;padding:7px 10px;overflow-wrap:anywhere;white-space:pre-wrap;color:var(--muted)}
-.ctx + .ctx{margin-top:6px}
-.g-right{display:grid;gap:14px;align-content:start;background:var(--raise);border-radius:14px;padding:16px;min-width:0;border:1px solid var(--line-soft)}
-.field{display:grid;gap:6px;min-width:0}
-.field label{font-size:13px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.field label .tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mint-ink);background:var(--mint-soft);padding:0 8px;border-radius:999px}
-.field .hint{font-size:12.5px;color:var(--muted)}
-.field textarea{min-height:84px;resize:vertical;line-height:1.5;background:var(--panel)}
-.field input,.field select{background:var(--panel)}
-.field-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
-.acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.err{color:var(--amber-ink);font-size:14px;padding:8px 12px;border-radius:9px;background:var(--amber-soft);border:1px solid var(--amber-line);overflow-wrap:anywhere}
-.done{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;color:var(--muted)}
-.done b{color:var(--mint-ink)}
+
+/* learned */
+.lede{color:var(--muted);font-size:16px;line-height:1.55;max-width:84ch;margin-bottom:22px;text-wrap:pretty}
+.lede a{font-weight:600}
+.attn{border-color:var(--amber-line);padding:20px 24px 6px;margin-bottom:6px}
+.attn-h{display:flex;gap:10px;align-items:center;font-size:16px;font-weight:700;letter-spacing:-.005em}
+.attn-h svg{width:18px;height:18px;flex:none;color:var(--amber-ink)}
+.attn .entries.bare{background:none;border:0;box-shadow:none;border-radius:0;padding:0}
+.day{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:30px}
+.day-h{font-size:15px;font-weight:700;letter-spacing:-.005em;line-height:1.3}
+.day-h span{display:block;color:var(--faint);font-weight:500;font-size:13.5px;margin-top:2px}
+@media (min-width:900px){.day{grid-template-columns:150px minmax(0,1fr);gap:0 28px}.day-h{padding-top:19px}}
+.entries{list-style:none;margin:0;padding:2px 24px;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+.entry{display:grid;gap:7px;padding:18px 0;border-top:1px solid var(--line-soft);min-width:0}
+.entry:first-child{border-top:0}
+.e-top{display:flex;align-items:center;gap:8px 10px;min-width:0}
+.e-top .badge,.e-top .btn{flex:none}
+.e-top .btn{margin-left:auto}
+.e-text{font-size:16px;line-height:1.5;overflow-wrap:anywhere;max-width:78ch;text-wrap:pretty}
+.e-why{font-size:14px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;max-width:78ch}
+.k-rule{background:var(--mint-soft);color:var(--mint-ink)}
+.k-sharpen{background:var(--indigo-soft);color:var(--indigo-ink)}
+.k-mechanism{background:var(--amber-soft);color:var(--amber-ink)}
+.k-retire{background:var(--raise);color:var(--muted)}
+.k-fact{background:var(--pink-soft);color:var(--pink-ink)}
+.nchip{appearance:none;display:inline-flex;align-items:center;gap:6px;flex:0 1 auto;max-width:100%;padding:1px 10px 1px 8px;border-radius:999px;background:var(--raise);border:1px solid var(--line-soft);color:var(--muted);font:12.5px/1.7 var(--mono);cursor:pointer;min-width:0}
+.nchip:hover{color:var(--text);border-color:var(--line)}
+.nchip svg{width:12px;height:12px;flex:none}
+.nchip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* replay */
 .run{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -344,24 +344,6 @@ table.rt{width:100%;border-collapse:collapse;font-size:14px}
 .gtip b{display:block;font-family:var(--mono);font-size:12.5px}
 .gtip span{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 
-/* more */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.pack{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:grid;gap:9px;align-content:start;min-width:0}
-.pack.on{border-color:var(--mint-line)}
-.pack h3{font-size:16px;font-family:var(--mono);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.pack p{color:var(--muted);font-size:14px}
-.pack .ln{font-size:13px;color:var(--faint)}
-.hand{display:grid;gap:0}
-.hrow{display:grid;grid-template-columns:150px 90px minmax(0,1fr) minmax(0,1.4fr);gap:8px 18px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-soft)}
-.hrow:last-child{border-bottom:0}
-.hrow .t{font-family:var(--mono);font-size:13px;color:var(--muted)}
-.hrow .repo{font-weight:700;overflow-wrap:anywhere}
-.hrow .sess{font-family:var(--mono);font-size:12px;color:var(--faint);overflow-wrap:anywhere;display:block;font-weight:400}
-dl.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:9px 28px}
-dl.kv dt{color:var(--muted)}
-dl.kv dd{font-weight:600;overflow-wrap:anywhere}
-dl.kv dd.mono{font-weight:500;font-size:13.5px}
-
 /* note panel */
 .note-backdrop{position:fixed;inset:0;z-index:48;background:rgba(5,8,20,.55)}
 .note{position:fixed;z-index:50;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-24px 0 60px -30px rgba(0,0,0,.65);display:flex;flex-direction:column;animation:slidein .2s ease-out both}
@@ -415,24 +397,32 @@ dl.kv dd.mono{font-weight:500;font-size:13.5px}
 .loading{color:var(--muted);padding:40px 0;text-align:center}
 
 @media (max-width:1020px){
-  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .group{grid-template-columns:minmax(0,1fr)}
   .statrow{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .duo{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:720px){
   main{padding-top:20px}
   .panel{padding:18px;border-radius:16px}
-  .hero{padding:20px 18px 14px}
-  .tiles{grid-template-columns:minmax(0,1fr);gap:14px}
-  .stack-v{gap:14px}
-  .field-row{grid-template-columns:minmax(0,1fr)}
-  .group{padding:16px}
-  .hrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .hrow .cmd{grid-column:1/-1}
+  .hero{padding:22px 20px 16px}
+  .card{padding:20px}
+  .digest{font-size:19px}
+  .stat-big{font-size:40px}
+  .stack-v,.duo{gap:14px}
+  .hrow{grid-template-columns:minmax(0,1fr)}
+  .pick{padding:18px 18px 10px}
   .since{margin-left:0;width:100%}
   .lesson{padding:15px}
   .search{max-width:none;flex-basis:100%}
   .brand-name{font-size:16px}
+  .tab{padding:10px 8px 11px;font-size:14px;gap:6px}
+  .attn{padding:18px 18px 4px}
+  .entries{padding:2px 16px;border-radius:16px}
+  .day{margin-top:24px}
+  .day-h{display:flex;align-items:baseline;gap:8px}
+  .day-h span{margin-top:0}
+  .entry .badge::before,.entry .nchip svg{display:none}
   .rt thead{display:none}
   .rt,.rt tbody,.rt tr,.rt td{display:block;width:100%}
   .rt tr{padding:12px 0;border-bottom:1px solid var(--line-soft)}
@@ -443,8 +433,6 @@ dl.kv dd.mono{font-weight:500;font-size:13.5px}
   .rt td.first::before{display:none}
   .g-hint{display:none}
   .graph-wrap{height:calc(100vh - 230px);min-height:420px}
-  dl.kv{grid-template-columns:minmax(0,1fr);gap:2px}
-  dl.kv dd{margin-bottom:10px}
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}
@@ -466,7 +454,7 @@ dl.kv dd.mono{font-weight:500;font-size:13.5px}
           <path d="M-6,-100 C-20,-50 20,-30 0,10 C-18,46 16,70 4,100" fill="none" stroke="url(#mk)" stroke-width="9" opacity=".55"/>
           <circle cx="-70" cy="-40" r="11" fill="var(--mint)"/><circle cx="70" cy="-30" r="11" fill="var(--indigo)"/><circle cx="40" cy="10" r="11" fill="var(--mint)"/><circle cx="-30" cy="80" r="11" fill="var(--indigo)"/>
         </svg>
-        <span class="brand-name">self-improving-brain</span>
+        <h1 class="brand-name">self-improving-brain</h1>
       </div>
       <div class="meta" id="meta" hidden>
         <span class="vault" id="vaultName"></span>
@@ -490,11 +478,10 @@ dl.kv dd.mono{font-weight:500;font-size:13.5px}
     <noscript><p class="panel">This page needs JavaScript. Everything stays on your machine.</p></noscript>
     <div id="panels">
       <section class="view" id="p-overview" role="tabpanel" aria-labelledby="t-overview" tabindex="-1"><div class="loading">Loading your brain…</div></section>
-      <section class="view" id="p-lessons" role="tabpanel" aria-labelledby="t-lessons" tabindex="-1" hidden></section>
-      <section class="view" id="p-review" role="tabpanel" aria-labelledby="t-review" tabindex="-1" hidden></section>
+      <section class="view" id="p-learned" role="tabpanel" aria-labelledby="t-learned" tabindex="-1" hidden></section>
+      <section class="view" id="p-rules" role="tabpanel" aria-labelledby="t-rules" tabindex="-1" hidden></section>
       <section class="view" id="p-replay" role="tabpanel" aria-labelledby="t-replay" tabindex="-1" hidden></section>
-      <section class="view" id="p-graph" role="tabpanel" aria-labelledby="t-graph" tabindex="-1" hidden></section>
-      <section class="view" id="p-more" role="tabpanel" aria-labelledby="t-more" tabindex="-1" hidden></section>
+      <section class="view" id="p-map" role="tabpanel" aria-labelledby="t-map" tabindex="-1" hidden></section>
     </div>
   </div>
 </main>
@@ -508,7 +495,6 @@ dl.kv dd.mono{font-weight:500;font-size:13.5px}
   </div>
   <div class="note-body" id="noteBody"></div>
 </aside>
-<datalist id="noteNames"></datalist>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
@@ -560,14 +546,17 @@ var ICONS={
   arrow:'M3 8 H13 M9 4 L13 8 L9 12',
   ext:'M6.5 3 H3 V13 H13 V9.5 M9 3 H13 V7 M13 3 L7.5 8.5',
   search:'M7 12 A5 5 0 1 1 7 2 A5 5 0 0 1 7 12 M11 11 L14 14',
-  shield:'M8 1.8 L13.2 3.6 V8 C13.2 11 10.8 13.2 8 14.4 C5.2 13.2 2.8 11 2.8 8 V3.6 Z M5.6 8 L7.3 9.7 L10.6 6.3'
+  shield:'M8 1.8 L13.2 3.6 V8 C13.2 11 10.8 13.2 8 14.4 C5.2 13.2 2.8 11 2.8 8 V3.6 Z M5.6 8 L7.3 9.7 L10.6 6.3',
+  note:'M4 2.5 H9.5 L12.5 5.5 V13.5 H4 Z M9.5 2.5 V5.5 H12.5 M6.2 8.6 H10.3 M6.2 11 H10.3',
+  undo:'M5.6 3 L2.6 6 L5.6 9 M2.8 6 H9.6 A3.4 3.4 0 0 1 9.6 12.8 H6',
+  info:'M8 1.8 A6.2 6.2 0 1 1 7.99 1.8 Z M8 7.3 V11.3 M8 4.8 V4.9'
 };
 function icon(name){
   return s('svg',{viewBox:'0 0 16 16',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'},s('path',{d:ICONS[name]}));
 }
 
 /* ================= formatting ================= */
-var MINUS='−', NB=' ';
+var MINUS='−', NB=' ';
 function num(n){return (n==null||isNaN(n))?'–':Number(n).toLocaleString('en-US')}
 function f1(n){return Number(n).toFixed(1)}
 function signedPct(n){var r=Math.round(n);return (r<0?MINUS:r>0?'+':'')+Math.abs(r)+NB+'%'}
@@ -575,6 +564,36 @@ function wk(w){return String(w).replace(/^\d{4}-/,'')}
 function dstr(ts){return ts?String(ts).slice(0,10):''}
 function tstr(ts){ts=String(ts||'');return ts.slice(0,10)+(ts.length>=16?' '+ts.slice(11,16):'')}
 function plural(n,one,many){return n+' '+(n===1?one:(many||one+'s'))}
+
+/* ================= dates (the demo stands still at the day its data was made) ================= */
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var WDAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function dayMs(ts){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(ts||''));return m?Date.UTC(+m[1],+m[2]-1,+m[3]):NaN}
+function todayMs(){
+  var st=S.state;
+  if(st&&st.demo){
+    var best='';
+    [st.nightly&&st.nightly.t,st.learned&&st.learned[0]&&st.learned[0].t,st.handoffs&&st.handoffs[0]&&st.handoffs[0].t,st.replay&&st.replay.t].forEach(function(t){t=dstr(t);if(t>best)best=t});
+    if(best)return dayMs(best);
+  }
+  var d=new Date();return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function daysAgo(ts){var t=dayMs(ts);return isNaN(t)?null:Math.round((todayMs()-t)/864e5)}
+function dayLabel(ts){
+  var t=dayMs(ts);if(isNaN(t))return '';
+  var d=new Date(t),s=MON[d.getUTCMonth()]+' '+d.getUTCDate();
+  return d.getUTCFullYear()===new Date(todayMs()).getUTCFullYear()?s:s+', '+d.getUTCFullYear();
+}
+function whenLabel(ts){
+  var n=daysAgo(ts),hm=String(ts||'').slice(11,16),d=n==null?'':n<=0?'Today':n===1?'Yesterday':dayLabel(ts);
+  return hm&&d?d+', '+hm:(d||hm);
+}
+function dayTitle(day){
+  var t=dayMs(day),n=daysAgo(day);
+  if(isNaN(t))return['Earlier',''];
+  return[n<=0?'Today':n===1?'Yesterday':WDAY[new Date(t).getUTCDay()],dayLabel(day)];
+}
+function recentCount(){return ((S.state&&S.state.learned)||[]).filter(function(e){var n=daysAgo(e.t);return n!=null&&n<=7}).length}
 
 /* ================= state ================= */
 var MECH={
@@ -584,9 +603,10 @@ var MECH={
   skill:'Like reflex; the rule names a playbook to load'
 };
 var MECH_ORDER=['always','reflex','guard','skill'];
-var TABS=[['overview','Overview'],['lessons','Lessons'],['review','Review'],['replay','Replay'],['graph','Graph'],['more','More']];
+var TABS=[['overview','Overview'],['learned','Learned'],['rules','Rules'],['replay','Replay'],['map','Map']];
+var ALIAS={lessons:'rules',review:'learned',graph:'map',more:'overview'};
 var S={state:null,tab:'overview',mech:'all',q:'',rstatus:'all',rshown:25,replayDays:30,replayBusy:false,replayErr:'',replayNote:'',
-  forms:{},done:{},noteStack:[],noteReq:0,noteReturn:null,noteNames:null};
+  noteStack:[],noteReq:0,noteReturn:null,noteNames:null};
 var TOKEN=new URLSearchParams(location.search).get('t');
 
 /* ================= api ================= */
@@ -674,6 +694,7 @@ function onWidth(el,fn){
 /* ================= router ================= */
 function tabFromHash(){
   var t=location.hash.replace(/^#\/?/,'').split(/[/?]/)[0];
+  t=ALIAS[t]||t;
   return TABS.some(function(x){return x[0]===t})?t:'overview';
 }
 function buildTabs(){
@@ -690,15 +711,16 @@ function buildTabs(){
   });
 }
 function showTab(t){
-  var changed=S.tab!==t;S.tab=t;
+  var changed=S.tab!==t,ae=document.activeElement,lost=!!(ae&&ae.closest&&ae.closest('.view'));
+  S.tab=t;
   TABS.forEach(function(x){
     var sel=x[0]===t,b=$('#t-'+x[0]);
     b.setAttribute('aria-selected',sel?'true':'false');b.tabIndex=sel?0:-1;
     $('#p-'+x[0]).hidden=!sel;
   });
   var sel=$('#t-'+t);if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:'nearest',inline:'nearest'});
-  if(changed)window.scrollTo(0,0);
-  if(t==='graph'&&S.state)ensureGraph();
+  if(changed){window.scrollTo(0,0);if(lost)$('#p-'+t).focus({preventScroll:true})}
+  if(t==='map'&&S.state)ensureGraph();
 }
 
 /* ================= load ================= */
@@ -721,16 +743,15 @@ function renderAll(){
   $('#vaultName').title=(st.vault&&st.vault.root)||'';
   $('#ver').textContent='v'+((st.vault&&st.vault.version)||'');
   $('#demoPill').hidden=!st.demo;
-  setCount('lessons',(st.lessons||[]).length,false);
-  setCount('review',(st.drafts||[]).length,true);
-  var names=[],dl=$('#noteNames');clear(dl);
-  ((st.graph&&st.graph.nodes)||[]).forEach(function(n){names.push(n.id);dl.appendChild(h('option',{value:n.id}))});
-  S.noteNames=new Set(names);
-  renderOverview();renderLessons();renderReview();renderReplay();renderMore();
-  if(S.tab==='graph')ensureGraph();
+  setCount('learned',recentCount(),true);
+  S.noteNames=new Set(((st.graph&&st.graph.nodes)||[]).map(function(n){return n.id}));
+  renderOverview();renderLearned();renderRules();renderReplay();
+  if(S.tab==='map')ensureGraph();
 }
 function setCount(tab,n,hot){
-  var c=$('#c-'+tab);c.textContent=String(n);c.hidden=!n;c.className='count'+(hot&&n?' hot':'');
+  var c=$('#c-'+tab);if(!c)return;
+  clear(c);c.hidden=!n;c.className='count'+(hot&&n?' hot':'');c.title=n?'Changes in the last 7 days':'';
+  if(n){c.appendChild(txt(String(n)));c.appendChild(h('span',{class:'sr',text:n===1?' change in the last 7 days':' changes in the last 7 days'}))}
 }
 
 /* ================= charts ================= */
@@ -766,7 +787,7 @@ function monotonePath(pts){
 }
 function curveChart(box,curve,animate){
   clear(box);
-  var W=Math.max(260,Math.floor(box.clientWidth)||640),H=W<520?210:280,n=curve.length;
+  var W=Math.max(260,Math.floor(box.clientWidth)||640),H=W<520?200:250,n=curve.length;
   var m={t:30,r:W<520?24:30,b:30,l:36},iw=W-m.l-m.r,ih=H-m.t-m.b;
   var vmax=Math.max.apply(null,curve.map(function(d){return d.per100}).concat([0.1])),nm=niceMax(vmax),top=nm.top;
   var X=function(i){return n===1?m.l+iw/2:m.l+iw*i/(n-1)},Y=function(v){return m.t+ih*(1-v/top)};
@@ -805,7 +826,7 @@ function curveChart(box,curve,animate){
     cur=i;var d=curve[i],x=X(i),y=Y(d.per100);
     cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('visibility','visible');
     act.setAttribute('cx',x);act.setAttribute('cy',y);act.setAttribute('visibility','visible');
-    tip.show(x,y,h('b',{text:d.week}),h('span',{class:'k'},f1(d.per100)+' corrections per 100 messages'),h('div',{class:'m k',text:d.corrections+' corrections · '+d.messages+' messages'}));
+    tip.show(x,y,h('b',{text:d.week}),h('span',{class:'k'},f1(d.per100)+' mistakes per 100 messages'),h('div',{class:'m k',text:d.corrections+' corrections · '+d.messages+' messages'}));
     if(speak)live.textContent=d.week+': '+f1(d.per100)+' per 100 messages, '+d.corrections+' corrections of '+d.messages+' messages';
   }
   function hide(){cur=-1;cross.setAttribute('visibility','hidden');act.setAttribute('visibility','hidden');tip.hide()}
@@ -820,160 +841,133 @@ function curveChart(box,curve,animate){
   };
   box.onfocus=function(){if(cur<0)show(n-1,true)};
   box.onblur=hide;
-  box.appendChild(srTable('Corrections per 100 user messages, by week',['Week','Per 100','Corrections','Messages'],curve.map(function(d){return[d.week,f1(d.per100),d.corrections,d.messages]})));
+  box.appendChild(srTable('Mistakes per 100 messages, by week',['Week','Per 100','Corrections','Messages'],curve.map(function(d){return[d.week,f1(d.per100),d.corrections,d.messages]})));
 }
 function srTable(caption,head,rows){
-  return h('table',{class:'sr'},h('caption',{text:caption}),h('thead',{},h('tr',{},head.map(function(c){return h('th',{scope:'col',text:c})}))),
-    h('tbody',{},rows.map(function(r){return h('tr',{},r.map(function(c){return h('td',{text:String(c)})}))})));
+  /* the wrapper clips the table, so a wide hidden table never makes the page scroll sideways */
+  return h('div',{class:'sr'},h('table',{},h('caption',{text:caption}),h('thead',{},h('tr',{},head.map(function(c){return h('th',{scope:'col',text:c})}))),
+    h('tbody',{},rows.map(function(r){return h('tr',{},r.map(function(c){return h('td',{text:String(c)})}))}))));
 }
-function checksChart(box,weeks){
-  clear(box);
-  var W=Math.max(200,Math.floor(box.clientWidth)||240),H=84,m={t:6,r:2,b:18,l:2},n=weeks.length;
-  var slot=(W-m.l-m.r)/n,bw=Math.min(24,slot*0.62),ih=H-m.t-m.b;
-  var vmax=Math.max.apply(null,weeks.map(function(w){return w[1].violations}).concat([1]));
-  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,width:W,height:H,'aria-hidden':'true'});
-  var base=m.t+ih;
-  svg.appendChild(s('line',{class:'g-line',x1:0,x2:W,y1:base+.5,y2:base+.5}));
-  var tip=makeTip(box);
-  weeks.forEach(function(w,i){
-    var v=w[1].violations,x=m.l+slot*i+(slot-bw)/2,hh=v>0?Math.max(4,ih*v/vmax):2,y=base-hh,r=Math.min(4,hh,bw/2);
-    var isLast=i===n-1;
-    svg.appendChild(s('path',{d:'M'+x+','+base+' V'+(y+r)+' Q'+x+','+y+' '+(x+r)+','+y+' H'+(x+bw-r)+' Q'+(x+bw)+','+y+' '+(x+bw)+','+(y+r)+' V'+base+' Z',fill:'var(--indigo)','fill-opacity':isLast?1:(v>0?.5:.25)}));
-    var hit=s('rect',{x:m.l+slot*i,y:0,width:slot,height:H,fill:'transparent'});
-    var enter=function(){tip.show(x+bw/2,y,h('b',{text:w[0]}),h('span',{class:'k'},plural(v,'violation')),h('div',{class:'m k',text:w[1].checked+' checks'}))};
-    hit.addEventListener('pointerenter',enter);hit.addEventListener('pointerdown',enter);
-    hit.addEventListener('pointerleave',function(){tip.hide()});
-    svg.appendChild(hit);
-  });
-  svg.appendChild(s('text',{class:'g-axis',x:m.l+(slot-bw)/2,y:H-4,'text-anchor':'start'},wk(weeks[0][0])));
-  if(n>1)svg.appendChild(s('text',{class:'g-axis',x:W-m.r-(slot-bw)/2,y:H-4,'text-anchor':'end'},wk(weeks[n-1][0])));
-  box.insertBefore(svg,box.firstChild);
-  box.appendChild(srTable('Rule-check violations by week',['Week','Violations','Checks'],weeks.map(function(w){return[w[0],w[1].violations,w[1].checked]})));
-}
-
 /* ================= OVERVIEW ================= */
-function headline(curve){
-  var first=curve[0],last=curve[curve.length-1];
-  if(curve.length>1&&first.per100>0){
-    var ch=(last.per100-first.per100)/first.per100*100;
-    return{big:signedPct(ch),dir:ch<0?'':ch>0?'up':'flat',text:'corrections per 100 user messages',week:first.week,sub:f1(first.per100)+' in '+first.week+' → '+f1(last.per100)+' in '+last.week};
+function sinceLabel(d){return dayLabel(d)||String(d||'')}
+function tok(n){
+  n=Number(n)||0;
+  if(n>=999500){var m=n/1e6;return (m>=10?Math.round(m):Math.round(m*10)/10)+'M'}
+  if(n>=1000)return Math.round(n/1000)+'k';
+  return String(Math.round(n));
+}
+function shareText(x){var p=x*100;return (p>0&&p<0.05)?'<0.1 %':p.toFixed(1)+' %'}
+function costLine(c){
+  var calls=Number(c.calls)||0,usd=Number(c.usd)||0;
+  if(!calls)return 'no LLM calls this week';
+  if(usd>0)return (usd<0.01?'<$0.01':'$'+usd.toFixed(2))+' for the nights this week · '+plural(calls,'call');
+  return plural(calls,'LLM call')+' this week';
+}
+function notice(kids,warm){return h('div',{class:'notice'+(warm?' warm':''),role:'note'},icon('info'),h('div',{class:'t'},kids))}
+function attentionNotice(text){
+  var t=String(text),m=t.match(/^(.*?)\s*→\s*(brain\s.+)$/);
+  return notice(m?[m[1]+' → ',h('code',{class:'i',text:m[2]})]:t);
+}
+function noLlmNotice(){
+  return notice(['No LLM CLI found: the brain measures, but cannot learn. Install claude, codex or ollama, then run ',h('code',{class:'i',text:'brain setup'}),'.'],true);
+}
+function heroSection(st){
+  var ss=st.since_start,curve=st.curve||[],main=h('div',{class:'hero-main'},h('p',{class:'eyebrow',text:'Is your agent getting better?'}));
+  if(ss&&ss.change!=null){
+    main.appendChild(h('div',{class:'big '+(ss.change<0?'':ss.change>0?'up':'flat')},signedPct(ss.change)));
+    main.appendChild(h('p',{class:'hero-text'},'mistakes since ',h('span',{class:'nw',text:sinceLabel(ss.since)})));
+    main.appendChild(h('p',{class:'hero-sub',text:f1(ss.base)+' → '+f1(ss.now)+' per 100 messages'}));
+  }else{
+    main.appendChild(h('p',{class:'hero-measure',text:'Measuring — the trend shows after a few weeks of sessions.'}));
   }
-  return{big:f1(last.per100),dir:'flat',text:'corrections per 100 user messages',sub:curve.length>1?'in '+last.week:'First week measured ('+last.week+'). Come back next week to see the change.'};
-}
-function onboarding(){
-  return h('section',{class:'panel onboard'},h('h2',{text:'No data yet'}),
-    h('p',{},'No data yet: run ',h('code',{class:'i',text:'brain learn'}),', then come back.'),cmdBox('brain learn'));
-}
-function hero(curve){
-  var hl=headline(curve),first=curve[0],last=curve[curve.length-1];
-  var box=h('div',{class:'chart',tabindex:'0',role:'group','aria-label':'Corrections per 100 messages by week. Use the left and right arrow keys to read each week.'});
-  var sec=h('section',{class:'panel hero','aria-labelledby':'heroNum'},
-    h('div',{class:'hero-head'},
-      h('div',{},h('p',{class:'eyebrow',text:'Your corrections'}),
-        h('div',{class:'big '+hl.dir,id:'heroNum'},hl.big),
-        h('p',{class:'hero-text'},hl.text,hl.week?[' since ',h('span',{class:'nw',text:hl.week})]:null,h('span',{class:'faint',text:hl.sub}))),
-      curve.length>1?h('div',{class:'facts'},
-        h('div',{class:'fact'},h('span',{class:'eyebrow',text:'Now · '+last.week}),h('b',{},f1(last.per100),h('small',{text:'per 100'})),h('span',{class:'s',text:last.corrections+' corrections in '+last.messages+' messages'})),
-        h('div',{class:'fact'},h('span',{class:'eyebrow',text:'Start · '+first.week}),h('b',{},f1(first.per100),h('small',{text:'per 100'})),h('span',{class:'s',text:first.corrections+' corrections in '+first.messages+' messages'}))
-      ):null),
-    box);
-  var first_draw=true;
-  requestAnimationFrame(function(){curveChart(box,curve,first_draw);first_draw=false;onWidth(box,function(){curveChart(box,curve,false)})});
+  var box=curve.length?h('div',{class:'chart',tabindex:'0',role:'group','aria-label':'Mistakes per 100 messages by week. Use the left and right arrow keys to read each week.'}):null;
+  var sec=h('section',{class:'panel hero','aria-label':'Is your agent getting better?'},h('div',{class:'hero-grid'+(box?' has-chart':'')},main,box));
+  if(box)requestAnimationFrame(function(){curveChart(box,curve,true);onWidth(box,function(){curveChart(box,curve,false)})});
   return sec;
 }
+function digestLine(d){
+  var items=[];
+  function add(n,word){items.push(h('span',{class:'part'},h('b',{text:String(n)}),' '+word))}
+  if(d.rules)add(d.rules,d.rules===1?'new rule':'new rules');
+  if(d.sharpened)add(d.sharpened,'sharpened');
+  if(d.facts)add(d.facts,d.facts===1?'fact filed':'facts filed');
+  if(d.retired)add(d.retired,'retired');
+  if(!items.length)items.push(h('span',{class:'part',text:'nothing new to learn'}));
+  var line=h('p',{class:'digest'});
+  items.forEach(function(it,i){
+    if(i)line.appendChild(txt(' '));
+    if(i<items.length-1)it.appendChild(txt(' ·'));
+    line.appendChild(it);
+  });
+  if(d.trend!=null){
+    var t=Math.round(d.trend);
+    line.appendChild(h('span',{class:'tr'+(t>0?' up':t===0?' flat':''),title:'The last full week against the four weeks before it'},
+      h('span',{class:'nw',text:t===0?'mistakes unchanged':'mistakes '+signedPct(t)}),h('small',{text:' last full week vs the 4 before'})));
+  }
+  return line;
+}
+function weekCard(st){
+  var n=st.nightly||{};
+  var card=h('section',{class:'panel card','aria-label':'What the brain changed on its own'},
+    h('p',{class:'eyebrow',text:'This week'}),digestLine(st.digest||{}),
+    h('div',{class:'go'},h('a',{class:'linkbtn',href:'#learned'},'What it learned, with undo',icon('arrow'))));
+  var night=h('div',{class:'split'},h('p',{class:'eyebrow',text:'Last night'}),h('p',{class:'ln'+(n.summary?'':' muted'),text:n.summary||'not run yet'}));
+  var att=n.attention||[];
+  if(att.length)night.appendChild(h('div',{class:'notices'},att.map(attentionNotice)));
+  card.appendChild(night);
+  return card;
+}
+function costCard(st){
+  var e=st.efficiency||{},c=(st.digest||{}).cost||{};
+  var card=h('section',{class:'panel card','aria-label':'Cost'},h('p',{class:'eyebrow',text:'Cost'}));
+  if(e.share!=null){
+    card.appendChild(h('div',{class:'stat-big'},h('span',{class:'nw',text:shareText(e.share)}),h('small',{text:" of your agent's tokens"})));
+    card.appendChild(h('p',{class:'muted',title:"Tokens the brain added to your agent's context, against all tokens your sessions used",text:tok(e.injected)+' of '+tok(e.session_tokens)+' tokens in '+plural(e.weeks||4,'week')}));
+    card.appendChild(h('div',{class:'share','aria-hidden':'true'},h('span',{style:{width:Math.min(100,Math.max(0,e.share*100))+'%'}})));
+  }else{
+    card.appendChild(h('div',{class:'stat-big muted',text:'–'}));
+    card.appendChild(h('p',{class:'muted',text:'Not measured yet. It shows after a few sessions.'}));
+  }
+  card.appendChild(h('div',{class:'split'},h('p',{class:'eyebrow',text:'Nightly runs'}),h('p',{class:'ln',text:costLine(c)})));
+  return card;
+}
+function pickUp(st){
+  var hl=st.handoffs||[];
+  if(!hl.length)return null;
+  var open=false,list=h('div',{class:'hand'}),more=h('div',{class:'more-row'});
+  function paint(){
+    clear(list);clear(more);
+    (open?hl:hl.slice(0,3)).forEach(function(x){
+      list.appendChild(h('div',{class:'hrow'},
+        h('div',{},h('span',{class:'repo',text:x.repo||'(no repo)'}),h('span',{class:'when',text:(x.agent?x.agent+' · ':'')+whenLabel(x.t)})),
+        cmdBox(x.session?'brain resume --session '+x.session:'brain resume')));
+    });
+    if(hl.length>3&&!open)more.appendChild(h('button',{class:'linkbtn',type:'button',onclick:function(){open=true;paint()}},'Show '+(hl.length-3)+' more'));
+  }
+  paint();
+  return h('section',{class:'panel pick','aria-labelledby':'pickTitle'},h('h2',{class:'sec-title',id:'pickTitle',text:'Pick up where you left off'}),
+    h('p',{class:'sec-sub',text:'Run the command in any agent to continue a session.'}),list,more);
+}
+function renderOverview(){
+  var root=clear($('#p-overview')),st=S.state,v=h('div',{class:'stack-v'});
+  if(st.vault&&st.vault.learning===false)v.appendChild(noLlmNotice());
+  v.appendChild(heroSection(st));
+  v.appendChild(h('div',{class:'duo'},weekCard(st),costCard(st)));
+  var pu=pickUp(st);if(pu)v.appendChild(pu);
+  root.appendChild(v);
+}
+
 function replayBar(r){
   var parts=[['caught',r.caught],['missed',r.missed],['uncovered',r.uncovered]].filter(function(p){return p[1]>0});
   return h('div',{class:'stackbar',role:'img','aria-label':r.caught+' caught, '+r.missed+' missed, '+r.uncovered+' not covered, of '+r.corrections+' corrections'},
     parts.map(function(p){return h('span',{class:'c-'+p[0],style:{flex:p[1]+' 1 0'},title:p[0]+': '+p[1]})}));
 }
-function replayLegend(r){
-  return h('div',{class:'legend'},
-    h('span',{class:'c-caught'},h('i'),h('b',{text:String(r.caught)}),' caught'),
-    h('span',{class:'c-missed'},h('i'),h('b',{text:String(r.missed)}),' missed'),
-    h('span',{class:'c-uncovered'},h('i'),h('b',{text:String(r.uncovered)}),' not covered yet'));
-}
 function replayHeadline(r){
   var by=r.would_ask>0?[' ',h('span',{class:'by',text:'· '+r.would_ask+' by asking first'})]:null;
-  return h('h2',{},'Your lessons would have caught ',h('em',{text:String(r.caught)}),' of ',h('em',{text:String(r.corrections)}),' past corrections',by);
-}
-function replaySummary(r){
-  if(!r){
-    return h('section',{class:'panel replay-sum'},h('p',{class:'eyebrow',text:'Replay'}),
-      h('h2',{text:'See what your lessons would have caught.'}),
-      h('p',{class:'expl'},'Replay re-reads your past sessions and checks, for every correction you made, whether a lesson about that mistake would have fired before it. No model is called and nothing leaves this machine.'),
-      h('div',{class:'row-end'},h('a',{class:'btn primary',href:'#replay'},'Open replay',icon('arrow'))));
-  }
-  var sec=h('section',{class:'panel replay-sum'},h('p',{class:'eyebrow',text:'Replay · last '+r.days+' days · '+plural(r.sessions,'session')}));
-  if(!r.corrections){
-    sec.appendChild(h('h2',{text:'No corrections found in the last '+r.days+' days.'}));
-    sec.appendChild(h('p',{class:'expl'},'Nothing to replay yet. Run the replay again after a few more sessions.'));
-  }else{
-    sec.appendChild(replayHeadline(r));
-    sec.appendChild(replayBar(r));
-    sec.appendChild(replayLegend(r));
-    sec.appendChild(h('p',{class:'expl'},h('b',{text:'caught'}),' = a lesson about this mistake would have fired before it. A guard would have asked first; the other lessons would have been in context.'));
-  }
-  sec.appendChild(h('div',{class:'row-end'},h('span',{class:'faint',text:'Replayed '+tstr(r.t).replace('T',' ')}),h('a',{class:'btn',href:'#replay'},'Details',icon('arrow'))));
-  return sec;
-}
-function tileLessons(){
-  var ls=S.state.lessons||[],counts={};
-  ls.forEach(function(l){counts[l.mechanism]=(counts[l.mechanism]||0)+1});
-  var keys=MECH_ORDER.filter(function(k){return counts[k]}).concat(Object.keys(counts).filter(function(k){return MECH_ORDER.indexOf(k)<0}));
-  var t=h('div',{class:'panel tile'},h('p',{class:'eyebrow',text:'Lessons'}),h('div',{class:'val',text:num(ls.length)}),h('p',{class:'sub',text:'rules your agents follow'}));
-  if(ls.length){
-    t.appendChild(h('div',{class:'vis'},
-      h('div',{class:'mix','aria-hidden':'true'},keys.map(function(k){return h('span',{class:'m-'+(MECH[k]?k:'x'),style:{'--n':counts[k]}})})),
-      h('div',{class:'mixlist'},keys.map(function(k){
-        return h('button',{type:'button',class:'m-'+(MECH[k]?k:'x'),title:'Show '+k+' lessons',onclick:function(){S.mech=k;location.hash='lessons';renderLessons()}},h('i'),h('b',{text:String(counts[k])}),k);
-      }))));
-  }
-  return t;
-}
-function tileDrafts(){
-  var gs=S.state.drafts||[],items=gs.reduce(function(a,g){return a+g.length},0);
-  var t=h('div',{class:'panel tile'},h('p',{class:'eyebrow',text:'Open drafts'}),h('div',{class:'val',text:num(gs.length)}));
-  t.appendChild(h('p',{class:'sub',text:gs.length?'waiting for your decision · '+plural(items,'correction')+' grouped':'nothing waiting. You are all caught up.'}));
-  if(gs.length)t.appendChild(h('div',{class:'vis'},h('a',{class:'btn',href:'#review'},'Review',icon('arrow'))));
-  return t;
-}
-function tileRecall(){
-  var r=S.state.recall||{},p=r.precision;
-  var t=h('div',{class:'panel tile'},h('p',{class:'eyebrow',text:'Recall precision'}),
-    h('div',{class:'val'},p==null?'–':Math.round(p*100),p==null?null:h('small',{text:'%'})));
-  if(p==null)t.appendChild(h('p',{class:'sub',text:'Shows up once the brain has recalled notes in your sessions.'}));
-  else{
-    t.appendChild(h('p',{class:'sub',text:num(r.hits)+' of '+num(r.injections)+' notes shown to the agent were opened afterwards (last 30 days)'}));
-    t.appendChild(h('div',{class:'vis'},h('div',{class:'meter',role:'img','aria-label':Math.round(p*100)+' percent'},h('span',{style:{width:Math.round(p*100)+'%'}}))));
-  }
-  return t;
-}
-function tileChecks(){
-  var ch=S.state.checks||{},weeks=Object.keys(ch).sort().map(function(k){return[k,ch[k]]});
-  var t=h('div',{class:'panel tile'},h('p',{class:'eyebrow',text:'Rule-check violations'}));
-  if(!weeks.length){
-    t.appendChild(h('div',{class:'val',text:'–'}));
-    t.appendChild(h('p',{class:'sub'},'No checks have run yet. Give a lesson a ',h('code',{class:'i',text:'check'}),' pattern and violations show up here.'));
-    return t;
-  }
-  var last=weeks[weeks.length-1],fst=weeks[0];
-  t.appendChild(h('div',{class:'val'},num(last[1].violations),h('small',{text:'in '+wk(last[0])})));
-  t.appendChild(h('p',{class:'sub',text:weeks.length>1?'of '+num(last[1].checked)+' checks · '+num(fst[1].violations)+' in '+wk(fst[0]):'of '+num(last[1].checked)+' checks'}));
-  var box=h('div',{class:'checks-chart'});
-  t.appendChild(h('div',{class:'vis'},box));
-  requestAnimationFrame(function(){checksChart(box,weeks);onWidth(box,function(){checksChart(box,weeks)})});
-  return t;
-}
-function renderOverview(){
-  var root=clear($('#p-overview')),st=S.state,curve=st.curve||[];
-  var v=h('div',{class:'stack-v'});
-  v.appendChild(curve.length?hero(curve):onboarding());
-  v.appendChild(replaySummary(st.replay));
-  v.appendChild(h('div',{class:'tiles'},tileLessons(),tileDrafts(),tileRecall(),tileChecks()));
-  root.appendChild(v);
+  return h('h2',{},'Your rules would have caught ',h('em',{text:String(r.caught)}),' of ',h('em',{text:String(r.corrections)}),' past corrections',by);
 }
 
-/* ================= LESSONS ================= */
+/* ================= RULES ================= */
 function needsAttention(l){return !!l.silent||!!(l.health&&l.health.verdict&&l.health.verdict!=='ok')}
 function lessonMatches(l){
   if(S.mech==='attention'){if(!needsAttention(l))return false}
@@ -990,36 +984,11 @@ function verdictBox(v){
   return box;
 }
 function silentBox(l){
-  var box=h('div',{class:'silent',role:'group','aria-label':'Silent lesson '+l.id});
-  var info=h('div',{class:'t'},h('b',{},icon('warn'),'Silent: this lesson does not reach your agent yet'),l.silent);
-  var acts=h('div',{class:'acts'});
-  function idle(){
-    clear(acts);
-    acts.appendChild(h('button',{class:'btn warn sm',type:'button',onclick:confirmStep},icon('shield'),'Trust…'));
-  }
-  function confirmStep(){
-    clear(info);clear(acts);
-    info.appendChild(h('b',{},icon('warn'),'Trust '+l.id+'?'));
-    info.appendChild(txt('After this the lesson will reach your agent. Only trust it if you have read the rule and it says what you want.'));
-    acts.appendChild(h('button',{class:'btn primary sm',type:'button',onclick:go},'Yes, trust it'));
-    acts.appendChild(h('button',{class:'btn ghost sm',type:'button',onclick:function(){clear(info);info.appendChild(h('b',{},icon('warn'),'Silent: this lesson does not reach your agent yet'));info.appendChild(txt(l.silent));idle()}},'Cancel'));
-    var y=acts.firstChild;if(y)y.focus();
-  }
-  async function go(){
-    var btns=acts.querySelectorAll('button');btns.forEach(function(b){b.disabled=true});
-    try{
-      await api('/api/trust',{method:'POST',body:{id:l.id}});
-      toast(S.state.demo?'Demo mode: nothing was changed. In your vault '+l.id+' would now reach your agent.':l.id+' is trusted and will reach your agent.','ok');
-      await load();
-    }catch(e){
-      if(e.auth){showAuth();return}
-      btns.forEach(function(b){b.disabled=false});
-      if(!box.querySelector('.err'))box.appendChild(h('div',{class:'err',role:'alert',style:{flex:'1 1 100%'},text:e.message}));
-      else box.querySelector('.err').textContent=e.message;
-    }
-  }
-  box.appendChild(info);box.appendChild(acts);idle();
-  return box;
+  var err=h('div',{class:'err',role:'alert',hidden:true,style:{flex:'1 1 100%'}}),btn=trustBtn(l.id);
+  btn.addEventListener('click',function(){trustRule(l.id,btn,err)});
+  return h('div',{class:'silent',role:'group','aria-label':'Silent rule '+l.id},
+    h('div',{class:'t'},h('b',{},icon('warn'),'Silent until you trust it'),cap(l.silent)),
+    h('div',{class:'acts'},btn),err);
 }
 function lessonCard(l){
   var hl=l.health||{},bad=needsAttention(l);
@@ -1037,9 +1006,9 @@ function lessonCard(l){
   var foot=h('div',{class:'l-foot'},
     l.note?h('button',{class:'linkbtn',type:'button','aria-label':'Open note '+l.note,onclick:function(e){openNote(l.note,false,e.currentTarget)}},l.note,icon('ext')):h('span',{class:'faint',text:'no note'}),
     hl.shown!=null?h('div',{class:'health'},
-      stat('shown',hl.shown,'Times this lesson was shown to an agent'),
-      stat('ignored',hl.ignored,'You corrected the same mistake although the lesson was shown',hl.ignored>0),
-      stat('missed',hl.missed,'You corrected the same mistake and the lesson was not shown',hl.missed>0),
+      stat('shown',hl.shown,'Times this rule was shown to an agent'),
+      stat('ignored',hl.ignored,'You corrected the same mistake although the rule was shown',hl.ignored>0),
+      stat('missed',hl.missed,'You corrected the same mistake and the rule was not shown',hl.missed>0),
       stat('violations',hl.violations,'Times the check pattern matched what an agent wrote',hl.violations>0),
       hl.last?h('div',{class:'stat'},'last shown ',h('b',{class:'d',text:hl.last})):null):h('span',{class:'faint',text:'no health data yet'}));
   return h('article',{class:'lesson'+(bad?' flag':'')},head,h('p',{class:'rule',text:l.rule}),
@@ -1049,9 +1018,9 @@ function lessonCard(l){
     foot);
 }
 function stat(label,v,title,bad){return h('div',{class:'stat'+(bad?' bad':''),title:title},h('b',{text:num(v)}),label)}
-function renderLessons(){
-  var root=clear($('#p-lessons')),ls=S.state.lessons||[];
-  if(!ls.length){root.appendChild(emptyBox('No lessons yet',['Approve a draft in Review, or add one with ',h('code',{class:'i',text:'brain pack add safety'}),'.']));return}
+function renderRules(){
+  var root=clear($('#p-rules')),ls=S.state.lessons||[];
+  if(!ls.length){root.appendChild(emptyBox('No rules yet',['The brain writes them from your corrections at night. To add one yourself, run ',h('code',{class:'i',text:'brain lesson'}),'.']));return}
   var counts={};ls.forEach(function(l){counts[l.mechanism]=(counts[l.mechanism]||0)+1});
   var attn=ls.filter(needsAttention).length;
   var keys=MECH_ORDER.filter(function(k){return counts[k]}).concat(Object.keys(counts).filter(function(k){return MECH_ORDER.indexOf(k)<0}));
@@ -1066,113 +1035,100 @@ function renderLessons(){
   function paintList(){
     clear(list);
     var shown=ls.filter(lessonMatches);
-    count.textContent=shown.length===ls.length?plural(ls.length,'lesson'):shown.length+' of '+plural(ls.length,'lesson');
+    count.textContent=shown.length===ls.length?plural(ls.length,'rule'):shown.length+' of '+plural(ls.length,'rule');
     if(!shown.length)list.appendChild(emptyBox('Nothing matches','Try another filter or clear the search.'));
     shown.forEach(function(l){list.appendChild(lessonCard(l))});
   }
-  var input=h('input',{type:'search',id:'lq',placeholder:'Search rules, ids, triggers…','aria-label':'Search lessons',value:S.q,autocomplete:'off',spellcheck:'false'});
+  var input=h('input',{type:'search',id:'lq',name:'rule-search',placeholder:'Search rules, ids, triggers…','aria-label':'Search rules',value:S.q,autocomplete:'off',spellcheck:'false'});
   input.addEventListener('input',function(){S.q=input.value;paintList()});
+  root.appendChild(h('p',{class:'lede'},'The rules your agent follows. The brain adds, sharpens and retires them at night; ',h('a',{href:'#learned'},'Learned'),' lists every change.'));
   root.appendChild(h('div',{class:'toolbar'},chipRow,h('div',{class:'search'},icon('search'),input)));
   root.appendChild(count);root.appendChild(list);
   paintChips();paintList();
 }
 
-/* ================= REVIEW ================= */
-function gkey(g){return g[0].id}
-function formFor(g){
-  var k=gkey(g);if(S.forms[k])return S.forms[k];
-  var wr=g.find(function(d){return d.rule&&String(d.rule).trim()}),sug=(g.find(function(d){return d.suggest&&(d.suggest.mechanism||d.suggest.words)})||{}).suggest||{};
-  return S.forms[k]={rule:wr?wr.rule:'',suggested:!!wr,mech:MECH[sug.mechanism]?sug.mechanism:'reflex',words:(sug.words||[]).join(', '),note:''};
+/* ================= LEARNED ================= */
+var DEMO_MSG='Demo: nothing changed';
+var KIND={rule:'k-rule',sharpen:'k-sharpen',mechanism:'k-mechanism',retire:'k-retire',fact:'k-fact'};
+function clip(t,n){t=String(t||'').replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n-1)+'…':t}
+function cap(t){t=String(t||'');return t?t.charAt(0).toUpperCase()+t.slice(1):t}
+function noteChip(name){
+  if(!name)return null;
+  return h('button',{class:'nchip',type:'button',title:'Open note '+name,'aria-label':'Open note '+name,onclick:function(e){openNote(name,false,e.currentTarget)}},icon('note'),h('span',{text:name}));
 }
-function groupLeft(g){
-  var quotes=new Map(),ctxs=new Map();
-  g.forEach(function(d){
-    var q=quotes.get(d.quote)||{quote:d.quote,n:0,ts:'',src:d.source};q.n++;if(String(d.ts||'')>q.ts)q.ts=String(d.ts||'');quotes.set(d.quote,q);
-    if(d.context)ctxs.set(d.context,(ctxs.get(d.context)||0)+1);
-  });
-  var qs=Array.from(quotes.values()),cs=Array.from(ctxs.keys());
-  var left=h('div',{class:'g-left'});
-  left.appendChild(h('div',{class:'g-top'},h('span',{class:'badge b-x nodot',text:'Seen '+plural(g.length,'time')}),
-    h('span',{class:'faint',text:'last '+dstr(g.map(function(d){return d.ts||''}).sort().pop())})));
-  var qbox=h('div',{},h('span',{class:'q-label',text:'What you said'}));
-  var showAll=false;
-  function paintQ(){
-    Array.prototype.slice.call(qbox.querySelectorAll('.quote,.more-q')).forEach(function(n){qbox.removeChild(n)});
-    (showAll?qs:qs.slice(0,3)).forEach(function(q){
-      qbox.appendChild(h('div',{class:'quote'},'“'+q.quote+'”',h('span',{class:'q-meta',text:(q.n>1?'×'+q.n+' · ':'')+(q.src?q.src+' · ':'')+dstr(q.ts)})));
-    });
-    if(qs.length>3&&!showAll)qbox.appendChild(h('button',{class:'linkbtn more-q',type:'button',style:{marginTop:'8px'},onclick:function(){showAll=true;paintQ()}},'Show '+(qs.length-3)+' more'));
+function trustBtn(id){return h('button',{class:'btn warn sm',type:'button','aria-label':'Trust rule '+id},icon('shield'),'Trust')}
+async function trustRule(id,btn,err){
+  if(btn.disabled)return;
+  btn.disabled=true;if(err)err.hidden=true;
+  try{
+    var r=await api('/api/trust',{method:'POST',body:{id:id}});
+    if(r&&r.demo){toast(DEMO_MSG,'ok');btn.disabled=false;return}
+    toast('Trusted. '+id+' reaches your agent from now on.','ok');
+    await load();
+  }catch(x){
+    if(x.auth){showAuth();return}
+    btn.disabled=false;
+    if(err){err.textContent=x.message;err.hidden=false}else toast(x.message,'err');
   }
-  paintQ();left.appendChild(qbox);
-  if(cs.length){
-    var cbox=h('div',{},h('span',{class:'q-label',text:'What the agent did'}));
-    cs.slice(0,3).forEach(function(c){cbox.appendChild(h('div',{class:'ctx',text:c}))});
-    if(cs.length>3)cbox.appendChild(h('p',{class:'faint',style:{marginTop:'6px'},text:'+'+(cs.length-3)+' more'}));
-    left.appendChild(cbox);
-  }
-  return left;
 }
-function groupCard(g){
-  var key=gkey(g),f=formFor(g),card=h('article',{class:'group'});
-  if(S.done[key]){
-    card.appendChild(h('div',{class:'done'},h('span',{},h('b',{text:S.done[key]==='approved'?'Approved':'Rejected'}),' (demo mode: nothing was written). “'+g[0].quote+'”'),
-      h('button',{class:'btn sm',type:'button',onclick:function(){delete S.done[key];renderReview()}},'Show again')));
-    return card;
+async function undoEntry(e,btn,label,err){
+  if(btn.disabled)return;
+  btn.disabled=true;err.hidden=true;label.textContent='Undoing…';
+  try{
+    var r=await api('/api/undo',{method:'POST',body:{id:e.id}});
+    if(r&&r.demo){toast(DEMO_MSG,'ok');btn.disabled=false;label.textContent='Undo';return}
+    toast((r&&r.message)||'Undone.','ok');
+    await load();
+    var p=$('#p-learned');if(p&&!p.hidden)p.focus({preventScroll:true});
+  }catch(x){
+    if(x.auth){showAuth();return}
+    btn.disabled=false;label.textContent='Undo';
+    err.textContent=x.message;err.hidden=false;
   }
-  card.appendChild(groupLeft(g));
-  var rule=h('textarea',{id:'rule-'+key,rows:'3',placeholder:'Write the rule as an instruction to the agent, e.g. “Fix flaky tests at the root; never add retries.”',value:f.rule});
-  var mech=h('select',{id:'mech-'+key},MECH_ORDER.map(function(m){return h('option',{value:m,text:m})}));
-  mech.value=f.mech;
-  var mhint=h('span',{class:'hint',id:'mh-'+key,text:MECH[f.mech]});
-  var words=h('input',{id:'words-'+key,type:'text',value:f.words,placeholder:'flaky, retry, sometimes fails',autocomplete:'off',spellcheck:'false'});
-  var note=h('input',{id:'note-'+key,type:'text',value:f.note,placeholder:'working-style',list:'noteNames',autocomplete:'off',spellcheck:'false'});
-  var approve=h('button',{class:'btn primary',type:'button',disabled:!f.rule.trim()},icon('check'),'Approve as lesson');
-  var reject=h('button',{class:'btn ghost',type:'button'},'Reject');
-  var err=h('div',{class:'err',role:'alert',hidden:true});
-  rule.addEventListener('input',function(){f.rule=rule.value;approve.disabled=!rule.value.trim()});
-  mech.addEventListener('change',function(){f.mech=mech.value;mhint.textContent=MECH[mech.value]});
-  words.addEventListener('input',function(){f.words=words.value});
-  note.addEventListener('input',function(){f.note=note.value});
-  function busy(b,label){approve.disabled=b||!rule.value.trim();reject.disabled=b;if(b){err.hidden=true}}
-  function fail(e){if(e.auth){showAuth();return}busy(false);err.textContent=e.message;err.hidden=false}
-  approve.addEventListener('click',async function(){
-    busy(true);approve.lastChild.textContent='Approving…';
-    try{
-      var r=await api('/api/approve',{method:'POST',body:{id:g[0].id,rule:f.rule.trim(),mechanism:f.mech,words:f.words,note:f.note.trim()}});
-      if(r&&r.demo){S.done[key]='approved';toast('Demo mode: nothing was written. In your vault this becomes a lesson.','ok')}
-      else{delete S.forms[key];toast('Approved as '+r.lesson+(r.note?' in '+r.note:'')+'.','ok')}
-      await load();
-    }catch(e){approve.lastChild.textContent='Approve as lesson';fail(e)}
-  });
-  reject.addEventListener('click',async function(){
-    busy(true);reject.textContent='Rejecting…';
-    try{
-      var r=await api('/api/reject',{method:'POST',body:{id:g[0].id}});
-      if(r&&r.demo){S.done[key]='rejected';toast('Demo mode: nothing was written.','ok')}
-      else{delete S.forms[key];toast('Rejected. It is gone from this list.','ok')}
-      await load();
-    }catch(e){reject.textContent='Reject';fail(e)}
-  });
-  var right=h('div',{class:'g-right'},
-    h('div',{class:'field'},h('label',{for:'rule-'+key},'Rule',f.suggested?h('span',{class:'tag',text:'suggested'}):null),rule,
-      h('span',{class:'hint',text:f.suggested?'The brain suggested this. Edit it until it says exactly what you want.':'Write it as an instruction to the agent.'})),
-    h('div',{class:'field-row'},
-      h('div',{class:'field'},h('label',{for:'mech-'+key},'How it fires'),mech,mhint),
-      h('div',{class:'field'},h('label',{for:'words-'+key},'Trigger words'),words,h('span',{class:'hint',text:'Comma separated. Two hits, or one exact phrase, fire it.'}))),
-    h('div',{class:'field'},h('label',{for:'note-'+key},'Note ',h('span',{class:'faint',text:'(optional)'})),note,h('span',{class:'hint',text:'Where the lesson lives. Leave empty and the brain picks the best home.'})),
-    err,h('div',{class:'acts'},approve,reject));
-  card.appendChild(right);
-  return card;
 }
-function renderReview(){
-  var root=clear($('#p-review')),gs=S.state.drafts||[];
-  var intro=h('section',{class:'panel tight'},h('div',{class:'promise'},icon('shield'),
-    h('div',{},h('h2',{class:'sec-title',text:'Nothing becomes a rule without you.'}),
-      h('p',{class:'sec-sub',text:'These are corrections you made that look likely to happen again, grouped when they are similar. Approve one to turn it into a lesson, or reject it to remove it from this list.'}))));
-  root.appendChild(intro);
-  if(!gs.length){root.appendChild(h('div',{style:{marginTop:'20px'}},emptyBox('All caught up','No corrections are waiting. New ones show up here after the next learning run.')));return}
-  var box=h('div',{class:'groups'});gs.forEach(function(g){box.appendChild(groupCard(g))});
-  root.appendChild(box);
+function entryRow(e){
+  var text=String(e.text||'');
+  if(e.note&&text.indexOf(e.note+' › ')===0)text=text.slice(e.note.length+3);
+  var err=h('div',{class:'err',role:'alert',hidden:true}),label=h('span',{text:'Undo'});
+  var undo=h('button',{class:'btn sm ghost',type:'button','aria-label':'Undo: '+clip(text,90)},icon('undo'),label);
+  undo.addEventListener('click',function(){undoEntry(e,undo,label,err)});
+  return h('li',{class:'entry'},
+    h('div',{class:'e-top'},h('span',{class:'badge '+(KIND[e.kind]||'b-x'),title:e.lesson||'',text:e.what||e.kind||'change'}),noteChip(e.note),undo),
+    h('p',{class:'e-text',text:text}),
+    e.why?h('p',{class:'e-why',text:e.why}):null,
+    err);
+}
+function silentRow(s){
+  var err=h('div',{class:'err',role:'alert',hidden:true}),btn=trustBtn(s.id);
+  btn.addEventListener('click',function(){trustRule(s.id,btn,err)});
+  return h('li',{class:'entry'},
+    h('div',{class:'e-top'},noteChip(s.note),btn),
+    h('p',{class:'e-text',text:s.rule}),
+    s.why?h('p',{class:'e-why',text:cap(s.why)}):null,
+    err);
+}
+function renderLearned(){
+  var root=clear($('#p-learned')),st=S.state,list=st.learned||[],silent=st.silent||[];
+  root.appendChild(h('p',{class:'lede',text:'Everything the brain changed on its own in the last 30 days. Undo anything — nothing needs your OK.'}));
+  if(silent.length){
+    root.appendChild(h('section',{class:'panel attn','aria-labelledby':'silentTitle'},
+      h('h2',{class:'attn-h',id:'silentTitle'},icon('warn'),'Written by an agent — silent until you trust them'),
+      h('ul',{class:'entries bare',role:'list'},silent.map(silentRow))));
+  }
+  if(!list.length){
+    var off=st.vault&&st.vault.learning===false;
+    root.appendChild(h('div',{style:{marginTop:silent.length?'24px':'0'}},emptyBox('Nothing learned in the last 30 days.',
+      off?['There is no LLM CLI on this machine, so it cannot learn yet. Install claude, codex or ollama, then run ',h('code',{class:'i',text:'brain setup'}),'.']:'It learns from your sessions every night.')));
+    return;
+  }
+  var days=[],by={};
+  list.forEach(function(e){var k=dstr(e.t)||'?';if(!by[k]){by[k]=[];days.push(k)}by[k].push(e)});
+  days.forEach(function(k){
+    var t=dayTitle(k),id='day-'+k;
+    root.appendChild(h('section',{class:'day','aria-labelledby':id},
+      h('h3',{class:'day-h',id:id},t[0],t[1]?h('span',{text:t[1]}):null),
+      h('ul',{class:'entries',role:'list'},by[k].map(entryRow))));
+  });
 }
 
 /* ================= REPLAY ================= */
@@ -1190,7 +1146,7 @@ async function runReplay(){
   S.replayBusy=true;S.replayErr='';S.replayNote='';renderReplay();
   try{
     var r=await api('/api/replay',{method:'POST',body:{days:S.replayDays}});
-    if(r&&r.demo){await sleep(1100);S.replayNote='Demo mode: the sample result stays. In your vault this re-reads your sessions.'}
+    if(r&&r.demo){await sleep(1100);S.replayNote='Demo: nothing changed. The sample result stays.'}
     else if(r&&r.replay){S.state.replay=r.replay;toast('Replay done: '+r.replay.caught+' of '+r.replay.corrections+' corrections would have been caught.','ok')}
     S.replayBusy=false;await load();
   }catch(e){
@@ -1203,7 +1159,7 @@ function renderReplay(){
   var root=clear($('#p-replay')),r=S.state.replay,v=h('div',{class:'stack-v'});root.appendChild(v);
   var top=h('section',{class:'panel'});
   var head=h('div',{class:'grid-h'},h('div',{},h('p',{class:'eyebrow',text:'Replay'}),
-    r&&r.corrections?replayHeadlineBlock(r):h('h2',{class:'sec-title',text:r?'No corrections found in the last '+r.days+' days':'Replay your past sessions against today’s lessons'})),runControls(r));
+    r&&r.corrections?replayHeadlineBlock(r):h('h2',{class:'sec-title',text:r?'No corrections found in the last '+r.days+' days':'Replay your past sessions against today’s rules'})),runControls(r));
   top.appendChild(head);
   if(S.replayBusy){
     top.appendChild(h('p',{class:'expl',role:'status',text:'Replaying the last '+S.replayDays+' days of sessions. This can take a few seconds.'}));
@@ -1212,35 +1168,35 @@ function renderReplay(){
   if(S.replayErr)top.appendChild(h('div',{class:'err',role:'alert',style:{marginTop:'14px'},text:S.replayErr}));
   if(S.replayNote)top.appendChild(h('p',{class:'expl',role:'status',text:S.replayNote}));
   if(!r){
-    top.appendChild(h('p',{class:'expl'},'Replay looks at every correction you made in your past sessions and at the moment just before it. A lesson ',h('b',{text:'catches'}),' a correction when it is about that mistake and its trigger fires in that window: a guard would have asked first, a reflex or an always-lesson would have been in context. No model is called and nothing leaves this machine.'));
+    top.appendChild(h('p',{class:'expl'},'Replay looks at every correction you made in your past sessions and at the moment just before it. A rule ',h('b',{text:'catches'}),' a correction when it is about that mistake and its trigger fires in that window: a guard would have asked first, a reflex or an always rule would have been in context. No model is called and nothing leaves this machine.'));
     v.appendChild(top);return;
   }
   if(r.corrections){
     top.appendChild(replayBar(r));
     top.appendChild(h('div',{class:'statrow'},
-      sbox('caught','Caught',r.caught,r.caught_pct!=null?r.caught_pct+'% of corrections. A lesson about this mistake would have fired before it.':''),
-      sbox('missed','Missed',r.missed,'A lesson exists, but none of its triggers fired. Widen its words or commands.'),
-      sbox('uncovered','Not covered',r.uncovered,'No lesson is about this yet. Replay can turn these into drafts.'),
+      sbox('caught','Caught',r.caught,r.caught_pct!=null?r.caught_pct+'% of corrections. A rule about this mistake would have fired before it.':''),
+      sbox('missed','Missed',r.missed,'A rule exists, but none of its triggers fired. Widen its words or commands.'),
+      sbox('uncovered','Not covered',r.uncovered,'No rule is about this yet.'),
       sbox('caught','Asks first',r.would_ask,'Of the caught ones, a guard would have asked before the tool call.')));
   }
-  top.appendChild(h('p',{class:'metaline',text:'Replayed '+tstr(r.t).replace('T',' ')+' · last '+r.days+' days · '+plural(r.sessions,'session')+' · '+plural(r.lessons,'lesson')+(r.silent_lessons?' ('+r.silent_lessons+' silent lesson'+(r.silent_lessons===1?'':'s')+' not counted: it does not reach your agent until you trust it)':'')}));
+  top.appendChild(h('p',{class:'metaline',text:'Replayed '+tstr(r.t).replace('T',' ')+' · last '+r.days+' days · '+plural(r.sessions,'session')+' · '+plural(r.lessons,'rule')+(r.silent_lessons?' ('+r.silent_lessons+' silent rule'+(r.silent_lessons===1?'':'s')+' not counted: it does not reach your agent until you trust it)':'')}));
   v.appendChild(top);
   var pl=r.per_lesson||[];
   if(pl.length){
-    var sec=h('section',{class:'panel'},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'By lesson'}),h('p',{class:'sec-sub',text:'Which lessons would have fired, and which need wider triggers.'}))));
+    var sec=h('section',{class:'panel'},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'By rule'}),h('p',{class:'sec-sub',text:'Which rules would have fired, and which need wider triggers.'}))));
     var tb=h('tbody',{});
     pl.forEach(function(p){
       tb.appendChild(h('tr',{},h('td',{class:'first id',text:p.id}),h('td',{class:'n','data-label':'Caught',text:String(p.caught)}),h('td',{class:'n','data-label':'Asks first',text:String(p.ask||0)}),
         h('td',{class:'n','data-label':'Missed'},p.missed?h('span',{style:{color:'var(--amber-ink)'},text:String(p.missed)}):'0'),
         h('td',{'data-label':'Widen'},(p.widen&&p.widen.length&&p.missed)?h('div',{class:'chips'},p.widen.map(function(w){return h('span',{class:'chip'},h('span',{class:'v',text:w}))})):h('span',{class:'faint',text:'–'}))));
     });
-    sec.appendChild(h('table',{class:'rt'},h('thead',{},h('tr',{},h('th',{scope:'col',text:'Lesson'}),h('th',{scope:'col',text:'Caught'}),h('th',{scope:'col',text:'Asks first'}),h('th',{scope:'col',text:'Missed'}),h('th',{scope:'col',text:'Add trigger words'}))),tb));
+    sec.appendChild(h('table',{class:'rt'},h('thead',{},h('tr',{},h('th',{scope:'col',text:'Rule'}),h('th',{scope:'col',text:'Caught'}),h('th',{scope:'col',text:'Asks first'}),h('th',{scope:'col',text:'Missed'}),h('th',{scope:'col',text:'Add trigger words'}))),tb));
     v.appendChild(sec);
   }
   var rows=r.rows||[];
   if(rows.length){
     var cnt={caught:0,missed:0,uncovered:0};rows.forEach(function(x){cnt[x.status]=(cnt[x.status]||0)+1});
-    var rsec=h('section',{},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'Every correction'}),h('p',{class:'sec-sub',text:'The moments you had to correct an agent, and what your lessons would have done.'}))));
+    var rsec=h('section',{},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'Every correction'}),h('p',{class:'sec-sub',text:'The moments you had to correct an agent, and what your rules would have done.'}))));
     var chipRow=h('div',{class:'chips',role:'group','aria-label':'Filter by status',style:{marginBottom:'14px'}}),list=h('div',{class:'rows'}),more=h('div',{class:'more-row'});
     var paintChips=function(){
       clear(chipRow);
@@ -1270,53 +1226,16 @@ function replayRow(x){
   var label={caught:'caught',missed:'missed',uncovered:'not covered'}[x.status]||x.status;
   var card=h('article',{class:'rrow'},
     h('div',{class:'r-top'},h('span',{class:'badge b-'+x.status,text:label}),x.agent?h('span',{class:'badge b-x nodot',text:x.agent}):null,
-      (x.before_lesson&&x.status!=='uncovered')?h('span',{class:'note-tag',text:'happened before the lesson existed'}):null,h('span',{class:'d',text:tstr(x.ts).replace('T',' ')})),
+      (x.before_lesson&&x.status!=='uncovered')?h('span',{class:'note-tag',text:'happened before the rule existed'}):null,h('span',{class:'d',text:tstr(x.ts).replace('T',' ')})),
     h('p',{class:'r-quote',text:'“'+x.quote+'”'}));
   if(x.context)card.appendChild(h('div',{class:'ctx',text:x.context}));
   var fire=h('div',{class:'r-fire'});
   (x.fired||[]).forEach(function(f){fire.appendChild(h('span',{class:'f'},h('code',{text:f.id}),(HOW[f.how]||f.how)))});
-  if(x.status==='missed')fire.appendChild(h('span',{class:'f'},'A lesson exists (',(x.lessons||[]).map(function(id,i){return [i?', ':'',h('code',{text:id})]}),') but no trigger fired.'));
-  if(x.status==='uncovered')fire.appendChild(h('span',{class:'f',text:'No lesson is about this yet.'}));
+  if(x.status==='missed')fire.appendChild(h('span',{class:'f'},'A rule exists (',(x.lessons||[]).map(function(id,i){return [i?', ':'',h('code',{text:id})]}),') but no trigger fired.'));
+  if(x.status==='uncovered')fire.appendChild(h('span',{class:'f',text:'No rule is about this yet.'}));
   if(x.status==='caught'&&x.lessons&&x.lessons.length)fire.appendChild(h('span',{class:'f faint'},'matching: ',x.lessons.map(function(id,i){return [i?', ':'',h('code',{text:id})]})));
   if(fire.childNodes.length)card.appendChild(fire);
   return card;
-}
-
-/* ================= MORE ================= */
-function renderMore(){
-  var root=clear($('#p-more')),st=S.state,v=h('div',{class:'stack-v'});root.appendChild(v);
-  var packs=st.packs||[];
-  var ps=h('section',{},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'Packs'}),h('p',{class:'sec-sub',text:'Ready-made lessons. Install one and its lessons start working in your next session.'}))));
-  var cards=h('div',{class:'cards'});
-  packs.forEach(function(p){
-    var c=h('div',{class:'pack'+(p.installed?' on':'')},
-      h('h3',{},p.name,p.installed?h('span',{class:'badge b-ok nodot'},'Installed ✓'):null,p.outdated?h('span',{class:'badge b-silent nodot',text:'update available'}):null),
-      h('p',{text:p.description}),h('p',{class:'ln',text:plural(p.lessons,'lesson')+(p.version?' · v'+p.version:'')}));
-    if(!p.installed)c.appendChild(cmdBox('brain pack add '+p.name));
-    else if(p.outdated)c.appendChild(cmdBox('brain pack add '+p.name));
-    cards.appendChild(c);
-  });
-  if(!packs.length)cards.appendChild(emptyBox('No packs found','Packs ship with the tool.'));
-  ps.appendChild(cards);v.appendChild(ps);
-  var hs=h('section',{class:'panel'},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'Recent handoffs'}),h('p',{class:'sec-sub',text:'Where a session stopped. Any agent can pick it up with the command shown.'}))));
-  var hl=st.handoffs||[],list=h('div',{class:'hand'});
-  hl.forEach(function(x){
-    list.appendChild(h('div',{class:'hrow'},h('span',{class:'t',text:tstr(x.t).replace('T',' ')}),h('span',{class:'badge b-x nodot',text:x.agent||'agent'}),
-      h('span',{class:'repo'},x.repo||'(no repo)',h('span',{class:'sess',text:x.session||''})),cmdBox('brain resume --session '+x.session)));
-  });
-  if(!hl.length)list.appendChild(h('p',{class:'muted',text:'No handoffs yet. They are written automatically before a session is compacted.'}));
-  hs.appendChild(list);v.appendChild(hs);
-  var vi=st.vault||{};
-  var vs=h('section',{class:'panel'},h('div',{class:'grid-h'},h('div',{},h('h2',{class:'sec-title',text:'Vault'}),h('p',{class:'sec-sub',text:'Plain Markdown files on your machine.'}))));
-  vs.appendChild(h('dl',{class:'kv'},
-    h('dt',{text:'Name'}),h('dd',{text:vi.name||''}),
-    h('dt',{text:'Location'}),h('dd',{class:'mono',text:vi.root||''}),
-    h('dt',{text:'Version'}),h('dd',{text:vi.version||''}),
-    h('dt',{text:'Notes'}),h('dd',{text:num(vi.notes)}),
-    h('dt',{text:'Lessons'}),h('dd',{text:num(vi.lessons)}),
-    h('dt',{text:'Open drafts'}),h('dd',{text:num(vi.drafts)}),
-    h('dt',{text:'Inbox'}),h('dd',{text:num(vi.inbox)+' waiting to be distilled'})));
-  v.appendChild(vs);
 }
 
 /* ================= MARKDOWN (small, safe, DOM-built) ================= */
@@ -1420,7 +1339,7 @@ function renderQuote(q){
       else if(lastKey&&l.trim())f[lastKey]+=' '+l.trim();
     });
     var card=h('div',{class:'lcard'});
-    var head=h('div',{class:'lc-head'},h('code',{text:title||'lesson'}));
+    var head=h('div',{class:'lc-head'},h('code',{text:title||'rule'}));
     if(f.mechanism)head.appendChild(mechBadge(f.mechanism));
     if(f.since)head.appendChild(h('span',{class:'lc-since',text:'since '+f.since}));
     card.appendChild(head);
@@ -1472,7 +1391,7 @@ function noteBack(){
   S.noteStack.pop();openNote(S.noteStack[S.noteStack.length-1],true);
 }
 
-/* ================= GRAPH ================= */
+/* ================= MAP ================= */
 var G={sig:'',sim:null,nodes:[],links:[],view:{x:0,y:0,k:1},touched:false,ready:false};
 function hash(str){var x=5381;for(var i=0;i<str.length;i++)x=((x<<5)+x+str.charCodeAt(i))|0;return String(x)}
 function graphSig(g){return g.nodes.length+':'+g.links.length+':'+hash(g.nodes.map(function(n){return n.id+'|'+n.folder+'|'+n.lessons+'|'+n.hub}).join(',')+g.links.map(function(l){return l[0]+'>'+l[1]}).join(','))}
@@ -1484,8 +1403,8 @@ function ensureGraph(){
 }
 function buildGraph(gd,sig){
   if(G.sim&&G.sim.raf)cancelAnimationFrame(G.sim.raf);
-  var root=clear($('#p-graph'));G.ready=false;
-  if(!gd.nodes.length){root.appendChild(emptyBox('No notes yet','Your notes will show up here as a graph once the vault has some. Run `brain setup` to create one.'));return}
+  var root=clear($('#p-map'));G.ready=false;
+  if(!gd.nodes.length){root.appendChild(emptyBox('No notes yet','Your notes will show up here as a map once the vault has some. Run `brain setup` to create one.'));return}
   var prev=new Map((G.nodes||[]).map(function(n){return[n.id,n]}));
   var folders=Array.from(new Set(gd.nodes.map(function(n){return n.folder||''}))).sort();
   var fidx=new Map(folders.map(function(f,i){return[f,i%7]}));
@@ -1507,7 +1426,7 @@ function buildGraph(gd,sig){
   G.nodes=nodes;G.links=links;G.sig=sig;G.touched=false;G.hover=null;G.q='';G.folder=null;G.pick=null;
 
   var wrap=h('div',{class:'graph-wrap'});
-  var svg=s('svg',{class:'gsvg',tabindex:'0',role:'img','aria-label':'Graph of '+N+' notes and '+links.length+' links. Use the search box to jump to a note, plus and minus to zoom, arrow keys to pan.'});
+  var svg=s('svg',{class:'gsvg',tabindex:'0',role:'img','aria-label':'Map of '+N+' notes and '+links.length+' links. Use the search box to jump to a note, plus and minus to zoom, arrow keys to pan.'});
   var vp=s('g',{}),edges=s('path',{class:'edges'}),edgesHi=s('path',{class:'edges-hi'}),ng=s('g',{});
   vp.appendChild(edges);vp.appendChild(edgesHi);vp.appendChild(ng);svg.appendChild(vp);
   nodes.forEach(function(n){
@@ -1521,11 +1440,11 @@ function buildGraph(gd,sig){
   });
   var gtip=h('div',{class:'gtip',hidden:true});
   var res=h('div',{class:'res','aria-live':'polite'});
-  var search=h('input',{type:'search',placeholder:'Find a note…','aria-label':'Find a note in the graph',autocomplete:'off',spellcheck:'false'});
+  var search=h('input',{type:'search',id:'mapq',name:'map-search',placeholder:'Find a note…','aria-label':'Find a note in the graph',autocomplete:'off',spellcheck:'false'});
   var ctl=h('div',{class:'g-ctl'},
     h('button',{class:'icon-btn',type:'button','aria-label':'Zoom in',title:'Zoom in',onclick:function(){zoomAt(0,0,1.3,true)}},icon('plus')),
     h('button',{class:'icon-btn',type:'button','aria-label':'Zoom out',title:'Zoom out',onclick:function(){zoomAt(0,0,1/1.3,true)}},icon('minus')),
-    h('button',{class:'icon-btn',type:'button','aria-label':'Fit graph to view',title:'Fit to view',onclick:function(){G.touched=false;fitView()}},icon('fit')));
+    h('button',{class:'icon-btn',type:'button','aria-label':'Fit map to view',title:'Fit to view',onclick:function(){G.touched=false;fitView()}},icon('fit')));
   var legend=h('div',{class:'g-legend'});
   folders.forEach(function(f,i){
     var cnt=nodes.filter(function(n){return n.folder===f}).length,ci=fidx.get(f);
@@ -1535,7 +1454,7 @@ function buildGraph(gd,sig){
       b.setAttribute('aria-pressed',on?'true':'false');G.folder=on?f:null;paintClasses();
     }},h('i'),(f||'(root)')+' · '+cnt));
   });
-  if(nodes.some(function(n){return n.lessons>0}))legend.appendChild(h('span',{class:'lg ring'},h('i'),'holds lessons'));
+  if(nodes.some(function(n){return n.lessons>0}))legend.appendChild(h('span',{class:'lg ring'},h('i'),'holds rules'));
   wrap.appendChild(svg);wrap.appendChild(h('div',{class:'gsearch'},search,res));wrap.appendChild(ctl);wrap.appendChild(legend);
   wrap.appendChild(h('div',{class:'g-hint',text:'Drag to pan · scroll to zoom · click a note'}));wrap.appendChild(gtip);
   root.appendChild(wrap);
@@ -1589,7 +1508,7 @@ function buildGraph(gd,sig){
     if(G.hover!==n){G.hover=n;paintClasses();paintEdgesHi()}
     if(!n){gtip.hidden=true;return}
     clear(gtip);gtip.appendChild(h('b',{text:n.id}));
-    gtip.appendChild(h('span',{text:[n.folder||'(root)',n.type,n.lessons?plural(n.lessons,'lesson'):'',plural(n.deg,'link')].filter(Boolean).join(' · ')}));
+    gtip.appendChild(h('span',{text:[n.folder||'(root)',n.type,n.lessons?plural(n.lessons,'rule'):'',plural(n.deg,'link')].filter(Boolean).join(' · ')}));
     if(n.desc)gtip.appendChild(h('span',{text:n.desc.length>150?n.desc.slice(0,147)+'…':n.desc}));
     gtip.hidden=false;var r=wrap.getBoundingClientRect(),w=gtip.offsetWidth,hh=gtip.offsetHeight;
     gtip.style.left=clamp(e.clientX-r.left+14,8,r.width-w-8)+'px';gtip.style.top=clamp(e.clientY-r.top+16,8,r.height-hh-8)+'px';

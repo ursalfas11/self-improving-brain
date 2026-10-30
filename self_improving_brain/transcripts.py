@@ -35,6 +35,7 @@ class Transcript:
     source: str
     turns: list[Turn]
     cwd: str = ""
+    tokens: int = 0      # new tokens the session cost: input + cache writes + output (cache reads excluded)
 
     @property
     def internal(self) -> bool:
@@ -76,11 +77,18 @@ def _text_of(content) -> str:
 def _claude(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
     session = cwd = ""
+    usage: dict[str, int] = {}  # per message id: one answer is logged as several lines with the same usage
     for d in lines:
         session = session or d.get("sessionId", "")
         cwd = cwd or str(d.get("cwd") or "")
         t, msg, ts = d.get("type"), d.get("message"), str(d.get("timestamp") or "")
-        if not isinstance(msg, dict) or d.get("isSidechain") or d.get("isMeta"):
+        if not isinstance(msg, dict) or d.get("isMeta"):
+            continue
+        u = msg.get("usage")
+        if t == "assistant" and isinstance(u, dict):
+            usage[str(msg.get("id") or len(usage))] = sum(int(u.get(k) or 0) for k in (
+                "input_tokens", "cache_creation_input_tokens", "output_tokens"))
+        if d.get("isSidechain"):
             continue
         content = msg.get("content")
         if t == "user":
@@ -103,17 +111,24 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                 elif c.get("type") == "tool_use":
                     turns.append(Turn("tool_call", json.dumps(c.get("input", {}), ensure_ascii=False)[:2000],
                                       tool=c.get("name", ""), ts=ts))
-    return Transcript(path, session or path.stem, "claude", turns, cwd)
+    return Transcript(path, session or path.stem, "claude", turns, cwd, sum(usage.values()))
 
 
 def _codex(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
     session = cwd = ""
+    tokens = 0
     for d in lines:
         p, ts = d.get("payload") or {}, str(d.get("timestamp") or "")
         if d.get("type") == "session_meta":
             session = p.get("id") or p.get("session_id") or session
             cwd = cwd or str(p.get("cwd") or "")
+            continue
+        if d.get("type") == "event_msg" and isinstance(p, dict) and p.get("type") == "token_count":
+            u = (p.get("info") or {}).get("total_token_usage") or {}
+            if isinstance(u, dict):  # running totals: the last one counts
+                tokens = (int(u.get("input_tokens") or 0) - int(u.get("cached_input_tokens") or 0)
+                          + int(u.get("output_tokens") or 0))
             continue
         if d.get("type") != "response_item" or not isinstance(p, dict):
             continue
@@ -132,7 +147,7 @@ def _codex(lines: list[dict], path: Path) -> Transcript:
             txt = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
             rej = any(m in txt.lower() for m in REJECT_MARKERS)
             turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
-    return Transcript(path, session or path.stem, "codex", turns, cwd)
+    return Transcript(path, session or path.stem, "codex", turns, cwd, max(tokens, 0))
 
 
 def _generic(lines: list[dict], path: Path) -> Transcript:

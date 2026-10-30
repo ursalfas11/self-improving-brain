@@ -5,7 +5,7 @@
 
 Per run: a fresh temp dir with the task's fixture, then the agent headless (`claude -p`) with no user
 settings, no MCP servers and no session saved. The "brain" condition adds the hooks of a throwaway
-vault that holds the starter lessons plus the bundled packs; the "bare" condition has no hooks.
+vault that holds the starter lessons plus bench/lessons.md; the "bare" condition has no hooks.
 Nothing is shared between runs. Results go to bench/results/<date>.json and a Markdown table.
 """
 from __future__ import annotations
@@ -26,18 +26,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tasks import TASKS, setup  # noqa: E402
 
-PACKS = ("safety", "secrets", "testing", "git", "python")
+LESSONS = Path(__file__).resolve().parent / "lessons.md"
 TOOLS = "Bash Edit Write Read Glob Grep"
 
 
 def make_vault(base: Path) -> tuple[Path, dict]:
-    """A throwaway vault with the starter lessons and the packs, and the env that keeps the brain inside it."""
+    """A throwaway vault with the starter lessons and bench/lessons.md, and the env that keeps the brain inside it."""
     env = {**os.environ, "XDG_CACHE_HOME": str(base / "cache"), "XDG_CONFIG_HOME": str(base / "config"),
            "BRAIN_VAULT": str(base / "vault")}
     brain = [sys.executable, str(ROOT / "brain")]
     subprocess.run([*brain, "init", str(base / "vault"), "--quiet"], env=env, check=True, capture_output=True)
-    for p in PACKS:
-        subprocess.run([*brain, "--vault", str(base / "vault"), "pack", "add", p], env=env, check=True, capture_output=True)
+    # written outside any agent tool call, so the trust ledger counts these lessons as the user's own
+    (base / "vault" / "20-areas" / "bench-lessons.md").write_text(LESSONS.read_text(encoding="utf-8"), encoding="utf-8")
     return base / "vault", env
 
 
@@ -46,8 +46,8 @@ def settings(vault: Path | None, base: Path) -> Path:
     hooks: dict = {}
     if vault:
         for event, matcher, handler, timeout, _ in CLAUDE_HOOKS:
-            if handler in ("session-end", "stop"):
-                continue  # learning and the stop check are about you, not this run
+            if handler == "session-end":
+                continue  # learning is about you, not about this run
             cmd = f'"{sys.executable}" "{ROOT / "brain"}" --vault "{vault}" hook {handler}'
             g = {"hooks": [{"type": "command", "command": cmd, "timeout": timeout}]}
             if matcher:

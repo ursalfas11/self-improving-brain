@@ -1,4 +1,4 @@
-"""Replay your past sessions against today's lessons: which corrections would they have caught?
+"""Replay your past sessions against today's rules: which corrections would they have caught?
 
 For every correction in your transcripts (the detection `brain learn` uses) replay looks at the
 moment before it: the prompt that started the turn and every tool call the agent made until you
@@ -157,24 +157,24 @@ def render(r: dict, show: int = 6) -> str:
     if not r["corrections"]:
         return (f"REPLAY ({r['days']} days, {r['sessions']} sessions): no corrections found — "
                 "nothing to replay yet, or `transcripts` in .brain/config.json points nowhere")
-    out = [f"REPLAY · {r['sessions']} sessions · last {r['days']} days · {r['lessons']} active lessons",
-           f"  Your lessons would have caught {r['caught']} of {r['corrections']} corrections ({r['caught_pct']} %)"
+    out = [f"REPLAY · {r['sessions']} sessions · last {r['days']} days · {r['lessons']} active rules",
+           f"  Your rules would have caught {r['caught']} of {r['corrections']} corrections ({r['caught_pct']} %)"
            + (f" — {r['would_ask']} of them by asking you first." if r["would_ask"] else "."),
-           "  (caught = a lesson about this mistake would have fired before it happened)",
-           f"  missed {r['missed']} (a lesson exists, its triggers did not fire) · uncovered {r['uncovered']} (no lesson yet)"]
+           "  (caught = a rule about this mistake would have fired before it happened)",
+           f"  missed {r['missed']} (a rule exists, its triggers did not fire) · uncovered {r['uncovered']} (no rule yet)"]
     if r.get("silent_lessons"):
-        out.append(f"  {r['silent_lessons']} lessons are silent until you trust them (`brain trust`) and were not counted.")
+        out.append(f"  {r['silent_lessons']} rules are silent until you trust them (`brain review`) and were not counted.")
     if r["per_lesson"]:
-        out.append("LESSONS")
+        out.append("RULES")
         for p in r["per_lesson"][:12]:
             tip = f"  → widen: words {', '.join(p['widen'])}" if p.get("missed") and p.get("widen") else ""
             out.append(f"  {p['id']:40} caught {p.get('caught', 0):3} · missed {p.get('missed', 0):3}{tip}")
-    for status, title in (("missed", "MISSED (the lesson was there, the trigger was not)"),
-                          ("uncovered", "UNCOVERED (no lesson yet → `brain replay --draft`)")):
+    for status, title in (("missed", "MISSED (the rule was there, the trigger was not)"),
+                          ("uncovered", "UNCOVERED (no rule yet; the nightly run learns from these)")):
         rows = [x for x in r["rows"] if x["status"] == status][-show:]
         if rows:
             out.append(title)
             out += [f"  {str(x['ts'])[:10]} {x['agent']:6} “{short(x['quote'], 110)}”" for x in rows]
     if r.get("drafted"):
-        out.append(f"✓ {r['drafted']} new lesson drafts — review them with `brain review`")
+        out.append(f"✓ {r['drafted']} new drafts — the nightly run weighs them")
     return "\n".join(out)

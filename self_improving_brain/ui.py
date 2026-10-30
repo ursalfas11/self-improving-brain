@@ -2,7 +2,7 @@
 
 The server binds 127.0.0.1 and answers only requests that carry the random token from the URL it
 opens, and only for its own Host header, so no web page you visit can read your vault or click
-"approve" for you. Everything the page shows comes from one JSON call (`/api/state`).
+"undo" for you. Everything the page shows comes from one JSON call (`/api/state`).
 """
 from __future__ import annotations
 
@@ -15,18 +15,22 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, events, handoff, inbox, learn, metrics, packs, replay, trust
+from . import __version__, events, handoff, inbox, journal, llm, metrics, nightly, replay, trust
 from .config import Vault
 from .notes import Library
+from .util import load_json
 
 PAGE = Path(__file__).parent / "ui.html"
 DEMO = Path(__file__).parent / "ui_demo.json"
 
 
 def demo_note(name: str) -> dict | None:
-    """`brain ui --demo` reads the starter vault and the packs, never yours."""
+    """`brain ui --demo` reads the starter vault and the demo file, never yours."""
     from .adapters import TEMPLATES
-    for root in (TEMPLATES / "vault", packs.BUILTIN):
+    extra = json.loads(DEMO.read_text(encoding="utf-8")).get("notes") or {}
+    if name in extra:
+        return extra[name]
+    for root in (TEMPLATES / "vault",):
         for p in root.rglob("*.md"):
             text = p.read_text(encoding="utf-8").replace("{{TODAY}}", "2026-10-30")
             from .notes import parse_frontmatter
@@ -41,27 +45,37 @@ def state(v: Vault) -> dict:
     """Everything the page shows, in one object (also what `brain report` renders)."""
     lib = Library(v.root)
     lessons = lib.lessons()
-    silent = {l.id: why for l, why in trust.untrusted(v, lessons)}
+    silent = trust.untrusted(v, lessons)
+    silent_ids = {l.id: why for l, why in silent}
     health = {h["id"]: h for h in metrics.lesson_health(v, lib)}
-    open_drafts = learn.drafts(v)
     names = set(lib.notes)
-    r = replay.last(v)
+    curve = metrics.weekly_curve(v, 12)
+    night = load_json(v.path("state", "nightly.json"), {})
+    learned = []
+    for e in journal.recent(v, days=30):
+        what, text, why = journal.describe(e)
+        learned.append({"id": e["id"], "t": e.get("t", ""), "kind": e.get("kind"), "what": what, "text": text,
+                        "why": why, "lesson": e.get("lesson", ""), "note": e.get("note", "")})
     return {
         "vault": {"root": str(v.root), "name": v.root.name, "version": __version__, "notes": len(lib.notes),
-                  "lessons": len(lessons), "drafts": len(open_drafts), "inbox": len(inbox.items(v))},
-        "curve": metrics.weekly_curve(v, weeks=12),
+                  "lessons": len(lessons), "inbox": len(inbox.items(v)), "learning": llm.available(v)},
+        "digest": metrics.week_digest(v),
+        "since_start": metrics.since_start(metrics.weekly_curve(v, 104)),
+        "curve": curve,
+        "efficiency": metrics.efficiency(v),
         "recall": metrics.recall_numbers(v),
+        "nightly": {"t": night.get("t", ""), "summary": nightly.summary(night) if night.get("t") else "",
+                    "attention": night.get("attention") or []},
         "lessons": [{"id": l.id, "note": l.note, "rule": l.rule, "mechanism": l.mechanism, "tools": l.tools,
                      "commands": l.commands, "paths": l.paths, "words": l.words, "check": l.check, "since": l.since,
-                     "silent": silent.get(l.id), "health": health.get(l.id, {})} for l in lessons],
-        "drafts": [[{k: d.get(k) for k in ("id", "kind", "quote", "context", "score", "ts", "source", "rule", "suggest")}
-                    for d in g] for g in learn.groups(open_drafts)[:60]],
-        "replay": r,
+                     "silent": silent_ids.get(l.id), "health": health.get(l.id, {})} for l in lessons],
+        "learned": learned,
+        "silent": [{"id": l.id, "rule": l.rule, "note": l.note, "why": why} for l, why in silent],
+        "replay": replay.last(v),
         "checks": events.check_counts(v),
-        "packs": packs.listing(v),
         "handoffs": list(reversed(handoff.load_index(v)))[:10],
         "graph": {"nodes": [{"id": n.name, "rel": n.rel, "folder": n.rel.split("/")[0] if "/" in n.rel else "",
-                             "type": n.type, "description": n.description, "lessons": len(n.lessons),
+                             "type": n.type, "description": n.description, "lessons": len([l for l in n.lessons if not l.retired]),
                              "hub": n.is_hub} for n in lib.notes.values()],
                   "links": [[n.name, t] for n in lib.notes.values() for t in n.links if t in names]},
     }
@@ -76,13 +90,8 @@ def note(v: Vault, name: str) -> dict | None:
 
 def act(v: Vault, path: str, body: dict) -> dict:
     """The page's buttons. Each is one CLI command the user could have typed."""
-    if path == "/api/approve":
-        words = [w.strip() for w in str(body.get("words") or "").split(",") if w.strip()] or None
-        l = learn.approve(v, str(body["id"]), rule=str(body.get("rule") or ""), mechanism=str(body.get("mechanism") or ""),
-                          note=str(body.get("note") or ""), words=words)
-        return {"ok": True, "lesson": l.id, "note": l.note}
-    if path == "/api/reject":
-        return {"ok": learn.reject(v, str(body["id"]))}
+    if path == "/api/undo":
+        return {"ok": True, "message": journal.undo(v, str(body["id"]))}
     if path == "/api/trust":
         lib = Library(v.root)
         ls = [l for l in lib.lessons() if l.id == str(body["id"])]

@@ -84,25 +84,12 @@ def library(v: Vault, fp: str | None = None) -> Library:
     return lib
 
 
-def _team_fingerprint(v: Vault) -> str:
-    from .team import fingerprint_paths
-    h = hashlib.sha1()
-    for p in fingerprint_paths(v):
-        try:
-            st = p.stat()
-        except OSError:
-            continue
-        h.update(os.fsencode(str(p)) + f"\0{st.st_size}\0{st.st_mtime_ns}\n".encode())
-    return h.hexdigest()
-
-
 def lessons(v: Vault):
-    """Your lessons and your team brains' — the hot path for every tool call."""
-    fp = fingerprint(v.root) + _team_fingerprint(v)
+    """Every lesson in the vault — the hot path for every tool call."""
+    fp = fingerprint(v.root)
     ls = _load(v, "lessons", fp)
     if ls is None:
-        from .team import lessons as team_lessons
-        ls = library(v).lessons() + team_lessons(v)
+        ls = library(v, fp).lessons()
         _store(v, "lessons", fp, ls)
     return ls
 

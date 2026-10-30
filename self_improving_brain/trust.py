@@ -7,11 +7,8 @@ fingerprint of every lesson you approved; hooks inject a lesson only while its t
 trust_mode
   agent   (default) lessons you write or edit yourself (Obsidian, an editor) are trusted on sight.
           A lesson that appears or changes during an agent's tool call stays silent until `brain trust`.
-  strict  only lessons created through the brain (approve, lesson, pack, team) or `brain trust` count.
+  strict  only lessons created through the brain (learned at night, approve, lesson) or `brain trust` count.
   off     every lesson counts.
-
-Team lessons (`brain team`) are other people's input: in agent and strict mode they count only as
-they were when you accepted them in `brain team add` / `brain team sync`.
 """
 from __future__ import annotations
 
@@ -45,16 +42,12 @@ def _save(v: Vault, data: dict) -> None:
 
 
 def record(v: Vault, lessons: list[Lesson], by: str) -> None:
-    """Trust these lessons as they are now (approve, lesson, pack, team, brain trust)."""
+    """Trust these lessons as they are now (learned at night, approve, lesson, brain trust)."""
     data = load(v) or {"trusted": {}, "pending": {}}
     for l in lessons:
         data["trusted"][l.id] = {"h": fingerprint(l), "by": by, "t": now_iso()}
         data["pending"].pop(l.id, None)
     _save(v, data)
-
-
-def _team(l: Lesson) -> bool:
-    return l.note.startswith("team:")
 
 
 def mark_pending(v: Vault, lessons: list[Lesson], session: str, tool: str) -> list[str]:
@@ -64,8 +57,6 @@ def mark_pending(v: Vault, lessons: list[Lesson], session: str, tool: str) -> li
         return []
     out = []
     for l in lessons:
-        if _team(l):
-            continue  # silent anyway until `brain team sync`
         fp = fingerprint(l)
         if data["trusted"].get(l.id, {}).get("h") == fp or data["pending"].get(l.id, {}).get("h") == fp:
             continue
@@ -90,7 +81,7 @@ def effective(v: Vault, lessons: list[Lesson]) -> list[Lesson]:
         fp = fingerprint(l)
         if data["trusted"].get(l.id, {}).get("h") == fp:
             out.append(l)
-        elif data["pending"].get(l.id, {}).get("h") == fp or mode == "strict" or _team(l):
+        elif data["pending"].get(l.id, {}).get("h") == fp or mode == "strict":
             continue
         else:
             seen.append(l)  # written by you outside any agent tool call
@@ -114,9 +105,7 @@ def untrusted(v: Vault, lessons: list[Lesson]) -> list[tuple[Lesson, str]]:
         if data["trusted"].get(l.id, {}).get("h") == fp:
             continue
         p = data["pending"].get(l.id)
-        if _team(l):
-            out.append((l, f"from team {l.note.split(':')[1]}, not accepted in this form → brain team sync"))
-        elif p and p.get("h") == fp:
+        if p and p.get("h") == fp:
             out.append((l, f"written by an agent ({p.get('tool', '?')}, {str(p.get('t', ''))[:16]})"))
         elif mode == "strict":
             out.append((l, "changed since you approved it" if l.id in data["trusted"] else "never approved"))

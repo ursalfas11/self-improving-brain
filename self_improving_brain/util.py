@@ -39,6 +39,15 @@ def iso_week(date_str: str) -> str:
     return f"{y}-W{w:02d}"
 
 
+def day_label(iso: str) -> str:
+    """'Oct 30' for an ISO date or timestamp."""
+    try:
+        d = _dt.date.fromisoformat(str(iso)[:10])
+    except ValueError:
+        return "?"
+    return f"{d:%b} {d.day}"
+
+
 def days_since(date_str: str) -> int | None:
     try:
         d = _dt.date.fromisoformat(str(date_str)[:10])

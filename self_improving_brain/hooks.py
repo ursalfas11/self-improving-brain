@@ -1,14 +1,15 @@
 """Hook handlers. Native for Claude Code (JSON on stdin, JSON on stdout).
 
 Every handler is fail-safe: any exception -> empty output, the agent is never blocked by a
-broken brain. Budgets are small on purpose: recall injects at most 2 notes as one line each,
-lessons fire once per session.
+broken brain. Budgets are small on purpose: one line plus at most `always_max` rules at session
+start, at most 2 notes as one line each per prompt, every other rule only on its trigger and once
+per session. Everything a hook puts into the context is counted (`brain` shows the share).
 
-  session-start   always-lessons, pending drafts/inbox, MUST lint findings, nightly report
+  session-start   one line, the always-rules, the repo's notes; once a week a line for the user
   prompt          recall (learned + graph), word-triggered lessons
   pre-tool        secret block on writes, guard lessons (ask), reflex lessons on tools/commands/paths
   post-tool       learning signal (which notes the agent actually opened) + lint of edited notes
-  session-end     learn from this session's transcript in the background
+  session-end     mine this session's transcript in the background (no LLM)
   pre-compact     write a handoff from the transcript; session-start (source=compact) injects it again
 """
 from __future__ import annotations
@@ -20,28 +21,26 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import cache, events, handoff, inbox, learn, trust
+from . import cache, events, handoff, trust
 from .adapters import cli_name
 from .config import NotAVault, Vault, open_vault
 from .lint import lint_note
 from .notes import Library, Lesson
 from .search import learned_model
 from .secrets import scan
-from .transcripts import HOOK_MARK
-from .util import fold, load_json, short, terms
-
-# The Stop hook interrupts the agent, so only unmistakable signals count there ("why did you…",
-# "I told you…", "from now on always…"). Everything weaker waits quietly for `brain review`.
-STOP_MIN = 0.8
+from .util import fold, iso_week, load_json, now_iso, save_json, short, terms, today
 
 
-def _out(event: str, context: str = "", decision: dict | None = None) -> dict:
+def _out(event: str, context: str = "", decision: dict | None = None, message: str = "") -> dict:
     hso: dict = {"hookEventName": event}
     if context:
         hso["additionalContext"] = context
     if decision:
         hso.update(decision)
-    return {"hookSpecificOutput": hso} if (context or decision) else {}
+    out = {"hookSpecificOutput": hso} if (context or decision) else {}
+    if message:
+        out["systemMessage"] = message  # shown to the user, never to the agent
+    return out
 
 
 def _session(payload: dict) -> str:
@@ -127,20 +126,32 @@ def repo_notes(lib: Library, repo: str, k: int = 3) -> list:
     return hits[:k]
 
 
+def weekly_line(v: Vault) -> str:
+    """Once per ISO week, for the user: what the brain learned and what it cost. Silent in a quiet week."""
+    if not v.get("digest"):
+        return ""
+    p = v.path("state", "digest.json")
+    week = iso_week(today())
+    if load_json(p, {}).get("week") == week:
+        return ""
+    from . import metrics
+    d = metrics.week_digest(v)
+    save_json(p, {"week": week, "t": now_iso()})
+    if not (d["rules"] or d["sharpened"] or d["facts"] or d["retired"] or d["trend"] is not None):
+        return ""
+    return metrics.digest_line(d)
+
+
 def session_start(v: Vault, payload: dict) -> dict:
     lib = cache.library(v)
     events.prune_sessions(v)
     session = _session(payload)
     st = events.session_state(v, session)
-    tp = payload.get("transcript_path")
-    if "checked_ts" not in st and tp and Path(str(tp)).is_file():
-        # a resumed session starts with old turns: the knowledge check only looks at what comes next
-        st["checked_ts"] = max((t.ts for t in _tail_turns(Path(str(tp))) if t.ts), default="")
     always = [l for l in trust.effective(v, cache.lessons(v)) if l.mechanism == "always"][: int(v.get("always_max"))]
     b = cli_name()
-    lines = [f"SELF-IMPROVING-BRAIN vault: {v.root} — before answering from memory, run `{b} search \"<question>\"`;"
-             f" open a note with `{b} read <note> [section]`; store new knowledge with"
-             f" `{b} remember <fact|decision|pitfall|preference|todo> \"<one sentence>\"`."]
+    lines = [f"SELF-IMPROVING-BRAIN memory at {v.root}: look things up with `{b} search \"<question>\"` and"
+             f" `{b} read <note> [section]`; keep what will matter later with"
+             f" `{b} remember <fact|decision|pitfall|preference> \"<one sentence>\"`."]
     if always:
         lines.append("LESSONS (apply in every session):")
         lines += [f"- {l.id}: {l.rule}" for l in always]
@@ -162,31 +173,8 @@ def session_start(v: Vault, payload: dict) -> dict:
         st["shown"] += [n.name for n in rnotes]
         lines.append(f"BRAIN-REPO {repo}: " + " · ".join(f"{n.name} — {short(n.description, 100)}" for n in rnotes))
     events.save_session_state(v, session, st)
-    pending = []
-    groups = learn.groups(learn.drafts(v))
-    if groups:
-        pending.append(f"{len(groups)} lesson candidates from past sessions → `{b} review` (or /brain-review)")
-    i = len(inbox.items(v))
-    if i:
-        pending.append(f"{i} inbox items → `brain distill`")
-    report = load_json(v.path("state", "nightly.json"), {})
-    for msg in (report.get("attention") or [])[:3]:
-        pending.append(msg)
-    for f in cache.must_findings(v)[:3]:
-        pending.append("fix " + " ".join(f.split()))
-    for n in rnotes:
-        if n.meta.get("atlas_sha"):
-            from .atlas import STALE_COMMITS, behind
-            k = behind(n, str(payload.get("cwd") or os.getcwd()))
-            if k is not None and k >= STALE_COMMITS:
-                pending.append(f"the atlas in {n.name} is {k} commits behind → `{b} atlas`")
-            break
-    silent = trust.untrusted(v, cache.lessons(v))
-    if silent:
-        pending.append(f"{len(silent)} lessons stay silent until the user checks them (written by an agent or never approved) → `{b} trust`")
-    if pending:
-        lines.append("BRAIN TODO (mention to the user only if relevant): " + " · ".join(pending))
-    return _out("SessionStart", "\n".join(lines))
+    message = weekly_line(v) if source in ("", "startup") and session != "doctor" else ""
+    return _out("SessionStart", "\n".join(lines), message=message)
 
 
 def prompt(v: Vault, payload: dict) -> dict:
@@ -224,9 +212,9 @@ def prompt(v: Vault, payload: dict) -> dict:
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
-# approving or trusting a rule is the user's call: an agent running these commands gets a permission prompt
+# which rules reach the agent is the user's call: an agent running these commands gets a permission prompt
 BRAIN_APPROVAL = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?"
-                            r"(approve|trust|promote|pack\s+add|team\s+(?:add|propose|sync)|skills\s+approve)\b")
+                            r"(approve|trust|promote|undo|lesson|config)\b")
 
 
 def _paths_in(tool_input: dict) -> list[str]:
@@ -398,56 +386,6 @@ def post_tool(v: Vault, payload: dict) -> dict:
     return _out("PostToolUse", "\n".join(lines)) if lines else {}
 
 
-def _tail_turns(path: Path, max_bytes: int = 400_000):
-    """Parse only the end of a (possibly huge) transcript — Stop fires after every answer."""
-    from .transcripts import read_part
-    tr = read_part(path, max_bytes)
-    return tr.turns if tr and not tr.internal else []
-
-
-SAVED = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?(remember|approve|lesson)\b")
-
-
-def stop(v: Vault, payload: dict) -> dict:
-    """Knowledge check at the end of an answer — only when the session gave a reason to keep something.
-
-    A correction or a lasting preference that was not saved yet makes the agent pause once and decide:
-    save it with `brain remember`, or finish. Never twice for the same moment, never in a loop.
-    """
-    if payload.get("stop_hook_active") or not v.get("capture_on_stop"):
-        return {}
-    tp = payload.get("transcript_path")
-    if not tp or not Path(tp).exists():
-        return {}
-    session = _session(payload)
-    st = events.session_state(v, session)
-    turns = _tail_turns(Path(tp))
-    last_checked = st.get("checked_ts", "")
-    signal = None
-    for i, t in enumerate(turns):
-        if t.ts and t.ts <= last_checked:
-            continue
-        c = learn.classify(turns, i)
-        if c and c[1] >= STOP_MIN:
-            later = turns[i + 1:]
-            if not any(x.role == "tool_call" and SAVED.search(x.text) for x in later):
-                signal = c
-    newest = max((t.ts for t in turns if t.ts), default=last_checked)
-    st["checked_ts"] = newest
-    events.save_session_state(v, session, st)
-    if not signal:
-        return {}
-    kind, _, quote = signal
-    b = cli_name()
-    what = "a lasting preference" if kind == "preference" else "a correction"
-    events.log(v, "capture", session=session, what=kind)
-    return {"decision": "block", "reason": (
-        f"{HOOK_MARK} BRAIN knowledge check: this session contains {what} that is not stored yet: “{short(quote, 160)}”. "
-        f"If it will matter beyond this task, save it in one line — `{b} remember "
-        f"{'preference' if kind == 'preference' else 'pitfall'} \"<one self-contained sentence>\" --quote \"<the user's words>\"` — "
-        "then finish your answer. If it was a one-off, just finish. Do not mention this check to the user.")}
-
-
 def pre_compact(v: Vault, payload: dict) -> dict:
     tp = payload.get("transcript_path")
     if tp and Path(str(tp)).is_file():
@@ -473,7 +411,6 @@ HANDLERS = {
     "pre-tool": pre_tool,
     "post-tool": post_tool,
     "session-end": session_end,
-    "stop": stop,
     "pre-compact": pre_compact,
 }
 
@@ -497,11 +434,10 @@ def run(event: str, vault_arg: str | None = None, plugin: bool = False) -> int:
         out = HANDLERS[event](v, payload)
     except NotAVault:
         if plugin and event == "session-start":
-            b = cli_name()
             sys.stdout.write(json.dumps(_out("SessionStart",
                 "self-improving-brain (plugin) has no vault yet. If the user wants it, run "
-                f"`{b} setup --yes --no-github --no-schedule` (creates ~/brain and learns from their past sessions; "
-                f"backup and the nightly run can be added later with `{b} setup` in a terminal)."), ensure_ascii=True))
+                f"`{cli_name()} setup`: it asks nothing, creates ~/brain, learns from their past sessions and schedules"
+                " the nightly run (all local; undo with `brain uninstall`)."), ensure_ascii=True))
         return 0
     except Exception as e:  # noqa: BLE001 — a hook must never break the agent
         if os.environ.get("BRAIN_DEBUG"):
@@ -512,6 +448,9 @@ def run(event: str, vault_arg: str | None = None, plugin: bool = False) -> int:
             pass
         return 0
     if out:
+        ctx = out.get("hookSpecificOutput", {}).get("additionalContext") or ""
+        if ctx and payload.get("session_id") != "doctor":
+            events.tally(v, inject_chars=len(ctx), inject_calls=1)
         try:
             sys.stdout.write(json.dumps(out, ensure_ascii=True))
         except Exception:  # noqa: BLE001

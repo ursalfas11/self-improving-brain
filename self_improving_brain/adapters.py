@@ -1,6 +1,6 @@
 """Connect agents to the brain.
 
-  claude   native hooks in ~/.claude/settings.json + slash commands + a block in ~/.claude/CLAUDE.md
+  claude   native hooks in ~/.claude/settings.json + the /brain command + a block in ~/.claude/CLAUDE.md
   codex    block in ~/.codex/AGENTS.md          (instruction-based: the agent calls the CLI)
   gemini   block in ~/.gemini/GEMINI.md
   agents   block in ./AGENTS.md of the current project (Cursor, Aider, Grok CLI, Zed, Cline, ...)
@@ -92,14 +92,14 @@ def block(v: Vault) -> str:
     b = brain_cmd()
     return f"""{BEGIN}
 ## Brain (self-improving-brain)
-You have a persistent, self-improving memory at `{v.root}`. Use it — it is how you get smarter over time.
-- **Start of a task:** run `{b} context` once (skip if a BRAIN block is already in your context).
-- **Before answering from memory** (project facts, decisions, "how did we…"): `{b} search "<question>"`, then `{b} read <note> [section]`. Cite the note.
-- **Learned something worth keeping** (a decision, a pitfall, a user preference, a fact that took effort): `{b} remember <fact|decision|pitfall|preference|todo|status> "<one self-contained sentence>" --quote "<user's words>"`. Never store secrets — store the variable name and where the value lives.
-- **Lessons** (`LESSON …` lines) are rules learned from your past mistakes with this user. Follow them; they outrank your defaults.
-- **Before an irreversible action** (force push, deleting data, deploys, migrations): `{b} check --command "<command>"`. If it names a guard lesson, ask the user first.
-- **Picking work up again** ("continue", "where were we", after a break or in another agent): `{b} resume` shows the last session's handoff — the user's own words, the open question, the files in flight. Before you end a long task without hooks, write one: `{b} handoff`.
-- **Never** approve lesson drafts or delete notes on your own; show the user and wait for an explicit OK.
+You have a persistent memory at `{v.root}` that learns from this user's corrections.
+- **Start of a task:** run `{b} context` once (skip it if a SELF-IMPROVING-BRAIN line is already in your context).
+- **Before answering from memory** (project facts, decisions, "how did we…"): `{b} search "<question>"`, then `{b} read <note> [section]`.
+- **Worth keeping** (a decision, a pitfall, a preference, a fact that took effort): `{b} remember <fact|decision|pitfall|preference> "<one sentence>"`. Never store secrets: store the variable name and where the value lives.
+- **LESSON lines** are rules learned from this user's corrections. Follow them; they outrank your defaults.
+- **Before an irreversible action** (force push, deleting data, deploys, migrations): `{b} check --command "<command>"`. If it names a GUARD, ask the user first.
+- **Continuing work** ("where were we", after a break or in another agent): `{b} resume`. Before you end a long task without hooks: `{b} handoff`.
+- Which rules reach you is the user's call: never run `brain trust`, `brain undo` or `brain approve` on your own.
 {END}
 """
 
@@ -157,7 +157,6 @@ CLAUDE_HOOKS = [
     ("PreToolUse", "*", "pre-tool", 10, False),
     ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit|NotebookEdit", "post-tool", 15, False),
     ("PreCompact", None, "pre-compact", 20, False),
-    ("Stop", None, "stop", 10, False),
     ("SessionEnd", None, "session-end", 5, True),
 ]
 
@@ -176,7 +175,8 @@ def plugin_hooks() -> dict:
             h["async"] = True
         g = {"matcher": matcher, "hooks": [h]} if matcher else {"hooks": [h]}
         out.setdefault(event, []).append(g)
-    return {"description": "self-improving-brain: lessons at the right moment, guards, recall, handoffs", "hooks": out}
+    return {"description": "self-improving-brain: rules from your corrections at the right moment, guards, recall, handoffs",
+            "hooks": out}
 
 
 def plugin_command(t: Path) -> str:
@@ -209,6 +209,19 @@ def _load_settings(p: Path) -> dict:
     return data
 
 
+# slash commands of earlier versions, removed on install and uninstall
+OLD_COMMANDS = ("brain-review.md", "brain-distill.md", "brain-ask.md", "brain-ingest.md")
+
+
+def _ours_command(f: Path) -> bool:
+    """A command file this tool wrote (its description names the brain), not one of yours with the same name."""
+    try:
+        head = f.read_text(encoding="utf-8", errors="replace")[:400]
+    except OSError:
+        return False
+    return any(l.startswith("description:") and "brain" in l.lower() for l in head.splitlines())
+
+
 def install_claude(v: Vault) -> list[str]:
     p = _claude_settings()
     data = _load_settings(p)
@@ -228,6 +241,9 @@ def install_claude(v: Vault) -> list[str]:
     out = [f"hooks → {p}"]
     cmd_dir = Path.home() / ".claude" / "commands"
     cmd_dir.mkdir(parents=True, exist_ok=True)
+    for old in OLD_COMMANDS:
+        if _ours_command(cmd_dir / old):
+            (cmd_dir / old).unlink()
     for t in sorted((TEMPLATES / "commands").glob("*.md")):
         (cmd_dir / t.name).write_text(t.read_text(encoding="utf-8").replace("{{BRAIN}}", brain_cmd()), encoding="utf-8")
         out.append(f"command /{t.stem}")
@@ -249,11 +265,11 @@ def uninstall_claude() -> list[str]:
                 del hooks[event]
         _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         out.append(f"hooks removed from {p}")
-    for t in (TEMPLATES / "commands").glob("*.md"):
-        f = Path.home() / ".claude" / "commands" / t.name
-        if f.exists():
+    for name in [t.name for t in (TEMPLATES / "commands").glob("*.md")] + list(OLD_COMMANDS):
+        f = Path.home() / ".claude" / "commands" / name
+        if _ours_command(f):
             f.unlink()
-            out.append(f"removed /{t.stem}")
+            out.append(f"removed /{f.stem}")
     out.append(_drop_block(Path.home() / ".claude" / "CLAUDE.md"))
     return out
 

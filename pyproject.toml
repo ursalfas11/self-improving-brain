@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "self-improving-brain"
 version = "0.2.0"
-description = "A self-improving, local-first memory for any coding agent: Claude Code, Codex, Gemini, Grok, Cursor, Aider. Learns from your corrections. No server, no API key, no dependencies."
+description = "A self-improving memory for coding agents (Claude Code, Codex, Gemini, Cursor, Aider): every night it turns your corrections into rules, on its own. Local, no server, no API key, no dependencies."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
@@ -26,7 +26,6 @@ packages = ["self_improving_brain"]
 [tool.setuptools.package-data]
 self_improving_brain = [
   "templates/commands/*.md",
-  "packs/*.md",
   "ui.html",
   "ui_demo.json",
   "templates/vault/*/*.md",

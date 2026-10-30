@@ -1,15 +1,14 @@
-"""`brain setup`: from zero to a working, backed-up, self-improving brain in one command.
+"""`brain setup`: one command, no questions, about thirty seconds. Then nothing to do.
 
-Steps (each one asks, `--yes` accepts the defaults):
-  1. vault        create it (with its own git history and the secret-scan pre-commit hook)
-  2. agents       connect every agent found on this machine
-  3. command      put `brain` on your PATH
-  4. history      learn from the sessions you already had — lessons and a baseline from day one
-  5. llm          optionally let an LLM CLI you already use judge lesson candidates at night
-  6. backup       recommend (and create) a PRIVATE GitHub repo, so a dead laptop never kills your brain
-  7. nightly      schedule the self-improvement loop on this machine
+  vault      ~/brain (or the one you have), with its own git history and a secret scan before every commit
+  agents     every agent found here: Claude Code hooks, Codex and Gemini instructions, MCP for the editors
+  command    `brain` on your PATH
+  history    reads the sessions you already had: your baseline, and the first rules tonight
+  learning   the LLM CLI you already use (claude, codex, ollama) with your login, under a daily budget
+  nightly    the learning run, every night on this machine
+  backup     only with --github: a PRIVATE repo, pushed every night. Nothing public is ever created.
 
-Nothing public is ever created. Nothing leaves the machine unless you say yes to the backup.
+Everything else stays on this machine. `brain uninstall` takes it all out again.
 """
 from __future__ import annotations
 
@@ -24,52 +23,20 @@ from . import adapters, learn, llm, nightly
 from .config import candidate_roots, is_vault, open_vault
 
 PKG_ROOT = Path(__file__).resolve().parent.parent
-B, D, G, Y, R, X = "\033[1m", "\033[2m", "\033[32m", "\033[33m", "\033[31m", "\033[0m"
+NAMES = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "claude-desktop": "Claude Desktop",
+         "cursor": "Cursor", "windsurf": "Windsurf", "vscode": "VS Code"}
 
 
-class Asker:
-    def __init__(self, assume_yes: bool):
-        self.yes = assume_yes
+class Out:
+    def __init__(self):
         self.color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 
     def c(self, code: str, text: str) -> str:
-        return f"{code}{text}{X}" if self.color else text
+        return f"\033[{code}m{text}\033[0m" if self.color else text
 
-    def ask(self, question: str, default: bool = True) -> bool:
-        if self.yes:
-            print(f"{question} {'yes' if default else 'no'} (default)")
-            return default
-        hint = "[Y/n]" if default else "[y/N]"
-        try:
-            ans = input(f"{question} {hint} ").strip().lower()
-        except EOFError:
-            return default
-        return default if not ans else ans in ("y", "yes", "j", "ja")
-
-    def text(self, question: str, default: str) -> str:
-        if self.yes:
-            return default
-        try:
-            ans = input(f"{question} [{default}] ").strip()
-        except EOFError:
-            return default
-        return ans or default
-
-
-def step(a: Asker, n: int, title: str) -> None:
-    print("\n" + a.c(B, f"{n}/8  {title}"))
-
-
-def ok(a: Asker, msg: str) -> None:
-    print("   " + a.c(G, "✓ ") + msg)
-
-
-def note(a: Asker, msg: str) -> None:
-    print("   " + a.c(D, msg))
-
-
-def warn(a: Asker, msg: str) -> None:
-    print("   " + a.c(Y, "! ") + msg)
+    def row(self, mark: str, label: str, text: str) -> None:
+        sym = {"ok": self.c("32", "✓"), "skip": self.c("2", "·"), "warn": self.c("33", "!")}[mark]
+        print(f"  {sym} {label:<10} {text}")
 
 
 def default_vault() -> Path:
@@ -88,23 +55,25 @@ def git(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
 
 
+def _home(p: Path) -> str:
+    h = str(Path.home())
+    return "~" + str(p)[len(h):] if str(p).startswith(h + os.sep) else str(p)
+
+
 # --- steps -----------------------------------------------------------------------------------
 
-def make_vault(a: Asker, path: str | None) -> Path | None:
+def make_vault(o: Out, path: str | None) -> Path | None:
     from . import cli
-    root = Path(path).expanduser() if path else Path(a.text("   Where should your brain live?", str(default_vault()))).expanduser()
-    root = root.resolve()
+    root = (Path(path).expanduser() if path else default_vault()).resolve()
     if is_vault(root):
-        ok(a, f"using existing vault {root}")
+        o.row("ok", "Vault", f"{_home(root)} — the one you have")
         return root
     if (root / ".brain").exists():
-        warn(a, f"{root}/.brain belongs to another tool — choose a different folder (brain setup --vault PATH)")
+        o.row("warn", "Vault", f"{root}/.brain belongs to another tool — choose another folder: brain setup --vault PATH")
         return None
+    # a folder you named that already holds notes: the brain moves in beside them, nothing is overwritten
     force = root.exists() and any(p for p in root.iterdir() if not p.name.startswith("."))
-    if force and not a.ask(f"   {root} already has files. Add the brain to them (nothing is overwritten)?", True):
-        return None
-    rc = cli.main(["init", str(root), "--git", "--quiet"] + (["--force"] if force else []))
-    if rc:
+    if cli.main(["init", str(root), "--git", "--quiet"] + (["--force"] if force else [])):
         return None
     owned = open_vault(str(root)).get("git_owned")  # only a repo the brain created gets everything committed
     if owned and shutil.which("git") and git(root, "rev-parse", "HEAD").returncode != 0:
@@ -112,143 +81,121 @@ def make_vault(a: Asker, path: str | None) -> Path | None:
         identity = [] if git(root, "config", "user.email").stdout.strip() else \
             ["-c", "user.name=brain", "-c", "user.email=brain@localhost"]
         git(root, *identity, "commit", "-q", "-m", "brain: init")
+    o.row("ok", "Vault", f"{_home(root)} — " + ("added to your notes" if force else "new, with its own git history"))
     return root
 
 
 AGENTS = [
-    ("claude", "Claude Code", "native hooks + /brain-review, /brain-distill, /brain-ingest, /brain-ask",
-     lambda: shutil.which("claude") or (Path.home() / ".claude").is_dir()),
-    ("codex", "Codex CLI", "instructions in ~/.codex/AGENTS.md + learning from ~/.codex/sessions",
-     lambda: shutil.which("codex") or (Path.home() / ".codex").is_dir()),
-    ("gemini", "Gemini CLI", "instructions in ~/.gemini/GEMINI.md",
-     lambda: shutil.which("gemini") or (Path.home() / ".gemini").is_dir()),
+    ("claude", lambda: shutil.which("claude") or (Path.home() / ".claude").is_dir()),
+    ("codex", lambda: shutil.which("codex") or (Path.home() / ".codex").is_dir()),
+    ("gemini", lambda: shutil.which("gemini") or (Path.home() / ".gemini").is_dir()),
 ]
+# editors without instruction files of their own get the brain as MCP tools; CLI agents above get instructions
+MCP_CLIENTS = ("claude-desktop", "cursor", "windsurf", "vscode")
 
 
-def connect_agents(a: Asker, v, only: list[str] | None) -> list[str]:
-    done = []
-    for key, name, what, present in AGENTS:
-        if only is not None and key not in only:
-            continue
-        if not present():
+def connect_agents(o: Out, v, only: list[str] | None) -> list[str]:
+    from . import mcp
+    done, failed = [], []
+    for key, present in AGENTS:
+        if (only is not None and key not in only) or not present():
             continue
         if key == "claude" and adapters.from_plugin():
-            ok(a, f"{name} is connected through the plugin")
             done.append(key)
             continue
-        if a.ask(f"   Connect {name}? ({what})", True):
-            try:
-                adapters.install(v, key)
-                ok(a, f"{name} connected")
-                done.append(key)
-            except SystemExit as e:
-                warn(a, str(e))
-    from . import mcp
-    names = {"claude-desktop": "Claude Desktop", "cursor": "Cursor", "windsurf": "Windsurf", "gemini": "Gemini CLI",
-             "vscode": "VS Code (Copilot)", "codex": "Codex"}
+        try:
+            adapters.install(v, key)
+            done.append(key)
+        except SystemExit as e:
+            failed.append(f"{NAMES[key]}: {e}")
     for c in mcp.detected():
-        if only is not None and c not in only and "mcp" not in only:
+        if c not in MCP_CLIENTS or (only is not None and c not in only and "mcp" not in only):
             continue
-        if a.ask(f"   Give {names[c]} the brain as MCP tools? (brain_context, brain_check, brain_correction …)", True):
-            try:
-                ok(a, f"{names[c]} MCP: {mcp.install(v, c)}")
-                done.append("mcp:" + c)
-            except (ValueError, OSError) as e:
-                warn(a, f"{names[c]}: {e}")
-    if not done:
-        note(a, "no agent connected. Cursor, Aider, Grok CLI & co: run `brain install agents` inside a project")
-        note(a, "(writes the brain block into that project's AGENTS.md), or `brain mcp config` for any MCP client")
+        try:
+            mcp.install(v, c)
+            done.append(c)
+        except (ValueError, OSError) as e:
+            failed.append(f"{NAMES[c]}: {e}")
+    if done:
+        o.row("ok", "Agents", " · ".join(NAMES[k] for k in done))
+    else:
+        o.row("skip", "Agents", "none found — for any other agent: `brain install agents` in a project, or `brain mcp config`")
+    for f in failed:
+        o.row("warn", "", f)
     return done
 
 
-def link_command(a: Asker) -> None:
+def link_command(o: Out) -> None:
     if adapters.cli_name() == "brain":
-        ok(a, f"`brain` is on your PATH ({shutil.which('brain')})")
+        o.row("ok", "Command", "brain")
         return
     shim = PKG_ROOT / "brain"
     src = shim if shim.is_file() else adapters.console_script()
     if os.name == "nt" or src is None:
-        note(a, f"run it as {adapters.brain_cmd()} <command>")
+        o.row("skip", "Command", f"run it as {adapters.brain_cmd()}")
         return
     bindir = Path.home() / ".local" / "bin"
     bindir.mkdir(parents=True, exist_ok=True)
     target = bindir / "brain"
-    if target.is_symlink() and target.resolve() == src.resolve():
-        ok(a, f"already linked {target}")
-    elif target.exists() or target.is_symlink():
-        warn(a, f"{target} exists and is something else — left untouched; use {adapters.brain_cmd()}")
-        return
+    if target.exists() or target.is_symlink():
+        if not (target.is_symlink() and target.resolve() == src.resolve()):
+            o.row("warn", "Command", f"{_home(target)} is something else — left alone; use {adapters.brain_cmd()}")
+            return
     else:
         target.symlink_to(src)
-        ok(a, f"linked {target}")
-    found = shutil.which("brain")
     if str(bindir) not in os.environ.get("PATH", "").split(os.pathsep):
-        warn(a, f'add it to your PATH:  echo \'export PATH="$HOME/.local/bin:$PATH"\' >> ~/.{"zshrc" if "zsh" in os.environ.get("SHELL", "") else "bashrc"}')
-    elif found and Path(found).resolve() != src.resolve():
-        warn(a, f"another `brain` comes first on your PATH ({found}) — use {adapters.brain_cmd()}")
+        rc = "zshrc" if "zsh" in os.environ.get("SHELL", "") else "bashrc"
+        o.row("warn", "Command", f"brain → {_home(target)}; put it on your PATH: "
+                                 f"echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.{rc}")
+    else:
+        found = shutil.which("brain")
+        if found and Path(found).resolve() != src.resolve():
+            o.row("warn", "Command", f"another `brain` comes first on your PATH ({found}) — use {adapters.brain_cmd()}")
+        else:
+            o.row("ok", "Command", f"brain → {_home(target)}")
 
 
-def learn_history(a: Asker, v) -> int:
+def learn_history(o: Out, v) -> int:
     files = learn.transcript_files(v)
     if not files:
-        note(a, "no past sessions found yet — the brain starts learning with your next one")
+        o.row("skip", "History", "no past sessions yet — it starts learning with your next one")
         return 0
-    note(a, f"reading {len(files)} session transcripts (stays on this machine)…")
     st = learn.scan(v, max_age_days=60)
-    gs = learn.groups(learn.drafts(v))
     per100 = 100 * st["corrections"] / st["user_messages"] if st["user_messages"] else 0
-    ok(a, f"{st['transcripts']} sessions · {st['user_messages']} of your messages · "
-          f"{st['corrections']} corrections ({per100:.1f} per 100 messages) → {len(gs)} lesson candidates")
-    for g in gs[:3]:
-        note(a, f"· “{g[0]['quote'][:90].strip()}”" + (f"  (seen {len(g)}×)" if len(g) > 1 else ""))
-    if per100:
-        note(a, "that rate is your baseline — `brain stats` shows whether it goes down from here")
-    return len(gs)
+    o.row("ok", "History", f"{st['transcripts']:,} sessions · {st['user_messages']:,} of your messages · "
+                           f"{per100:.1f} corrections per 100 (your baseline)")
+    return st["transcripts"]
 
 
-def add_packs(a: Asker, v, allow: bool) -> None:
-    from . import packs
-    have = {p["name"] for p in packs.listing(v) if p["installed"]}
-    want = [n for n in ("safety", "secrets") if n not in have]
-    if not allow or not want:
-        return
-    if not a.ask("Add the safety and secrets lesson packs? (the agent asks before rm -rf, DROP TABLE, publishing;"
-                 " no keys in code)", True):
-        note(a, "later: `brain pack list`")
-        return
-    for n in want:
-        try:
-            p = packs.add(v, n)
-            ok(a, f"pack {n}: {len(p['lessons'])} lessons")
-        except ValueError as e:
-            warn(a, f"pack {n}: {e}")
-    note(a, "more packs: testing, git, python, typescript → `brain pack list`")
-
-
-def choose_llm(a: Asker, v, candidates: int, allow: bool) -> None:
+def choose_llm(o: Out, v, allow: bool) -> bool:
     if not allow:
-        note(a, "skipped")
-        return
+        o.row("skip", "Learning", "off (--no-llm): the brain measures, but learns nothing new")
+        return False
     if v.get("llm_cmd"):
-        ok(a, f"already set: {v.get('llm_cmd')}")
-        return
-    cmd = llm.detect()
-    if not cmd:
-        note(a, "no LLM CLI found (claude, codex, ollama). Your agent judges candidates during /brain-review instead.")
-        return
-    tool = cmd.split()[0]
-    print(f"   Found {a.c(B, tool)}. At night it can sort real mistakes from noise and write the rule for each,")
-    print("   so your review is a quick yes/no. It uses your existing CLI login; no API key is stored here.")
-    if a.ask(f"   Use `{tool}` for that?", True):
-        v.set("llm_cmd", cmd)
-        ok(a, f"llm_cmd = {cmd}")
-        if candidates:
-            subprocess.Popen([sys.executable, "-m", "self_improving_brain", "--vault", str(v.root), "refine"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
-                             start_new_session=True, cwd=str(PKG_ROOT))
-            note(a, f"judging your {candidates} candidates in the background (`brain review` shows the result)")
+        cmd = str(v.get("llm_cmd"))
     else:
-        note(a, "fine — your agent does the judging during /brain-review")
+        cmd = llm.detect()
+        if not cmd:
+            o.row("warn", "Learning", "no LLM CLI found (claude, codex, ollama) — install one, then run brain setup again")
+            return False
+        v.set("llm_cmd", cmd)
+    model = " (Haiku)" if " haiku" in cmd else ""
+    o.row("ok", "Learning", f"{cmd.split()[0]}{model} with your login · at most ${float(v.get('llm_budget_usd')):.2f} a day")
+    return True
+
+
+def schedule(o: Out, v, allow: bool) -> bool:
+    if not allow:
+        o.row("skip", "Nightly", "not scheduled (--no-schedule) — `brain nightly` runs it by hand")
+        return False
+    try:
+        nightly.schedule_install(v)
+    except (OSError, subprocess.CalledProcessError) as e:
+        o.row("warn", "Nightly", f"could not schedule it: {e} — try `brain schedule install`")
+        return False
+    o.row("ok", "Nightly", "every night at 03:17" + (" (a missed run catches up when the Mac wakes)"
+                                                    if sys.platform == "darwin" else ""))
+    return True
 
 
 def gh(*args: str, timeout: int = 60) -> subprocess.CompletedProcess:
@@ -273,132 +220,91 @@ def repo_exists(full: str) -> bool:
     return gh("repo", "view", full).returncode == 0
 
 
-def _push_works(a: Asker, root: Path) -> bool:
+def _push_works(root: Path) -> bool:
     """The nightly run pushes without anyone at the keyboard: prove that works now."""
     if nightly.git_in(root, "push", "-q", "-u", "origin", "HEAD").returncode == 0:
         return True
     url = nightly.git_in(root, "remote", "get-url", "origin").stdout.strip()
     if url.startswith("https://github.com/") and shutil.which("gh") and gh("auth", "setup-git", "--hostname", "github.com").returncode == 0:
-        note(a, "git now uses your gh login for github.com (gh auth setup-git)")
         return nightly.git_in(root, "push", "-q", "-u", "origin", "HEAD").returncode == 0
     return False
 
 
-def backup(a: Asker, v, allow: bool) -> None:
+def backup(o: Out, v, create: bool) -> None:
     root = v.root
     if not (root / ".git").exists():
-        warn(a, "the vault is not a git repo — run `git init` in it to enable backups")
+        o.row("skip", "Backup", "the vault is not a git repo — `git init` in it enables backups")
         return
     url, problem = nightly.backup_state(root)
     if url:
-        vis = nightly.remote_visibility(url) if allow else ""
+        vis = nightly.remote_visibility(url)
         if vis == "PUBLIC" and not v.get("allow_public_remote"):
             v.set("git_sync", False)
-            warn(a, f"{url} is PUBLIC — anyone can read your brain there. Nightly sync is off.")
-            note(a, "make the repo private on GitHub, then:  brain config git_sync true")
-            return
-        if not v.get("git_sync"):
-            # a repo the brain joined: syncing commits your notes and pushes them to that remote
-            if a.ask(f"   This vault already has the remote {url}{' (private)' if vis == 'PRIVATE' else ''}."
-                     " Commit your notes and push them there every night?", vis == "PRIVATE"):
-                v.set("git_sync", True)
-            else:
-                note(a, "nightly sync stays off — turn it on any time:  brain config git_sync true")
-                return
-        if problem:
-            warn(a, f"backup remote {url} is set, but {problem} — run `brain sync` (check your git login if it fails)")
+            o.row("warn", "Backup", f"{url} is PUBLIC — anyone could read your brain. Sync is off until it is private.")
+        elif not v.get("git_sync"):
+            o.row("skip", "Backup", f"{url} is yours; the brain pushes there once you say so: brain config git_sync true")
+        elif problem:
+            o.row("warn", "Backup", f"{url}: {problem} — `brain sync` (check your git login if it fails)")
         else:
-            ok(a, f"backed up to {url}" + (" (private)" if vis == "PRIVATE" else "") + " — synced every night")
+            o.row("ok", "Backup", f"{url}{' (private)' if vis == 'PRIVATE' else ''} — every night")
         return
-    print("   Your brain grows every day. If this laptop dies, it should not die with it.")
-    print("   " + a.c(B, "Recommended:") + " keep it in a PRIVATE git repo — the nightly run pushes there automatically.")
-    login = gh_login() if allow else ""
-    if login:
-        name = root.name if root.name not in ("", ".") else "brain"
-        if repo_exists(f"{login}/{name}"):
-            name = f"{name}-vault" if not repo_exists(f"{login}/{name}-vault") else f"{name}-vault-{os.getpid()}"
-        full = f"{login}/{name}"
-        if a.ask(f"   Create the PRIVATE repo github.com/{full} now and push your brain there?", True):
-            try:
-                r = gh("repo", "create", full, "--private", "--source", str(root), "--remote", "origin",
-                       "--push", "--description", "My self-improving brain (private)", timeout=180)
-            except (OSError, subprocess.SubprocessError) as e:
-                r = subprocess.CompletedProcess([], 1, "", str(e))
-            url = nightly.git_in(root, "remote", "get-url", "origin").stdout.strip()
-            if not url:
-                warn(a, "could not create it: " + (r.stderr or r.stdout).strip()[:200])
-            else:
-                vis = nightly.remote_visibility(url)
-                if vis != "PRIVATE":
-                    v.set("git_sync", False)
-                    warn(a, f"{full} reports visibility {vis or '?'} — sync stays off. Make it private on GitHub, "
-                            "then: brain config git_sync true")
-                    return
-                v.set("git_sync", True)
-                if _push_works(a, root):
-                    ok(a, f"backed up to github.com/{full} (private) — synced every night")
-                else:
-                    warn(a, f"created github.com/{full} (private), but pushing from this machine failed.")
-                    note(a, f"fix your git login for github.com, then:  git -C {root} push -u origin HEAD")
-                return
-    print("   Do it later with one of these:")
-    print(f"     gh repo create my-brain --private --source {root} --remote origin --push")
-    print(f"     git -C {root} remote add origin <your-private-git-url> && git -C {root} push -u origin main")
+    if not create:
+        o.row("skip", "Backup", "none — `brain setup --github` keeps a private copy on GitHub")
+        return
+    login = gh_login()
+    if not login:
+        o.row("warn", "Backup", "needs the GitHub CLI, logged in: gh auth login, then brain setup --github")
+        return
+    name = root.name if root.name not in ("", ".") else "brain"
+    if repo_exists(f"{login}/{name}"):
+        name = f"{name}-vault" if not repo_exists(f"{login}/{name}-vault") else f"{name}-vault-{os.getpid()}"
+    full = f"{login}/{name}"
+    try:
+        r = gh("repo", "create", full, "--private", "--source", str(root), "--remote", "origin",
+               "--push", "--description", "My self-improving brain (private)", timeout=180)
+    except (OSError, subprocess.SubprocessError) as e:
+        r = subprocess.CompletedProcess([], 1, "", str(e))
+    url = nightly.git_in(root, "remote", "get-url", "origin").stdout.strip()
+    if not url:
+        o.row("warn", "Backup", "could not create it: " + (r.stderr or r.stdout).strip()[:200])
+        return
+    if nightly.remote_visibility(url) != "PRIVATE":
+        v.set("git_sync", False)
+        o.row("warn", "Backup", f"{full} does not report itself as private — sync stays off. Make it private, then: "
+                                "brain config git_sync true")
+        return
+    v.set("git_sync", True)
+    if _push_works(root):
+        o.row("ok", "Backup", f"github.com/{full} (private) — every night")
+    else:
+        o.row("warn", "Backup", f"created github.com/{full} (private), but pushing failed — fix your git login, then: "
+                                f"git -C {root} push -u origin HEAD")
 
 
-def schedule(a: Asker, v, allow: bool) -> None:
-    if not allow:
-        note(a, "skipped — run `brain schedule install` any time")
-        return
-    print("   Every night: learn from new sessions, tune recall, check lessons, rebuild the index, back up.")
-    if a.ask("   Schedule it on this machine?", True):
-        try:
-            ok(a, nightly.schedule_install(v))
-        except (OSError, subprocess.CalledProcessError) as e:
-            warn(a, f"could not schedule: {e}. Run `brain nightly` by hand or try `brain schedule install`.")
+def first_run(v) -> None:
+    """Learn from the history right away instead of waiting for the night."""
+    subprocess.Popen([sys.executable, "-m", "self_improving_brain", "--vault", str(v.root), "nightly"],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                     start_new_session=True, cwd=str(PKG_ROOT))
 
 
 def run(args: argparse.Namespace) -> int:
-    interactive = sys.stdin.isatty()
-    if not interactive and not args.yes:
-        print("brain setup asks a few questions. Run it in a terminal, or pass --yes to accept the defaults:\n"
-              "  vault ~/brain · connect detected agents · learn from past sessions · safety+secrets packs ·\n"
-              "  use a detected LLM CLI ·\n"
-              "  create a PRIVATE GitHub backup repo (if gh is logged in) · schedule the nightly run")
-        return 2
-    a = Asker(args.yes)
-    print(a.c(B, "\n🧠  self-improving-brain setup") + a.c(D, "  — everything stays on this machine unless you say otherwise"))
-
-    step(a, 1, "Your vault")
-    root = make_vault(a, args.vault)
+    o = Out()
+    print("\n  🧠  " + o.c("1", "self-improving-brain") + "\n")
+    root = make_vault(o, args.vault)
     if root is None:
         return 1
     v = open_vault(str(root))
-    ok(a, f"vault ready at {root}")
-
-    step(a, 2, "Connect your agents")
-    connect_agents(a, v, args.agents.split(",") if args.agents else None)
-
-    step(a, 3, "The `brain` command")
-    link_command(a)
-
-    step(a, 4, "Learn from the sessions you already had")
-    candidates = learn_history(a, v)
-
-    step(a, 5, "Lesson packs")
-    add_packs(a, v, not getattr(args, "no_packs", False))
-
-    step(a, 6, "Smarter judging at night (optional)")
-    choose_llm(a, v, candidates, not args.no_llm)
-
-    step(a, 7, "Backup")
-    backup(a, v, not args.no_github)
-
-    step(a, 8, "Nightly self-improvement")
-    schedule(a, v, not args.no_schedule)
-
-    print("\n" + a.c(B, "Done.") + " Open a new agent session — the brain is in it from the first prompt.")
-    if candidates:
-        print(f"Start with {a.c(B, '/brain-review')} (Claude Code) or `brain review` to turn your history into lessons.")
-    print(a.c(D, "Check everything any time with `brain doctor`. Undo with `brain uninstall <agent>` and `brain schedule remove`."))
+    connect_agents(o, v, args.agents.split(",") if args.agents else None)
+    link_command(o)
+    sessions = learn_history(o, v)
+    thinks = choose_llm(o, v, not args.no_llm)
+    schedule(o, v, not args.no_schedule)
+    backup(o, v, bool(getattr(args, "github", False)))
+    if thinks and sessions and not os.environ.get("BRAIN_SETUP_NO_RUN"):
+        first_run(v)
+        print("\n  Done. It is learning from your history right now; the first rules are in place in a few minutes.")
+    else:
+        print("\n  Done.")
+    print("  Nothing else to do. " + o.c("1", "brain") + " shows how it is doing.\n")
     return 0
