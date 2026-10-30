@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly, replay  # noqa: E402
+from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly, packs, replay  # noqa: E402
 from self_improving_brain.config import open_vault  # noqa: E402
 from self_improving_brain.notes import Library, parse_frontmatter  # noqa: E402
 from self_improving_brain.search import Index  # noqa: E402
@@ -736,4 +736,74 @@ class TestReplay(VaultCase):
         self.assertTrue(any("french" in d["quote"] for d in learn.drafts(self.v)))
         self.assertEqual(replay.run(self.v, files=[p], draft=True)["drafted"], 0, "no duplicate drafts")
         self.assertIn("prevented 2 of 3", run_cli("replay", "--file", str(p)))
+
+
+class TestPacks(VaultCase):
+    SAMPLES = {  # lesson id: (commands or writes that must fire, ones that must not)
+        "L-safety-rm-rf": (["rm -rf build", "rm -fr /tmp/x", "find . -name '*.pyc' -delete"], ["rm file.txt", "rm -f a.lock"]),
+        "L-safety-git-discard": (["git reset --hard HEAD~1", "git clean -fdx", "git checkout -- ."], ["git checkout main", "git restore src/a.py"]),
+        "L-safety-drop-data": (["psql -c 'DROP TABLE users'", "redis-cli FLUSHALL", 'psql -c "DELETE FROM users"'],
+                               ["psql -c 'DELETE FROM users WHERE id=1'"]),
+        "L-safety-publish": (["npm publish", "gh release create v1", "git push origin --tags"], ["npm run build", "git push origin feat"]),
+        "L-secrets-no-print-env": (["cat .env", "cat .env.local", "printenv"], ["cat .env.example", "printenv HOME"]),
+        "L-secrets-no-commit-env": (["git add .env", "git add key.pem"], ["git add .env.example", "git add src/env.ts"]),
+        "L-git-branch-first": (["git push origin main", "git push origin HEAD:main"], ["git push -u origin feature", "git push origin main-fix"]),
+        "L-git-no-verify": (["git commit --no-verify -m x", "git commit -n -m x"], ["git commit -m 'no verify needed'"]),
+        "L-secrets-no-hardcoded-keys": (["key = 'AKIAABCDEFGHIJKLMNOP'", "-----BEGIN RSA PRIVATE KEY-----"], ["os.environ['AWS_KEY']"]),
+        "L-testing-no-skip-to-green": (["@pytest.mark.skip(reason='x')", "it.skip('a'", "xit('a'"], ["skip_list = []"]),
+        "L-python-no-bare-except": (["try:\n    x()\nexcept:\n    pass", "except Exception:\n    pass"], ["except Exception as e:\n    log(e)"]),
+        "L-python-no-mutable-default": (["def f(a=[]):"], ["def f(a=None):"]),
+        "L-ts-no-any": (["let x: any = 1", "foo as any"], ["const anyway = 1"]),
+    }
+
+    def test_bundled_packs_are_valid_and_precise(self):
+        import re
+        lessons = {}
+        for name, path in packs.builtin().items():
+            _, ls = packs.parse(path.read_text())
+            self.assertTrue(ls, name)
+            self.assertEqual(packs.problems(ls), [], name)
+            for l in ls:
+                self.assertNotIn(l.id, lessons, "lesson ids are unique across packs")
+                lessons[l.id] = l
+        for lid, (yes, no) in self.SAMPLES.items():
+            rx = lessons[lid].check or lessons[lid].commands
+            for x in yes:
+                self.assertTrue(re.search(rx, x), f"{lid} should fire on {x!r}")
+            for x in no:
+                self.assertFalse(re.search(rx, x), f"{lid} must not fire on {x!r}")
+
+    def test_add_guards_edit_protection_remove_and_export(self):
+        out = run_cli("pack", "add", "safety")
+        self.assertIn("6 lessons", out)
+        dest = self.root / "30-resources/packs/pack-safety.md"
+        self.assertTrue(dest.exists())
+        out = hooks.pre_tool(self.v, {"session_id": "p", "tool_name": "Bash", "tool_input": {"command": "rm -rf build/"}})
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask", "a pack guard is active at once")
+        self.assertEqual([f for f in __import__("self_improving_brain.lint", fromlist=["x"]).lint(self.v) if f.level == "MUST"], [])
+        dest.write_text(dest.read_text() + "\nmy own note\n")
+        self.assertIn("you edited", run_cli("pack", "add", "safety"))
+        self.assertIn("you edited", run_cli("pack", "remove", "safety"))
+        run_cli("pack", "remove", "safety", "--force")
+        self.assertFalse(dest.exists())
+        self.assertIn("safety", run_cli("pack", "list"))
+        mine = self.note("20-areas/deploy.md", "---\nname: deploy\ndescription: Deploys\n---\n# Deploy\n\n[[hub-brain]]\n\n"
+                         "> [!lesson]- L-safety-rm-rf\n> rule: my own rule\n> mechanism: reflex\n> words: clean, build\n"
+                         "> evidence: “you deleted my build folder again” (session 1234)\n")
+        out = run_cli("pack", "add", "safety")
+        self.assertIn("1 skipped", out, "a lesson id you already have is not overwritten")
+        self.assertNotIn("L-safety-rm-rf", (self.root / "30-resources/packs/pack-safety.md").read_text())
+        exported = run_cli("pack", "export", "ops", "--note", "deploy")
+        self.assertIn("L-safety-rm-rf", exported)
+        self.assertNotIn("you deleted my build folder", exported, "evidence (your own words) never leaves the vault")
+        f = Path(self.tmp.name) / "ops.md"
+        f.write_text(exported)
+        run_cli("pack", "remove", "safety")
+        mine.unlink()
+        self.assertIn("--yes", run_cli("pack", "add", str(f)), "a pack from outside is shown first")
+        self.assertIn("1 lessons", run_cli("pack", "add", str(f), "--yes"))
+        self.assertTrue((self.root / "30-resources/packs/pack-ops.md").exists())
+        bad = Path(self.tmp.name) / "bad.md"
+        bad.write_text("---\nname: pack-bad\npack: bad\n---\n# Bad\n\n> [!lesson]- L-bad\n> rule: x\n> check: ([\n")
+        self.assertIn("not a valid regex", run_cli("pack", "add", str(bad), "--yes"))
 

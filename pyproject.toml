@@ -26,6 +26,7 @@ packages = ["self_improving_brain"]
 [tool.setuptools.package-data]
 self_improving_brain = [
   "templates/commands/*.md",
+  "packs/*.md",
   "templates/vault/*/*.md",
   "templates/vault/.gitignore",
   "templates/vault/*/.gitkeep",

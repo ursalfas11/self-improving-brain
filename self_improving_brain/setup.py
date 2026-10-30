@@ -57,7 +57,7 @@ class Asker:
 
 
 def step(a: Asker, n: int, title: str) -> None:
-    print("\n" + a.c(B, f"{n}/7  {title}"))
+    print("\n" + a.c(B, f"{n}/8  {title}"))
 
 
 def ok(a: Asker, msg: str) -> None:
@@ -188,6 +188,25 @@ def learn_history(a: Asker, v) -> int:
     if per100:
         note(a, "that rate is your baseline — `brain stats` shows whether it goes down from here")
     return len(gs)
+
+
+def add_packs(a: Asker, v, allow: bool) -> None:
+    from . import packs
+    have = {p["name"] for p in packs.listing(v) if p["installed"]}
+    want = [n for n in ("safety", "secrets") if n not in have]
+    if not allow or not want:
+        return
+    if not a.ask("Add the safety and secrets lesson packs? (the agent asks before rm -rf, DROP TABLE, publishing;"
+                 " no keys in code)", True):
+        note(a, "later: `brain pack list`")
+        return
+    for n in want:
+        try:
+            p = packs.add(v, n)
+            ok(a, f"pack {n}: {len(p['lessons'])} lessons")
+        except ValueError as e:
+            warn(a, f"pack {n}: {e}")
+    note(a, "more packs: testing, git, python, typescript → `brain pack list`")
 
 
 def choose_llm(a: Asker, v, candidates: int, allow: bool) -> None:
@@ -327,7 +346,8 @@ def run(args: argparse.Namespace) -> int:
     interactive = sys.stdin.isatty()
     if not interactive and not args.yes:
         print("brain setup asks a few questions. Run it in a terminal, or pass --yes to accept the defaults:\n"
-              "  vault ~/brain · connect detected agents · learn from past sessions · use a detected LLM CLI ·\n"
+              "  vault ~/brain · connect detected agents · learn from past sessions · safety+secrets packs ·\n"
+              "  use a detected LLM CLI ·\n"
               "  create a PRIVATE GitHub backup repo (if gh is logged in) · schedule the nightly run")
         return 2
     a = Asker(args.yes)
@@ -349,13 +369,16 @@ def run(args: argparse.Namespace) -> int:
     step(a, 4, "Learn from the sessions you already had")
     candidates = learn_history(a, v)
 
-    step(a, 5, "Smarter judging at night (optional)")
+    step(a, 5, "Lessons other people already learned")
+    add_packs(a, v, not getattr(args, "no_packs", False))
+
+    step(a, 6, "Smarter judging at night (optional)")
     choose_llm(a, v, candidates, not args.no_llm)
 
-    step(a, 6, "Backup")
+    step(a, 7, "Backup")
     backup(a, v, not args.no_github)
 
-    step(a, 7, "Nightly self-improvement")
+    step(a, 8, "Nightly self-improvement")
     schedule(a, v, not args.no_schedule)
 
     print("\n" + a.c(B, "Done.") + " Open a new agent session — the brain is in it from the first prompt.")

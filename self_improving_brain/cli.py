@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, distill, events, handoff, hooks, inbox, learn, llm, maplib, metrics, nightly, replay, trust
+from . import adapters, distill, events, handoff, hooks, inbox, learn, llm, maplib, metrics, nightly, packs, replay, trust
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -463,6 +463,65 @@ def c_replay(a):
     return 0
 
 
+def _show_pack(p: dict) -> None:
+    print(f"pack {p['name']} v{p['version']} · {p['origin']}" + (f"\n  {p['description']}" if p["description"] else ""))
+    for l in p["lessons"]:
+        trig = l.commands or l.check or ", ".join(l.words) or l.paths
+        print(f"  {l.mechanism:7} {l.id}: {l.rule}" + (f"\n          ↳ {trig}" if trig else ""))
+    for i in p["skipped"]:
+        print(f"  (skipped {i}: you already have a lesson with this id)")
+    for w in p["warnings"]:
+        print(f"  ⚠ {w}")
+    for e in p["problems"]:
+        print(f"  ✗ {e}")
+
+
+def c_pack(a):
+    v = _vault(a)
+    try:
+        if a.action == "list":
+            for p in packs.listing(v):
+                mark = "✓" if p["installed"] else " "
+                print(f"{mark} {p['name']:12} {p['lessons']:2} lessons  {p['description'][:90]}"
+                      + ("  (update: `brain pack add " + p["name"] + "`)" if p["outdated"] else ""))
+            print("→ brain pack show <name> · brain pack add <name|file|https-url>")
+            return 0
+        if not a.name:
+            print(f"brain pack {a.action} needs a name")
+            return 1
+        if a.action == "show":
+            _show_pack(packs.plan(v, a.name))
+            return 0
+        if a.action == "add":
+            p = packs.plan(v, a.name)
+            if p["origin"] != "builtin" and not a.yes:
+                _show_pack(p)
+                if not sys.stdin.isatty():
+                    print("a pack from outside puts rules into your agent — read them, then run again with --yes")
+                    return 2
+                if input("trust these lessons and add them? [y/N] ").strip().lower() not in ("y", "yes"):
+                    return 1
+            p = packs.add(v, a.name, force=a.force)
+            print(f"✓ pack {p['name']}: {len(p['lessons'])} lessons → {p['path'].relative_to(v.root)}"
+                  + (f" ({len(p['skipped'])} skipped, ids already in your vault)" if p["skipped"] else ""))
+            maplib.write(v)
+            return 0
+        if a.action == "remove":
+            print(f"✓ removed {packs.remove(v, a.name, force=a.force).relative_to(v.root)}")
+            maplib.write(v)
+            return 0
+        text = packs.export(v, a.name, a.lesson or [], note=a.note or "", description=a.description or "")
+        if a.out:
+            Path(a.out).expanduser().write_text(text, encoding="utf-8")
+            print(f"✓ wrote {a.out} — share it; others add it with `brain pack add <file or https url>`")
+        else:
+            print(text, end="")
+        return 0
+    except (ValueError, OSError) as e:
+        print(f"✗ {e}")
+        return 1
+
+
 def c_lint(a):
     v = _vault(a)
     fs = lint(v)
@@ -689,6 +748,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--vault", dest="setup_vault", metavar="PATH"); s.add_argument("--yes", "-y", action="store_true", help="accept all defaults")
     s.add_argument("--agents", help="comma list to connect, e.g. claude,codex (default: all detected)")
     s.add_argument("--no-github", action="store_true"); s.add_argument("--no-llm", action="store_true"); s.add_argument("--no-schedule", action="store_true")
+    s.add_argument("--no-packs", action="store_true")
     s.set_defaults(f=c_setup)
     s = sub.add_parser("init", help="create a vault"); s.add_argument("path", nargs="?"); s.add_argument("--git", action="store_true"); s.add_argument("--force", action="store_true"); s.add_argument("--quiet", action="store_true"); s.set_defaults(f=c_init)
     s = sub.add_parser("refine", help="let llm_cmd judge open lesson candidates now"); s.set_defaults(f=c_refine)
@@ -725,6 +785,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--draft", action="store_true", help="turn uncovered corrections into lesson drafts")
     s.add_argument("--json", action="store_true"); s.add_argument("--rows", action="store_true", help="with --json: every correction")
     s.set_defaults(f=c_replay)
+    s = sub.add_parser("pack", help="lesson packs: ready-made rules (safety, secrets, testing, git, python, typescript)")
+    s.add_argument("action", choices=["list", "show", "add", "remove", "export"]); s.add_argument("name", nargs="?")
+    s.add_argument("--yes", action="store_true"); s.add_argument("--force", action="store_true")
+    s.add_argument("--lesson", action="append", help="export: lesson id (repeatable)"); s.add_argument("--note", help="export: every lesson of a note")
+    s.add_argument("--description"); s.add_argument("-o", "--out"); s.set_defaults(f=c_pack)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)
