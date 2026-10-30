@@ -149,9 +149,10 @@ def session_start(v: Vault, payload: dict) -> dict:
     st = events.session_state(v, session)
     always = [l for l in trust.effective(v, cache.lessons(v)) if l.mechanism == "always"][: int(v.get("always_max"))]
     b = cli_name()
-    lines = [f"SELF-IMPROVING-BRAIN memory at {v.root}: look things up with `{b} search \"<question>\"` and"
-             f" `{b} read <note> [section]`; keep what will matter later with"
-             f" `{b} remember <fact|decision|pitfall|preference> \"<one sentence>\"`."]
+    how = "" if b == "brain" else f" (`brain` below means `{b}`)"  # a long command once, not in every example
+    lines = [f"SELF-IMPROVING-BRAIN memory at {v.root}{how}: look things up with `brain search \"<question>\"` and"
+             f" `brain read <note> [section]`; keep what will matter later with"
+             f" `brain remember <fact|decision|pitfall|preference> \"<one sentence>\"`."]
     if always:
         lines.append("LESSONS (apply in every session):")
         lines += [f"- {l.id}: {l.rule}" for l in always]

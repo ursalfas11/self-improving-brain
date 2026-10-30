@@ -382,6 +382,8 @@ class TestNumbers(VaultCase):
         t = list(events.tallies(self.v).values())[-1]
         self.assertEqual((t["inject_chars"], t["inject_calls"]), (len(ctx), 1))
         self.assertLess(len(ctx), 900, "session start: one line plus the always-rules")
+        if hooks.cli_name() != "brain":
+            self.assertEqual(ctx.count(hooks.cli_name()), 1, "the full command is spelled out once")
 
 
 class TestCli(VaultCase):
