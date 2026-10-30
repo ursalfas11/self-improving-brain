@@ -12,7 +12,7 @@ import os
 import re
 from pathlib import Path
 
-from . import events, llm
+from . import events, llm, trust
 from .config import Vault
 from .notes import Lesson, Library, atomic_write, dump_frontmatter, set_field
 from .transcripts import parse
@@ -367,11 +367,37 @@ def approve(v: Vault, draft_id: str, *, rule: str = "", mechanism: str = "", not
         since=today(), evidence=short(d.get("quote", ""), 140).replace("\n", " "),
         klass=klass or sug.get("class") or "")
     write_lesson(v, note_path, lesson)
+    trust.record(v, [lesson], "approve")
     for x in all_d:
         if x["id"] in group_ids:  # the whole group of similar corrections is answered by this lesson
             x["status"] = "approved"
             x["lesson"] = lesson.id
     write_jsonl(drafts_path(v), all_d)
+    return lesson
+
+
+def set_lesson_field(v: Vault, lesson_id: str, key: str, value: str) -> Lesson:
+    """Change one field of a lesson callout in place (the rest of the note stays byte-for-byte)."""
+    import re as _re
+    lib = Library(v.root)
+    hit = next(((n, l) for n in lib.notes.values() for l in n.lessons if l.id == lesson_id), None)
+    if hit is None:
+        raise KeyError(f"no lesson {lesson_id}")
+    note, _ = hit
+    lines = note.path.read_text(encoding="utf-8").split("\n")
+    head = next(i for i, ln in enumerate(lines) if _re.match(rf"^>\s*\[!lesson\][+-]?\s*{_re.escape(lesson_id)}\s*$", ln))
+    end = head + 1
+    while end < len(lines) and lines[end].startswith(">"):
+        end += 1
+    for i in range(head + 1, end):
+        if _re.match(rf"^>\s*{key}\s*:", lines[i], _re.I):
+            lines[i] = f"> {key}: {value}"
+            break
+    else:
+        lines.insert(end, f"> {key}: {value}")
+    atomic_write(note.path, set_field("\n".join(lines), "updated", today()))
+    lesson = next(l for l in Library(v.root).lessons() if l.id == lesson_id)
+    trust.record(v, [lesson], f"set {key}")
     return lesson
 
 

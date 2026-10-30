@@ -9,6 +9,7 @@ Event kinds:
   lesson   {session, id, trigger}                lesson injected or guard raised
   turns    {session, user, corrections, source}  per transcript: message and correction counts
   correction {session, text, week, lessons_shown} a user correction found by `brain learn`
+  violation {session, id, tool, sample}          a lesson's `check:` matched what the agent did
   tool     {cmd}                                 a CLI command was used
 """
 from __future__ import annotations
@@ -39,6 +40,35 @@ def all_events(v: Vault, kind: str | None = None) -> list[dict]:
         out = [e for e in out if e.get("k") == kind]
     out.sort(key=lambda e: str(e.get("t", "")))
     return out
+
+
+def count_check(v: Vault, violations: int) -> None:
+    """Actions checked against self-checking rules, per ISO week: the denominator of the violation rate."""
+    from .util import iso_week, today
+    p = v.path("checks", f"{host()}.json")  # versioned like events: one file per machine
+    data = load_json(p, {})
+    if not isinstance(data, dict):
+        data = {}
+    w = data.setdefault(iso_week(today()), {"checked": 0, "violations": 0})
+    w["checked"] += 1
+    w["violations"] += violations
+    try:
+        save_json(p, data)
+    except OSError:
+        pass
+
+
+def check_counts(v: Vault) -> dict:
+    """{week: {checked, violations}} summed over machines."""
+    out: dict = {}
+    d = v.path("checks")
+    for f in sorted(d.glob("*.json")) if d.exists() else []:
+        data = load_json(f, {})
+        for w, c in (data.items() if isinstance(data, dict) else []):
+            o = out.setdefault(w, {"checked": 0, "violations": 0})
+            o["checked"] += int(c.get("checked", 0))
+            o["violations"] += int(c.get("violations", 0))
+    return dict(sorted(out.items()))
 
 
 # --- per-session memory: "show each thing once per session" -------------------------------

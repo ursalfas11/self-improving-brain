@@ -41,6 +41,10 @@ DEFAULTS = {
     "git_owned": False,
     # never push to a repo anyone can read (checked before every push); set true only on purpose
     "allow_public_remote": False,
+    # which lessons may reach the agent: agent (default) | strict | off — see trust.py
+    "trust_mode": "agent",
+    # an agent running `brain approve/trust/promote/pack add/...` gets a permission prompt first
+    "guard_brain_commands": True,
     # notes of type project that were not updated for this many days are flagged
     "stale_days": 45,
     # transcript sources to learn from (globs, ~ expanded)

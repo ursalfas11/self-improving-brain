@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, distill, events, hooks, inbox, learn, llm, maplib, metrics, nightly
+from . import adapters, distill, events, hooks, inbox, learn, llm, maplib, metrics, nightly, trust
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -75,6 +75,7 @@ def c_init(a):
             print(f"note: {root} already is a git repo — nightly sync stays off until you run: brain config git_sync true")
     save_json(root / ".brain" / MARKER, marker)
     v = Vault(root, dict(DEFAULTS))
+    trust.record(v, Library(root).lessons(), "init")
     idx = root / "INDEX.md"
     if idx.exists() and maplib.HEADER.splitlines()[0] not in idx.read_text(encoding="utf-8", errors="replace"):
         print(f"note: kept your own {idx.name}; the generated map is skipped until you move it")
@@ -333,8 +334,9 @@ def c_lesson(a):
     path = n.path if n else learn.default_note(v)
     l = Lesson(id=learn.unique_lesson_id(lib, a.rule, a.klass or ""), note=n.name if n else "working-style",
                rule=a.rule, mechanism=a.mechanism, tools=_csv(a.tools) or [], commands=a.commands or "",
-               paths=a.paths or "", words=_csv(a.words) or [], since=today(), klass=a.klass or "")
+               paths=a.paths or "", words=_csv(a.words) or [], check=a.check or "", since=today(), klass=a.klass or "")
     learn.write_lesson(v, path, l)
+    trust.record(v, [l], "lesson")
     print(f"✓ lesson {l.id} → {path.relative_to(v.root)}")
     return 0
 
@@ -345,12 +347,59 @@ def c_lessons(a):
     ls = lib.lessons()
     if not ls:
         print("no lessons yet — they appear as you correct your agent (`brain learn`, `brain review`).")
+    silent = {l.id: why for l, why in trust.untrusted(v, ls)}
     for l in sorted(ls, key=lambda l: (l.mechanism, l.id)):
         trig = ", ".join(x for x in [("words: " + ", ".join(l.words)) if l.words else "",
                                      ("tools: " + ", ".join(l.tools)) if l.tools else "",
                                      ("cmd: " + l.commands) if l.commands else "",
-                                     ("path: " + l.paths) if l.paths else ""] if x)
-        print(f"{l.mechanism:7} {l.id}  [{l.note}]\n        {l.rule}" + (f"\n        {trig}" if trig else ""))
+                                     ("path: " + l.paths) if l.paths else "",
+                                     ("check: " + l.check) if l.check else ""] if x)
+        mark = f"  ⚠ silent: {silent[l.id]} → brain trust {l.id}" if l.id in silent else ""
+        print(f"{l.mechanism:7} {l.id}  [{l.note}]{mark}\n        {l.rule}" + (f"\n        {trig}" if trig else ""))
+    return 0
+
+
+def c_trust(a):
+    v = _vault(a)
+    lib = Library(v.root)
+    silent = trust.untrusted(v, lib.lessons())
+    if a.ids or a.all:
+        pick = [l for l, _ in silent if a.all or l.id in a.ids]
+        missing = [i for i in a.ids if i not in {l.id for l in lib.lessons()}]
+        if missing:
+            print("no lesson " + ", ".join(missing))
+            return 1
+        pick += [l for l in lib.lessons() if l.id in a.ids and l not in pick]
+        if not pick:
+            print("nothing to trust")
+            return 0
+        for l in pick:
+            print(f"  {l.mechanism:7} {l.id} [{l.note}]: {l.rule}")
+        if sys.stdin.isatty() and not a.yes:
+            if input(f"Let these {len(pick)} lessons reach your agent? [y/N] ").strip().lower() not in ("y", "yes", "j", "ja"):
+                print("nothing changed")
+                return 1
+        trust.record(v, pick, "trust")
+        print(f"✓ {len(pick)} lessons trusted")
+        return 0
+    if not silent:
+        print(f"every lesson is trusted (trust_mode {v.get('trust_mode')})")
+        return 0
+    print(f"{len(silent)} lessons are silent — read each one before you trust it:")
+    for l, why in silent:
+        print(f"  {l.id} [{l.note}] · {why}\n     {l.mechanism}: {l.rule}" + (f"\n     check: {l.check}" if l.check else ""))
+    print("→ brain trust <id> [<id> …]   or   brain trust --all")
+    return 0
+
+
+def c_promote(a):
+    v = _vault(a)
+    try:
+        l = learn.set_lesson_field(v, a.id, "mechanism", a.to)
+    except (KeyError, StopIteration) as e:
+        print(str(e).strip("'\""))
+        return 1
+    print(f"✓ {l.id} is now {l.mechanism}")
     return 0
 
 
@@ -389,7 +438,14 @@ def c_stats(a):
     if not health:
         print("  none yet")
     for h in health:
-        print(f"  {h['id']:40} {h['mechanism']:7} shown {h['shown']:3} · ignored {h['ignored']} · missed {h['missed']}  → {h['verdict']}")
+        print(f"  {h['id']:40} {h['mechanism']:7} shown {h['shown']:3} · ignored {h['ignored']} · missed {h['missed']}"
+              f"{' · broken ' + str(h['violations']) if h['check'] else ''}  → {h['verdict']}")
+    checks = events.check_counts(v)
+    if checks:
+        print("RULE CHECKS (lessons with `check:` — violations found without a user correction)")
+        for w, c in list(checks.items())[-8:]:
+            rate = 100 * c["violations"] / c["checked"] if c["checked"] else 0
+            print(f"  {w}  {c['violations']:3} violations in {c['checked']:4} checked actions ({rate:.1f}%)")
     d = len(learn.drafts(v))
     i = len(inbox.items(v))
     print(f"QUEUE  {d} lesson drafts · {i} inbox items · llm_cmd {'set' if llm.available(v) else 'not set (agent-driven mode)'}")
@@ -592,8 +648,12 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("reject", help="discard a draft"); s.add_argument("id"); s.add_argument("--block", nargs="*"); s.add_argument("--reason"); s.set_defaults(f=c_reject)
     s = sub.add_parser("lesson", help="add a lesson by hand")
     s.add_argument("rule"); s.add_argument("--note"); s.add_argument("--mechanism", default="reflex", choices=["reflex", "always", "guard", "skill"])
-    s.add_argument("--words"); s.add_argument("--tools"); s.add_argument("--commands"); s.add_argument("--paths"); s.add_argument("--class", dest="klass"); s.set_defaults(f=c_lesson)
+    s.add_argument("--words"); s.add_argument("--tools"); s.add_argument("--commands"); s.add_argument("--paths"); s.add_argument("--check"); s.add_argument("--class", dest="klass"); s.set_defaults(f=c_lesson)
     s = sub.add_parser("lessons", help="list all lessons"); s.set_defaults(f=c_lessons)
+    s = sub.add_parser("trust", help="review lessons that stay silent (written by an agent, or strict mode)")
+    s.add_argument("ids", nargs="*"); s.add_argument("--all", action="store_true"); s.add_argument("--yes", "-y", action="store_true"); s.set_defaults(f=c_trust)
+    s = sub.add_parser("promote", help="change how a lesson acts, e.g. reflex -> guard after repeated violations")
+    s.add_argument("id"); s.add_argument("--to", required=True, choices=["reflex", "always", "guard", "skill"]); s.set_defaults(f=c_promote)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)

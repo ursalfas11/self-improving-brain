@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import cache, events, inbox, learn
+from . import cache, events, inbox, learn, trust
 from .adapters import cli_name
 from .config import NotAVault, Vault, open_vault
 from .lint import lint_note
@@ -135,7 +135,7 @@ def session_start(v: Vault, payload: dict) -> dict:
     if "checked_ts" not in st and tp and Path(str(tp)).is_file():
         # a resumed session starts with old turns: the knowledge check only looks at what comes next
         st["checked_ts"] = max((t.ts for t in _tail_turns(Path(str(tp))) if t.ts), default="")
-    always = [l for l in lib.lessons() if l.mechanism == "always"][: int(v.get("always_max"))]
+    always = [l for l in trust.effective(v, lib.lessons()) if l.mechanism == "always"][: int(v.get("always_max"))]
     b = cli_name()
     lines = [f"SELF-IMPROVING-BRAIN vault: {v.root} — before answering from memory, run `{b} search \"<question>\"`;"
              f" open a note with `{b} read <note> [section]`; store new knowledge with"
@@ -163,6 +163,9 @@ def session_start(v: Vault, payload: dict) -> dict:
         pending.append(msg)
     for f in cache.must_findings(v)[:3]:
         pending.append("fix " + " ".join(f.split()))
+    silent = trust.untrusted(v, lib.lessons())
+    if silent:
+        pending.append(f"{len(silent)} lessons stay silent until the user checks them (written by an agent or never approved) → `{b} trust`")
     if pending:
         lines.append("BRAIN TODO (mention to the user only if relevant): " + " · ".join(pending))
     return _out("SessionStart", "\n".join(lines))
@@ -194,7 +197,7 @@ def prompt(v: Vault, payload: dict) -> dict:
         st["shown"] += [h.note.name for h in chosen]
         lines.append(f"BRAIN-RECALL (open with `{cli_name()} read <note>` if relevant): " + " · ".join(
             f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
-    for l in lib.lessons():
+    for l in trust.effective(v, lib.lessons()):
         if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words"):
             lines.append(f"LESSON {l.id}: {l.rule}")
     events.save_session_state(v, session, st)
@@ -203,10 +206,60 @@ def prompt(v: Vault, payload: dict) -> dict:
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
+# approving or trusting a rule is the user's call: an agent running these commands gets a permission prompt
+BRAIN_APPROVAL = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?"
+                            r"(approve|trust|promote|pack\s+add|team\s+(?:add|propose)|skills\s+approve)\b")
+
 
 def _paths_in(tool_input: dict) -> list[str]:
     out = [str(tool_input[k]) for k in ("file_path", "path", "notebook_path") if tool_input.get(k)]
     return out
+
+
+def written_text(tool_input: dict) -> str:
+    """What a Write/Edit/MultiEdit/NotebookEdit call puts into a file."""
+    content = str(tool_input.get("content") or tool_input.get("new_string") or tool_input.get("new_source") or "")
+    for e in tool_input.get("edits") or []:
+        if isinstance(e, dict):
+            content += "\n" + str(e.get("new_string", ""))
+    return content
+
+
+def _in(p: str, root: Path) -> bool:
+    try:
+        return Path(p).expanduser().resolve().is_relative_to(root)
+    except (OSError, ValueError):
+        return False
+
+
+def check_hits(lessons, tool: str, cmd: str, paths: list[str], content: str) -> list[Lesson]:
+    """Lessons whose `check:` matches what the agent writes or runs."""
+    out = []
+    for l in lessons:
+        if not l.check:
+            continue
+        if tool in WRITE_TOOLS:
+            if l.paths and not any(regex_match(l.paths, p) for p in paths):
+                continue
+            if regex_match(l.check, content):
+                out.append(l)
+        elif cmd and regex_match(l.check, cmd):
+            out.append(l)
+    return out
+
+
+def guard_for(lessons, tool: str, cmd: str, paths: list[str], content: str = ""):
+    """(first guard lesson that fires, reflex lessons whose triggers fire) for one proposed action."""
+    reflexes = []
+    for l in lessons:
+        fired = (tool_match(l, tool) or regex_match(l.commands, cmd)
+                 or any(regex_match(l.paths, p) for p in paths) or (cmd and regex_match(l.paths, cmd)))
+        if l.mechanism == "guard":
+            if fired or (l.check and check_hits([l], tool, cmd, paths, content)):
+                return l, reflexes
+        elif fired and l.mechanism in ("reflex", "skill"):
+            reflexes.append(l)
+    return None, reflexes
 
 
 def pre_tool(v: Vault, payload: dict) -> dict:
@@ -215,10 +268,13 @@ def pre_tool(v: Vault, payload: dict) -> dict:
     ti = ti if isinstance(ti, dict) else {}
     session = _session(payload)
     paths = _paths_in(ti)
-    if tool in WRITE_TOOLS and any(Path(p).resolve().is_relative_to(v.root) for p in paths):
-        content = str(ti.get("content") or ti.get("new_string") or "")
-        for e in ti.get("edits") or []:
-            content += "\n" + str(e.get("new_string", ""))
+    content = written_text(ti) if tool in WRITE_TOOLS else ""
+    if tool in WRITE_TOOLS and any(_in(p, v.meta) for p in paths):
+        return _out("PreToolUse", decision={
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "self-improving-brain: .brain/ holds the brain's own state (trust ledger, events)."
+            " Change it through the brain CLI, never by editing files."})
+    if tool in WRITE_TOOLS and any(_in(p, v.root) for p in paths):
         found = scan(content)
         if found:
             return _out("PreToolUse", decision={
@@ -226,22 +282,22 @@ def pre_tool(v: Vault, payload: dict) -> dict:
                 "permissionDecisionReason": "self-improving-brain: refusing to write a secret into the vault ("
                 + ", ".join(k for k, _ in found) + "). Store the variable name and where the value lives instead."})
     cmd = command_head(str(ti.get("command") or "")) if tool == "Bash" else ""
-    candidates = [l for l in cache.lessons(v) if l.tools or (cmd and (l.commands or l.paths)) or (paths and l.paths)]
+    if cmd and v.get("guard_brain_commands") and BRAIN_APPROVAL.search(cmd):
+        return _out("PreToolUse", decision={
+            "permissionDecision": "ask",
+            "permissionDecisionReason": "self-improving-brain: approving or trusting a rule needs the user's own OK."})
+    candidates = [l for l in trust.effective(v, cache.lessons(v))
+                  if l.tools or (cmd and (l.commands or l.paths or l.check)) or (paths and (l.paths or l.check))]
     if not candidates:
         return {}
     st = events.session_state(v, session)
-    lines, guard = [], None
-    for l in candidates:
-        fired = (tool_match(l, tool) or regex_match(l.commands, cmd)
-                 or any(regex_match(l.paths, p) for p in paths) or (cmd and regex_match(l.paths, cmd)))
-        if not fired:
-            continue
-        if l.mechanism == "guard":
-            events.log(v, "lesson", session=session, id=l.id, trigger="guard:" + tool)
-            guard = l
-            break
-        if l.mechanism in ("reflex", "skill") and _mark_lesson(v, session, st, l, "tool:" + tool):
+    guard, reflexes = guard_for(candidates, tool, cmd, paths, content)
+    lines = []
+    for l in reflexes:
+        if _mark_lesson(v, session, st, l, "tool:" + tool):
             lines.append(f"LESSON {l.id}: {l.rule}")
+    if guard:
+        events.log(v, "lesson", session=session, id=guard.id, trigger="guard:" + tool)
     events.save_session_state(v, session, st)
     if guard:
         return _out("PreToolUse", "\n".join(lines), {
@@ -254,40 +310,71 @@ def pre_tool(v: Vault, payload: dict) -> dict:
 READ_CMD = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\"']?\s+(?:--vault\s+\S+\s+)?read\s+[\"']?([\w\-./]+)")
 
 
+def _touches_vault(v: Vault, payload: dict, command: str) -> bool:
+    cwd = str(payload.get("cwd") or "")
+    home = str(Path.home())
+    root = str(v.root)
+    return bool((cwd and _in(cwd, v.root)) or root in command
+                or (root.startswith(home) and "~" + root[len(home):] in command))
+
+
+def _rule_checks(v: Vault, session: str, tool: str, cmd: str, paths: list[str], content: str) -> list[str]:
+    """Rules that check themselves: a lesson's `check:` matched what the agent just did."""
+    lessons = [l for l in trust.effective(v, cache.lessons(v)) if l.check and l.mechanism != "guard"]
+    if not lessons or not (content or cmd):
+        return []
+    hits = check_hits(lessons, tool, cmd, paths, content)
+    events.count_check(v, len(hits))
+    lines = []
+    for l in hits:
+        events.log(v, "violation", session=session, id=l.id, tool=tool, sample=short(cmd or content, 120))
+        lines.append(f"BRAIN-CHECK {l.id}: what you just did breaks this rule: {l.rule} "
+                     "Fix it now, unless the user asked for exactly this.")
+    return lines
+
+
 def post_tool(v: Vault, payload: dict) -> dict:
     tool = str(payload.get("tool_name") or "")
     ti = payload.get("tool_input") or {}
     ti = ti if isinstance(ti, dict) else {}
     session = _session(payload)
     paths = _paths_in(ti)
-    lib = None
+    lines: list[str] = []
     if tool == "Bash":
-        m = READ_CMD.search(str(ti.get("command") or ""))
+        full = str(ti.get("command") or "")
+        m = READ_CMD.search(full)
         if m:
-            lib = cache.library(v)
-            n = lib.find(m.group(1))
+            n = cache.library(v).find(m.group(1))
             if n:
                 events.log(v, "read", session=session, note=n.name, via="cli")
-        return {}
-    in_vault = [p for p in paths if p.endswith(".md") and Path(p).resolve().is_relative_to(v.root)]
-    if not in_vault:
-        return {}
-    lib = cache.library(v) if tool == "Read" else Library(v.root)
+        if _touches_vault(v, payload, full):
+            trust.mark_pending(v, cache.lessons(v), session, "Bash")
+        lines += _rule_checks(v, session, tool, command_head(full), [], "")
+        return _out("PostToolUse", "\n".join(lines)) if lines else {}
+    in_vault = [p for p in paths if p.endswith(".md") and _in(p, v.root)]
     if tool == "Read":
+        lib = cache.library(v)
         for p in in_vault:
             n = lib.find(Path(p).stem)
             if n:
                 events.log(v, "read", session=session, note=n.name, via="read")
         return {}
-    if tool in WRITE_TOOLS:
-        msgs = []
-        for p in in_vault:
-            n = lib.find(Path(p).stem)
-            if n:
-                msgs += [str(f) for f in lint_note(n, lib, int(v.get("stale_days")))[:5]]
-        if msgs:
-            return _out("PostToolUse", "BRAIN-LINT on the note you just edited:\n" + "\n".join(msgs))
-    return {}
+    if tool not in WRITE_TOOLS:
+        return {}
+    edited, lib = [], None
+    if in_vault:
+        # first, before anything else looks at the lessons: what this call wrote is the agent's, not yours
+        lib = Library(v.root)
+        edited = [n for n in (lib.find(Path(p).stem) for p in in_vault) if n]
+        silent = trust.mark_pending(v, [l for n in edited for l in n.lessons], session, tool)
+        if silent:
+            lines.append(f"BRAIN: you wrote the lesson(s) {', '.join(silent)}. They stay silent until the user checks them "
+                         f"with `{cli_name()} trust` — tell the user.")
+    lines += _rule_checks(v, session, tool, "", paths, written_text(ti))
+    found = [str(f) for n in edited for f in lint_note(n, lib, int(v.get("stale_days")))[:5]]
+    if found:
+        lines += ["BRAIN-LINT on the note you just edited:"] + found
+    return _out("PostToolUse", "\n".join(lines)) if lines else {}
 
 
 def _tail_turns(path: Path, max_bytes: int = 400_000):

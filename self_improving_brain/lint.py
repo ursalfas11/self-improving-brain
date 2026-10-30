@@ -60,6 +60,16 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
     if len(always) > int(v.get("always_max")):
         out.append(Finding("SHOULD", "(lessons)", f"{len(always)} 'always' lessons (max {v.get('always_max')}) —"
                            " every one costs tokens in every session; turn some into reflexes"))
+    from .trust import untrusted
+    for l, why in untrusted(v, lib.lessons()):
+        out.append(Finding("SHOULD", l.note, f"{l.id} is silent ({why}) — read it, then `brain trust {l.id}`"))
+    for l in lib.lessons():
+        if l.check:
+            import re
+            try:
+                re.compile(l.check)
+            except re.error as e:
+                out.append(Finding("MUST", l.note, f"{l.id}: check is not a valid regex ({e})"))
     out.extend(duplicates(lib))
     return sorted(out, key=lambda f: (f.level != "MUST", f.note))
 

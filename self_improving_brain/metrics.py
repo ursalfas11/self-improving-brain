@@ -93,6 +93,7 @@ def lesson_health(v: Vault, lib: Library | None = None) -> list[dict]:
         shown[e.get("id")] += 1
         last_shown[e.get("id")] = e.get("t", "")
     corrections = events.all_events(v, "correction")
+    violations = Counter(e.get("id") for e in events.all_events(v, "violation"))
     out = []
     for l in lib.lessons():
         topic = set(terms(l.rule + " " + " ".join(l.words)))
@@ -110,7 +111,9 @@ def lesson_health(v: Vault, lib: Library | None = None) -> list[dict]:
                 missed += 1
         age = days_since(l.since) if l.since else None
         verdict = "ok"
-        if ignored >= 2:
+        if violations[l.id] >= 2 and l.mechanism in ("reflex", "skill", "always"):
+            verdict = f"broken {violations[l.id]}× despite the rule → brain promote {l.id} --to guard"
+        elif ignored >= 2:
             verdict = "sharpen rule or use guard"
         elif missed >= 2:
             verdict = "widen triggers"
@@ -118,6 +121,7 @@ def lesson_health(v: Vault, lib: Library | None = None) -> list[dict]:
             verdict = "dormant: retrigger or drop"
         out.append({"id": l.id, "note": l.note, "mechanism": l.mechanism, "shown": shown[l.id],
                     "last": last_shown.get(l.id, "")[:10], "ignored": ignored, "missed": missed,
+                    "violations": violations[l.id], "check": bool(l.check),
                     "verdict": verdict})
     return out
 

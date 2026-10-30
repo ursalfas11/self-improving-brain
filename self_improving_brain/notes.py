@@ -21,7 +21,7 @@ LINK = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]*)?(?:\|[^\]]*)?\]\]")
 LESSON_HEAD = re.compile(r"^>\s*\[!lesson\][+-]?\s*(\S+)?\s*(.*)$", re.I)
 LESSON_FIELD = re.compile(r"^>\s*([a-z_]+)\s*:\s*(.*)$", re.I)
 
-LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "since", "evidence", "class")
+LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "check", "since", "evidence", "class")
 MECHANISMS = ("always", "reflex", "guard", "skill")
 
 
@@ -46,6 +46,7 @@ class Lesson:
     commands: str = ""
     paths: str = ""
     words: list[str] = field(default_factory=list)
+    check: str = ""      # regex on what the agent wrote or ran: a match is a violation, found without you
     since: str = ""
     evidence: str = ""
     klass: str = ""
@@ -60,6 +61,8 @@ class Lesson:
             lines.append(f"> paths: {self.paths}")
         if self.words:
             lines.append("> words: " + ", ".join(self.words))
+        if self.check:
+            lines.append(f"> check: {self.check}")
         if self.klass:
             lines.append(f"> class: {self.klass}")
         if self.since:
@@ -289,6 +292,8 @@ def parse_lessons(body: str, note_name: str) -> list[Lesson]:
             cur.paths = v
         elif k == "words":
             cur.words = [x.strip() for x in v.split(",") if x.strip()]
+        elif k == "check":
+            cur.check = v
         elif k == "since":
             cur.since = v
         elif k == "evidence":
