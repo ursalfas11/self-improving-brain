@@ -66,6 +66,17 @@ def brain_cmd() -> str:
     return f'"{sys.executable}"{" -P" if sys.version_info >= (3, 11) else ""} -m self_improving_brain'
 
 
+def brain_argv() -> list[str]:
+    """brain_cmd() as an argument list, for configs that take command + args (MCP clients)."""
+    shim = PKG_ROOT / "brain"
+    if shim.is_file():
+        return [_python().strip('"'), str(shim)]
+    script = console_script()
+    if script:
+        return [str(script)]
+    return [sys.executable, *(["-P"] if sys.version_info >= (3, 11) else []), "-m", "self_improving_brain"]
+
+
 def cli_name() -> str:
     """`brain` if it is on PATH and points here, else the full command."""
     found = shutil.which("brain")
@@ -149,6 +160,37 @@ CLAUDE_HOOKS = [
     ("Stop", None, "stop", 10, False),
     ("SessionEnd", None, "session-end", 5, True),
 ]
+
+
+def from_plugin() -> bool:
+    """Running from a Claude Code plugin install (its path changes with every plugin update)."""
+    return "/.claude/plugins/" in PKG_ROOT.as_posix() + "/"
+
+
+def plugin_hooks() -> dict:
+    """hooks/hooks.json of the Claude Code plugin; tests keep the file in sync with CLAUDE_HOOKS."""
+    out: dict = {}
+    for event, matcher, handler, timeout, is_async in CLAUDE_HOOKS:
+        h = {"type": "command", "command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}/brain" hook {handler} --plugin', "timeout": timeout}
+        if is_async:
+            h["async"] = True
+        g = {"matcher": matcher, "hooks": [h]} if matcher else {"hooks": [h]}
+        out.setdefault(event, []).append(g)
+    return {"description": "self-improving-brain: lessons at the right moment, guards, recall, handoffs", "hooks": out}
+
+
+def plugin_command(t: Path) -> str:
+    """A slash command for the plugin: `brain` is the command from the SELF-IMPROVING-BRAIN context line."""
+    _, head, body = t.read_text(encoding="utf-8").split("---\n", 2)
+    return (f"---\n{head}---\n`brain` below is the brain command shown in the SELF-IMPROVING-BRAIN line of your context.\n\n"
+            + body.lstrip("\n").replace("{{BRAIN}}", "brain"))
+
+
+def claude_hooks_installed() -> bool:
+    try:
+        return HOOK_TAG in _claude_settings().read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def _claude_settings() -> Path:

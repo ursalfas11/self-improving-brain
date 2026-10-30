@@ -132,6 +132,10 @@ def connect_agents(a: Asker, v, only: list[str] | None) -> list[str]:
             continue
         if not present():
             continue
+        if key == "claude" and adapters.from_plugin():
+            ok(a, f"{name} is connected through the plugin")
+            done.append(key)
+            continue
         if a.ask(f"   Connect {name}? ({what})", True):
             try:
                 adapters.install(v, key)
@@ -139,9 +143,21 @@ def connect_agents(a: Asker, v, only: list[str] | None) -> list[str]:
                 done.append(key)
             except SystemExit as e:
                 warn(a, str(e))
+    from . import mcp
+    names = {"claude-desktop": "Claude Desktop", "cursor": "Cursor", "windsurf": "Windsurf", "gemini": "Gemini CLI",
+             "vscode": "VS Code (Copilot)", "codex": "Codex"}
+    for c in mcp.detected():
+        if only is not None and c not in only and "mcp" not in only:
+            continue
+        if a.ask(f"   Give {names[c]} the brain as MCP tools? (brain_context, brain_check, brain_correction …)", True):
+            try:
+                ok(a, f"{names[c]} MCP: {mcp.install(v, c)}")
+                done.append("mcp:" + c)
+            except (ValueError, OSError) as e:
+                warn(a, f"{names[c]}: {e}")
     if not done:
         note(a, "no agent connected. Cursor, Aider, Grok CLI & co: run `brain install agents` inside a project")
-        note(a, "(writes the brain block into that project's AGENTS.md)")
+        note(a, "(writes the brain block into that project's AGENTS.md), or `brain mcp config` for any MCP client")
     return done
 
 

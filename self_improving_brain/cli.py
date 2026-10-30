@@ -522,6 +522,32 @@ def c_pack(a):
         return 1
 
 
+def c_mcp(a):
+    from . import mcp
+    if a.action == "serve":
+        return mcp.serve(_vault(a))
+    if a.action == "config":
+        print(mcp.snippet(_vault(a), a.client or ""))
+        return 0
+    clients = mcp.detected() if a.client in (None, "all") else [a.client]
+    if a.client and a.client not in (*mcp.CLIENTS, "all"):
+        print(f"no automatic install for {a.client} — paste this into its MCP settings:\n{mcp.snippet(_vault(a), a.client)}")
+        return 1
+    if not clients:
+        print("no MCP client found — `brain mcp config` prints the entry to paste into any client")
+        return 1
+    rc = 0
+    for c in clients:
+        try:
+            print(f"{c:15} " + (mcp.install(_vault(a), c) if a.action == "install" else mcp.uninstall(c)))
+        except (ValueError, OSError) as e:
+            print(f"{c:15} ✗ {e}")
+            rc = 1
+    if a.action == "install":
+        print("restart the client; it then has brain_context, brain_check, brain_correction, brain_handoff …")
+    return rc
+
+
 def c_lint(a):
     v = _vault(a)
     fs = lint(v)
@@ -621,7 +647,7 @@ def c_config(a):
 
 
 def c_hook(a):
-    return hooks.run(a.event, a.vault)
+    return hooks.run(a.event, a.vault, plugin=a.plugin)
 
 
 def c_install(a):
@@ -790,6 +816,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--yes", action="store_true"); s.add_argument("--force", action="store_true")
     s.add_argument("--lesson", action="append", help="export: lesson id (repeatable)"); s.add_argument("--note", help="export: every lesson of a note")
     s.add_argument("--description"); s.add_argument("-o", "--out"); s.set_defaults(f=c_pack)
+    s = sub.add_parser("mcp", help="the brain as an MCP server (Cursor, Windsurf, Claude Desktop, VS Code, Gemini, Codex, Zed …)")
+    s.add_argument("action", nargs="?", default="serve", choices=["serve", "install", "uninstall", "config"])
+    s.add_argument("client", nargs="?", help="claude-desktop, cursor, windsurf, gemini, vscode, codex (install: default all detected); config also: zed")
+    s.set_defaults(f=c_mcp)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)
@@ -797,7 +827,7 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("schedule", help="run nightly on this laptop (launchd/cron)"); s.add_argument("action", choices=["install", "remove", "show"]); s.add_argument("--hour", type=int, default=3); s.set_defaults(f=c_schedule)
     s = sub.add_parser("sync", help="git commit, pull --rebase, push"); s.add_argument("-m", "--message"); s.set_defaults(f=c_sync)
     s = sub.add_parser("config", help="show or set settings"); s.add_argument("key", nargs="?"); s.add_argument("value", nargs="?"); s.set_defaults(f=c_config)
-    s = sub.add_parser("hook", help="(internal) agent hook entry point"); s.add_argument("event", choices=list(hooks.HANDLERS)); s.set_defaults(f=c_hook)
+    s = sub.add_parser("hook", help="(internal) agent hook entry point"); s.add_argument("event", choices=list(hooks.HANDLERS)); s.add_argument("--plugin", action="store_true"); s.set_defaults(f=c_hook)
     s = sub.add_parser("install", help="connect an agent"); s.add_argument("agent", choices=["claude", "codex", "gemini", "agents", "print"]); s.set_defaults(f=c_install)
     s = sub.add_parser("uninstall", help="disconnect an agent"); s.add_argument("agent", choices=["claude", "codex", "gemini", "agents"]); s.set_defaults(f=c_uninstall)
     s = sub.add_parser("scan", help="secret scan (stdin, files, or --staged)"); s.add_argument("files", nargs="*"); s.add_argument("--staged", action="store_true"); s.set_defaults(f=c_scan)

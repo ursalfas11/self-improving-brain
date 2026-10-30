@@ -807,3 +807,93 @@ class TestPacks(VaultCase):
         bad.write_text("---\nname: pack-bad\npack: bad\n---\n# Bad\n\n> [!lesson]- L-bad\n> rule: x\n> check: ([\n")
         self.assertIn("not a valid regex", run_cli("pack", "add", str(bad), "--yes"))
 
+
+class TestMcp(VaultCase):
+    def _talk(self, *msgs):
+        from self_improving_brain import mcp
+        out = io.BytesIO()
+        mcp.serve(self.v, stdin=io.BytesIO("\n".join(json.dumps(m) for m in msgs).encode() + b"\n"), stdout=out)
+        return [json.loads(l) for l in out.getvalue().decode().splitlines()]
+
+    def test_protocol_and_tools(self):
+        call = lambda i, name, **args: {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": name, "arguments": args}}
+        r = self._talk({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+                       {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                       {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                       call(3, "brain_check", command="git push --force origin main"),
+                       call(4, "brain_correction", what_happened="I added a retry to the flaky test; user: fix the root cause",
+                            rule="Fix flaky tests at the root."),
+                       call(5, "brain_handoff", goal="ship the login fix", user_words="keep the old API working",
+                            open_question="Merge now?"),
+                       call(6, "brain_resume", any_repo=True),
+                       call(7, "brain_search", query="note conventions"),
+                       {"jsonrpc": "2.0", "id": 8, "method": "nope"})
+        self.assertEqual([x.get("id") for x in r], [1, 2, 3, 4, 5, 6, 7, 8], "notifications get no answer")
+        self.assertIn("instructions", r[0]["result"])
+        names = {t["name"] for t in r[1]["result"]["tools"]}
+        self.assertTrue({"brain_context", "brain_check", "brain_correction", "brain_handoff"} <= names)
+        self.assertFalse(any(n for n in names if "approve" in n or "trust" in n), "no tool can approve a lesson")
+        self.assertIn("GUARD", r[2]["result"]["content"][0]["text"])
+        self.assertIn("draft", r[3]["result"]["content"][0]["text"])
+        self.assertTrue(any(d.get("source") == "mcp" for d in learn.drafts(self.v)))
+        self.assertIn("keep the old API working", r[5]["result"]["content"][0]["text"])
+        self.assertFalse(r[6]["result"]["isError"])
+        self.assertEqual(r[7]["error"]["code"], -32601)
+
+    def test_install_keeps_other_servers(self):
+        from self_improving_brain import mcp
+        cur = Path(os.environ["HOME"]) / ".cursor" / "mcp.json"
+        cur.parent.mkdir(parents=True)
+        cur.write_text(json.dumps({"mcpServers": {"other": {"command": "x"}}}))
+        self.assertIn("✓", mcp.install(self.v, "cursor"))
+        data = json.loads(cur.read_text())
+        self.assertEqual(data["mcpServers"]["other"], {"command": "x"})
+        self.assertEqual(data["mcpServers"]["brain"]["args"][-1], "mcp")
+        self.assertIn("up to date", mcp.install(self.v, "cursor"))
+        mcp.uninstall("cursor")
+        self.assertNotIn("brain", json.loads(cur.read_text())["mcpServers"])
+        codex = Path(os.environ["HOME"]) / ".codex" / "config.toml"
+        codex.parent.mkdir(parents=True)
+        codex.write_text('model = "x"\n\n[mcp_servers.other]\ncommand = "y"\n')
+        mcp.install(self.v, "codex")
+        self.assertIn("[mcp_servers.brain]", codex.read_text())
+        mcp.uninstall("codex")
+        self.assertEqual(codex.read_text(), 'model = "x"\n\n[mcp_servers.other]\ncommand = "y"\n')
+        bad = Path(os.environ["HOME"]) / ".gemini" / "settings.json"
+        bad.parent.mkdir(parents=True)
+        bad.write_text("{ // comment\n}")
+        with self.assertRaises(ValueError):
+            mcp.install(self.v, "gemini")
+
+
+class TestPlugin(VaultCase):
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_plugin_files_match_the_code(self):
+        self.assertEqual(json.loads((self.ROOT / "hooks/hooks.json").read_text()), adapters.plugin_hooks(),
+                         "regenerate hooks/hooks.json from adapters.plugin_hooks()")
+        for t in sorted((adapters.TEMPLATES / "commands").glob("*.md")):
+            self.assertEqual((self.ROOT / "commands" / t.name).read_text(), adapters.plugin_command(t), t.name)
+        from self_improving_brain import __version__
+        meta = json.loads((self.ROOT / ".claude-plugin/plugin.json").read_text())
+        market = json.loads((self.ROOT / ".claude-plugin/marketplace.json").read_text())
+        self.assertEqual(meta["version"], market["plugins"][0]["version"])
+        self.assertEqual(meta["version"], __version__)
+
+    def test_plugin_hooks_step_aside_and_hint_without_vault(self):
+        settings = Path(os.environ["HOME"]) / ".claude" / "settings.json"
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        settings.write_text(json.dumps({"hooks": {"SessionStart": [{"hooks": [{"type": "command",
+                            "command": f"brain hook session-start  # {adapters.HOOK_TAG}"}]}]}}))
+        from unittest import mock
+        stdin = lambda: mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"{}")))
+        buf = io.StringIO()
+        with redirect_stdout(buf), stdin():
+            hooks.run("session-start", str(self.root), plugin=True)
+        self.assertEqual(buf.getvalue(), "", "with `brain install claude` hooks present the plugin stays silent")
+        settings.unlink()
+        buf = io.StringIO()
+        with redirect_stdout(buf), stdin():
+            hooks.run("session-start", str(Path(self.tmp.name) / "nowhere"), plugin=True)
+        self.assertIn("setup --yes", buf.getvalue())
+

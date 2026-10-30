@@ -468,9 +468,13 @@ HANDLERS = {
 }
 
 
-def run(event: str, vault_arg: str | None = None) -> int:
+def run(event: str, vault_arg: str | None = None, plugin: bool = False) -> int:
     if os.environ.get("BRAIN_HOOKS_OFF"):
         return 0
+    if plugin:
+        from .adapters import claude_hooks_installed
+        if claude_hooks_installed():
+            return 0  # `brain install claude` hooks are there too: one brain per event, not two
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace") if not sys.stdin.isatty() else ""
         payload = json.loads(raw) if raw.strip() else {}
@@ -482,6 +486,12 @@ def run(event: str, vault_arg: str | None = None) -> int:
         v = open_vault(vault_arg)
         out = HANDLERS[event](v, payload)
     except NotAVault:
+        if plugin and event == "session-start":
+            b = cli_name()
+            sys.stdout.write(json.dumps(_out("SessionStart",
+                "self-improving-brain (plugin) has no vault yet. If the user wants it, run "
+                f"`{b} setup --yes --no-github --no-schedule` (creates ~/brain and learns from their past sessions; "
+                f"backup and the nightly run can be added later with `{b} setup` in a terminal)."), ensure_ascii=True))
         return 0
     except Exception as e:  # noqa: BLE001 — a hook must never break the agent
         if os.environ.get("BRAIN_DEBUG"):

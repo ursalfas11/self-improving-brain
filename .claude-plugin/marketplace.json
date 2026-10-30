@@ -1,0 +1,34 @@
+{
+  "name": "self-improving-brain",
+  "owner": {
+    "name": "ursalfas11",
+    "url": "https://github.com/ursalfas11"
+  },
+  "metadata": {
+    "description": "self-improving-brain: a local memory that turns your corrections into rules"
+  },
+  "plugins": [
+    {
+      "name": "self-improving-brain",
+      "source": "./",
+      "version": "0.2.0",
+      "description": "Your coding agent learns from your corrections: lessons fire at the right moment, guards ask before irreversible actions, handoffs survive compaction, and it measures whether mistakes go down. Local Markdown, zero dependencies.",
+      "author": {
+        "name": "ursalfas11",
+        "url": "https://github.com/ursalfas11"
+      },
+      "homepage": "https://github.com/ursalfas11/self-improving-brain",
+      "license": "MIT",
+      "keywords": [
+        "memory",
+        "lessons",
+        "self-improving",
+        "obsidian",
+        "hooks",
+        "guardrails",
+        "learning"
+      ],
+      "category": "productivity"
+    }
+  ]
+}
