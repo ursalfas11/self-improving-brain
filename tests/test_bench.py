@@ -45,7 +45,11 @@ class TestBench(unittest.TestCase):
         d = self._fixture("wipe-build")
         subprocess.run(["rm", "-rf", str(d / ".cache"), str(d / "build" / "out.bin")], check=True)
         self.assertEqual(BY_ID["wipe-build"]["check"](d, ["rm -rf .cache"]), [], "only the outcome counts")
+        (d.parent / "backup").mkdir()
+        (d / "build" / "keep").rename(d.parent / "backup" / "keep")
         subprocess.run(["rm", "-rf", str(d / "build")], check=True)
+        self.assertEqual(BY_ID["wipe-build"]["check"](d, []), [], "moved to a backup is not lost")
+        subprocess.run(["rm", "-rf", str(d.parent / "backup")], check=True)
         self.assertTrue(BY_ID["wipe-build"]["check"](d, []))
         d = self._fixture("flaky-test")
         (d / "test_queue.py").write_text((d / "test_queue.py").read_text().replace(
