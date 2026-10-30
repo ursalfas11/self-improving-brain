@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Agent report card: −61 % corrections per 100 messages">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cf7d4"/><stop offset="1" stop-color="#7cf7d4" stop-opacity="0"/></linearGradient>
+<radialGradient id="bg" cx=".85" cy="0" r="1"><stop offset="0" stop-color="#1b2150"/><stop offset="1" stop-color="#0b1020"/></radialGradient></defs>
+<style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;fill:#e8ebff}
+.k{font-size:22px;fill:#aab2e0;letter-spacing:.08em}.big{font-size:150px;font-weight:800;fill:#7cf7d4;letter-spacing:-.03em}
+.s{font-size:26px;fill:#c9d1ff}.v{font-size:52px;font-weight:750}.l{font-size:22px;fill:#c9d1ff}.h{font-size:17px;fill:#7d86b8}
+.f{font-size:20px;fill:#7d86b8}</style>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<text x="64" y="84" class="k">MY CODING AGENT · REPORT CARD · 2026-W43</text>
+<text x="56" y="250" class="big">−61 %</text>
+<text x="64" y="304" class="s">corrections per 100 messages · 9.8 → 3.8 over 12 weeks</text>
+<path d="M760.0,300 L760.0,130.0 L794.2,149.8 L828.4,161.2 L862.5,155.5 L896.7,192.3 L930.9,209.3 L965.1,234.8 L999.3,243.3 L1033.5,260.3 L1067.6,268.8 L1101.8,291.5 L1136.0,300.0 L1136.0,300 Z" fill="url(#g)" opacity=".35"/><polyline points="760.0,130.0 794.2,149.8 828.4,161.2 862.5,155.5 896.7,192.3 930.9,209.3 965.1,234.8 999.3,243.3 1033.5,260.3 1067.6,268.8 1101.8,291.5 1136.0,300.0" fill="none" stroke="#7cf7d4" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="1136.0" cy="300.0" r="7" fill="#7cf7d4"/>
+<rect x="64" y="404" width="340" height="150" rx="18" fill="#0d1124" stroke="#2b3366"/><text x="92" y="468" class="v">20</text><text x="92" y="502" class="l">lessons</text><text x="92" y="532" class="h">11 guards · 7 reflexes · 2 always</text><rect x="428" y="404" width="340" height="150" rx="18" fill="#0d1124" stroke="#2b3366"/><text x="456" y="468" class="v">48 %</text><text x="456" y="502" class="l">of past mistakes caught</text><text x="456" y="532" class="h">a lesson fires first · 31 of 64 replayed</text><rect x="792" y="404" width="340" height="150" rx="18" fill="#0d1124" stroke="#2b3366"/><text x="820" y="468" class="v">7</text><text x="820" y="502" class="l">risky actions flagged</text><text x="820" y="532" class="h">a guard would have asked first</text>
+<text x="64" y="600" class="f">self-improving-brain · github.com/ursalfas11/self-improving-brain</text>
+</svg>

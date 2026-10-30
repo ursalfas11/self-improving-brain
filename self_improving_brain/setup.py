@@ -385,7 +385,7 @@ def run(args: argparse.Namespace) -> int:
     step(a, 4, "Learn from the sessions you already had")
     candidates = learn_history(a, v)
 
-    step(a, 5, "Lessons other people already learned")
+    step(a, 5, "Lesson packs")
     add_packs(a, v, not getattr(args, "no_packs", False))
 
     step(a, 6, "Smarter judging at night (optional)")

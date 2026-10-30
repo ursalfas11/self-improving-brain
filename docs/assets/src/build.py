@@ -209,20 +209,22 @@ def setup_demo() -> str:
              body="curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/main/install.sh | sh", pause=0.4),
         dict(kind="out", text="self-improving-brain setup — everything stays on this machine unless you say otherwise",
              color=PERI, bold=True, pause=0.6),
-        dict(kind="step", text="1/7  Your vault", result="~/brain · own git history · secret scan on commit", pause=0.35),
-        dict(kind="step", text="2/7  Connect your agents", result="Claude Code · Codex · Gemini CLI", pause=0.3),
-        dict(kind="step", text="3/7  The brain command", result="linked ~/.local/bin/brain", pause=0.3),
-        dict(kind="step", text="4/7  Learn from past sessions", result="127 sessions · 64 corrections → 59 lesson candidates",
+        dict(kind="step", text="1/8  Your vault", result="~/brain · own git history · secret scan on commit", pause=0.35),
+        dict(kind="step", text="2/8  Connect your agents", result="Claude Code · Codex · Gemini CLI · Cursor (MCP)", pause=0.3),
+        dict(kind="step", text="3/8  The brain command", result="linked ~/.local/bin/brain", pause=0.3),
+        dict(kind="step", text="4/8  Learn from past sessions", result="127 sessions · 64 corrections → 59 lesson candidates",
              color=PINK, wait=1.2, pause=0.3),
-        dict(kind="step", text="5/7  Smarter judging (optional)", result="claude, your existing login · no API key stored", pause=0.3),
-        dict(kind="step", text="6/7  Backup", result="github.com/you/brain  (private)", color=TEAL, wait=0.9, pause=0.3),
-        dict(kind="step", text="7/7  Nightly self-improvement", result="every night at 03:17", pause=0.3),
+        dict(kind="step", text="5/8  Lesson packs", result="safety: 6 guards · secrets: 4 lessons", pause=0.3),
+        dict(kind="step", text="6/8  Smarter judging (optional)", result="claude, your existing login · no API key stored", pause=0.3),
+        dict(kind="step", text="7/8  Backup", result="github.com/you/brain  (private)", color=TEAL, wait=0.9, pause=0.3),
+        dict(kind="step", text="8/8  Nightly self-improvement", result="every night at 03:17", pause=0.3),
         dict(kind="gap", pause=0),
         dict(kind="out", text="Done. Open a new agent session — the brain is in it from the first prompt.",
              color=TXT, bold=True, pause=0.6),
     ]
-    return terminal("setup", "brain setup · about a minute", "brain setup in seven steps: vault, agents, command, "
-                    "learning from past sessions, optional LLM judge, private GitHub backup, nightly run", rows, W=980, hold=5)
+    return terminal("setup", "brain setup · about a minute", "brain setup in eight steps: vault, agents, command, "
+                    "learning from past sessions, lesson packs, optional LLM judge, private GitHub backup, nightly run",
+                    rows, W=980, hold=5)
 
 
 # --- banner -------------------------------------------------------------------------------------
