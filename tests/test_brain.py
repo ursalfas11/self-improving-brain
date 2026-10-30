@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly  # noqa: E402
+from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly, replay  # noqa: E402
 from self_improving_brain.config import open_vault  # noqa: E402
 from self_improving_brain.notes import Library, parse_frontmatter  # noqa: E402
 from self_improving_brain.search import Index  # noqa: E402
@@ -702,4 +702,38 @@ class TestHandoff(VaultCase):
             os.chdir(Path(__file__).parent)
         self.assertIn("rename the config loader", out)
         self.assertIn("old-1", run_cli("resume", "--list"))
+
+
+class TestReplay(VaultCase):
+    def test_replay_counts_caught_missed_and_uncovered(self):
+        self.note("20-areas/tests.md", TestTrustAndChecks.LESSON)
+        p = Path(self.tmp.name) / "r.jsonl"
+        rows = [
+            ("user", "push the fix"),
+            ("assistant", [{"type": "tool_use", "id": "a", "name": "Bash", "input": {"command": "git push --force origin main"}}]),
+            ("user", [{"type": "tool_result", "tool_use_id": "a", "content": "ok"}]),
+            ("user", "why did you force push, you overwrote my commits"),
+            ("user", "the api test is flaky in CI, look at it"),
+            ("assistant", [{"type": "tool_use", "id": "b", "name": "Edit", "input": {
+                "file_path": "/repo/tests/test_api.py", "old_string": "x", "new_string": "@retry(3)"}}]),
+            ("user", [{"type": "tool_result", "tool_use_id": "b", "content": "ok"}]),
+            ("user", "no, I told you: no retries for flaky tests"),
+            ("user", "update the changelog"),
+            ("assistant", [{"type": "text", "text": "Done, I rewrote the whole changelog in French."}]),
+            ("user", "why did you translate the changelog into french"),
+        ]
+        lines = [{"type": "user" if r == "user" else "assistant", "sessionId": "rp", "timestamp": f"2026-10-04T10:00:{i:02d}Z",
+                  "message": {"role": r, "content": c}} for i, (r, c) in enumerate(rows)]
+        p.write_text("\n".join(json.dumps(x) for x in lines))
+        r = replay.run(self.v, files=[p], draft=True)
+        self.assertEqual(r["corrections"], 3)
+        by = {x["quote"][:13]: x["status"] for x in r["rows"]}
+        self.assertEqual(by["why did you f"], "caught", "the force-push guard would have asked")
+        self.assertEqual(by["no, I told yo"], "caught", "the flaky-test reflex fires on the prompt words")
+        self.assertEqual(by["why did you t"], "uncovered")
+        self.assertEqual(r["would_ask"], 1)
+        self.assertEqual(r["drafted"], 1)
+        self.assertTrue(any("french" in d["quote"] for d in learn.drafts(self.v)))
+        self.assertEqual(replay.run(self.v, files=[p], draft=True)["drafted"], 0, "no duplicate drafts")
+        self.assertIn("prevented 2 of 3", run_cli("replay", "--file", str(p)))
 

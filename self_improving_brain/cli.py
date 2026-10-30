@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, distill, events, handoff, hooks, inbox, learn, llm, maplib, metrics, nightly, trust
+from . import adapters, distill, events, handoff, hooks, inbox, learn, llm, maplib, metrics, nightly, replay, trust
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -454,6 +454,15 @@ def c_check(a):
     return 0
 
 
+def c_replay(a):
+    v = _vault(a)
+    files = [Path(f).expanduser() for f in a.file] if a.file else None
+    r = replay.run(v, days=a.days, files=files, draft=a.draft)
+    print(json.dumps({k: x for k, x in r.items() if k != "rows" or a.rows}, indent=1, ensure_ascii=False) if a.json
+          else replay.render(r))
+    return 0
+
+
 def c_lint(a):
     v = _vault(a)
     fs = lint(v)
@@ -711,6 +720,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--file"); s.set_defaults(f=c_handoff)
     s = sub.add_parser("check", help="would this action trip a guard lesson? (agents without hooks)")
     s.add_argument("--command"); s.add_argument("--path"); s.add_argument("--tool"); s.set_defaults(f=c_check)
+    s = sub.add_parser("replay", help="replay past sessions: which corrections would today's lessons have prevented?")
+    s.add_argument("--days", type=int, default=30); s.add_argument("--file", action="append", help="one transcript (repeatable)")
+    s.add_argument("--draft", action="store_true", help="turn uncovered corrections into lesson drafts")
+    s.add_argument("--json", action="store_true"); s.add_argument("--rows", action="store_true", help="with --json: every correction")
+    s.set_defaults(f=c_replay)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)
