@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import secrets as pysecrets
+import socketserver
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -163,11 +164,20 @@ def make_handler(v: Vault | None, token: str, port_ref: list):
     return H
 
 
+class _Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self):
+        # HTTPServer looks up the host's FQDN here, which can take seconds on some networks
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def serve(v: Vault | None, port: int = 0, open_browser: bool = True, ready=None) -> int:
     """v=None serves the demo data (`brain ui --demo`), for screenshots and trying it out."""
     token = pysecrets.token_urlsafe(18)
     port_ref = [port]
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), make_handler(v, token, port_ref))
+    httpd = _Server(("127.0.0.1", port), make_handler(v, token, port_ref))
     port_ref[0] = httpd.server_address[1]
     url = f"http://127.0.0.1:{port_ref[0]}/?t={token}"
     if ready:

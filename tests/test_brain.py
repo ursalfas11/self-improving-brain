@@ -912,7 +912,7 @@ class TestUiAndReport(VaultCase):
             box.update(url=url, httpd=httpd)
             ready.set()
         threading.Thread(target=ui.serve, args=(v,), kwargs={"open_browser": False, "ready": on_ready}, daemon=True).start()
-        ready.wait(5)
+        self.assertTrue(ready.wait(20), "the ui server did not start")
         self.addCleanup(box["httpd"].shutdown)
         return box["url"]
 
