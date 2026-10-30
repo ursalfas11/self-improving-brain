@@ -313,7 +313,7 @@ def banner() -> str:
 <g class="m" font-size="15" fill="{TXT}">{"".join(chip_svg)}</g>
 <text class="m" x="362" y="350" font-size="16" fill="#9aa3d6">no server · no API key · no vector DB · zero dependencies · plain Markdown</text>
 <g transform="translate(1030 110)">
-<text class="m" x="0" y="0" font-size="13" fill="#9aa3d6">mistakes / 100 msgs</text>
+<text class="m" x="0" y="0" font-size="13" fill="#9aa3d6">mistakes / 100 msgs (example)</text>
 {counter_svg}
 <line x1="0" y1="150" x2="200" y2="150" stroke="#ffffff" stroke-opacity=".2"/>
 <path class="curve" pathLength="100" d="{curve}" fill="none" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
