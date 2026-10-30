@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "notes": 9,
   "lessons": 21,
-  "drafts": 6,
+  "drafts": 9,
   "inbox": 3
  },
  "curve": [
@@ -101,7 +101,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-08-14",
    "silent": null,
    "health": {
     "id": "L-result-first",
@@ -126,7 +126,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-08-14",
    "silent": null,
    "health": {
     "id": "L-verify-before-done",
@@ -151,7 +151,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-16",
    "silent": null,
    "health": {
     "id": "L-ask-before-force-push",
@@ -176,7 +176,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-git-no-verify",
@@ -201,7 +201,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-git-branch-first",
@@ -226,7 +226,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-git-no-rewrite-pushed",
@@ -238,7 +238,7 @@
     "missed": 0,
     "violations": 0,
     "check": false,
-    "verdict": "broken 3× despite the rule → brain promote L-x --to guard"
+    "verdict": "broken 3× despite the rule → brain promote L-git-no-rewrite-pushed --to guard"
    }
   },
   {
@@ -251,7 +251,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-git-stage-by-name",
@@ -276,7 +276,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": "written by an agent (Write, 2026-10-29T14:02)",
    "health": {
     "id": "L-safety-rm-rf",
@@ -301,7 +301,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-safety-git-discard",
@@ -326,7 +326,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-safety-drop-data",
@@ -351,7 +351,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-safety-destroy-infra",
@@ -376,7 +376,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-safety-publish",
@@ -401,7 +401,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-safety-chmod-sudo",
@@ -426,7 +426,7 @@
    "paths": "",
    "words": [],
    "check": "AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\\bgh[pousr]_[A-Za-z0-9]{36}\\b|\\bsk-[A-Za-z0-9_-]{20,}|\\bxox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-secrets-no-hardcoded-keys",
@@ -451,7 +451,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-secrets-no-print-env",
@@ -476,7 +476,7 @@
    "paths": "",
    "words": [],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-secrets-no-commit-env",
@@ -508,7 +508,7 @@
     "env var"
    ],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-02",
    "silent": null,
    "health": {
     "id": "L-secrets-ask-dont-guess",
@@ -538,7 +538,7 @@
     "retry"
    ],
    "check": "@retry\\b|pytest\\.mark\\.flaky|@flaky\\b|jest\\.retryTimes|retries:\\s*[1-9]|\\.retry\\(\\d",
-   "since": "2026-10-30",
+   "since": "2026-09-16",
    "silent": null,
    "health": {
     "id": "L-testing-no-retry-flaky",
@@ -569,7 +569,7 @@
     "broken test"
    ],
    "check": "@pytest\\.mark\\.skip|@unittest\\.skip|\\b(it|test|describe)\\.skip\\(|\\bx(it|describe|test)\\(|\\bt\\.Skip\\(|@Disabled\\b|@Ignore\\b",
-   "since": "2026-10-30",
+   "since": "2026-09-16",
    "silent": null,
    "health": {
     "id": "L-testing-no-skip-to-green",
@@ -594,7 +594,7 @@
    "paths": "(^|/)(tests?|spec|__tests__)/|\\.test\\.|\\.spec\\.",
    "words": [],
    "check": "\\b(it|test|describe)\\.only\\(|\\bf(it|describe)\\(",
-   "since": "2026-10-30",
+   "since": "2026-09-16",
    "silent": null,
    "health": {
     "id": "L-testing-no-focused-tests",
@@ -625,7 +625,7 @@
     "test fails"
    ],
    "check": "",
-   "since": "2026-10-30",
+   "since": "2026-09-16",
    "silent": null,
    "health": {
     "id": "L-testing-dont-weaken-asserts",
@@ -651,87 +651,51 @@
     "score": 0.85,
     "ts": "2026-10-20T10:00:00Z",
     "source": "claude",
-    "rule": "Fix flaky tests at the root; never add retries.",
+    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
     "suggest": {
      "mechanism": "reflex",
      "words": [
       "flaky",
-      "retry"
+      "retry",
+      "sleep"
      ]
     }
    },
-   {
-    "id": "d-00000000",
-    "kind": "lesson",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "score": 0.85,
-    "ts": "2026-10-20T10:00:00Z",
-    "source": "claude",
-    "rule": "Fix flaky tests at the root; never add retries.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "flaky",
-      "retry"
-     ]
-    }
-   },
-   {
-    "id": "d-00000000",
-    "kind": "lesson",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "score": 0.85,
-    "ts": "2026-10-20T10:00:00Z",
-    "source": "claude",
-    "rule": "Fix flaky tests at the root; never add retries.",
-    "suggest": {
-     "mechanism": "reflex",
-     "words": [
-      "flaky",
-      "retry"
-     ]
-    }
-   }
-  ],
-  [
    {
     "id": "d-00000001",
     "kind": "lesson",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "score": 0.7999999999999999,
-    "ts": "2026-10-21T10:00:00Z",
+    "quote": "again a retry around the flaky test? find the race",
+    "context": "[Edit] tests/test_queue.py",
+    "score": 0.85,
+    "ts": "2026-10-14T10:01:00Z",
     "source": "claude",
-    "rule": "",
-    "suggest": null
-   }
-  ],
-  [
+    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "flaky",
+      "retry",
+      "sleep"
+     ]
+    }
+   },
    {
     "id": "d-00000002",
     "kind": "lesson",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "score": 0.75,
-    "ts": "2026-10-22T10:00:00Z",
-    "source": "claude",
-    "rule": "Fix flaky tests at the root; never add retries.",
-    "suggest": null
-   }
-  ],
-  [
-   {
-    "id": "d-00000003",
-    "kind": "lesson",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "score": 0.7,
-    "ts": "2026-10-23T10:00:00Z",
-    "source": "claude",
-    "rule": "",
-    "suggest": null
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "score": 0.6,
+    "ts": "2026-10-08T10:02:00Z",
+    "source": "codex",
+    "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "flaky",
+      "retry",
+      "sleep"
+     ]
+    }
    }
   ],
   [
@@ -739,25 +703,102 @@
     "id": "d-00000004",
     "kind": "lesson",
     "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "score": 0.6499999999999999,
-    "ts": "2026-10-24T10:00:00Z",
+    "context": "[Bash] npx prettier --write .",
+    "score": 0.6,
+    "ts": "2026-10-22T10:04:00Z",
     "source": "claude",
-    "rule": "Fix flaky tests at the root; never add retries.",
+    "rule": "Change only the lines the task needs; never reformat untouched code or whole files.",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "reformat",
+      "prettier",
+      "format"
+     ]
+    }
+   },
+   {
+    "id": "d-00000005",
+    "kind": "lesson",
+    "quote": "you reformatted the whole file again, only change what the task needs",
+    "context": "[Edit] src/server.ts",
+    "score": 0.6,
+    "ts": "2026-10-17T10:05:00Z",
+    "source": "claude",
+    "rule": "Change only the lines the task needs; never reformat untouched code or whole files.",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "reformat",
+      "prettier",
+      "format"
+     ]
+    }
+   }
+  ],
+  [
+   {
+    "id": "d-00000003",
+    "kind": "lesson",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "[Edit] src/cli.py",
+    "score": 0.6,
+    "ts": "2026-10-21T10:03:00Z",
+    "source": "claude",
+    "rule": "",
     "suggest": null
    }
   ],
   [
    {
-    "id": "d-00000005",
+    "id": "d-00000006",
     "kind": "lesson",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "score": 0.6,
-    "ts": "2026-10-25T10:00:00Z",
-    "source": "claude",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "score": 0.85,
+    "ts": "2026-10-23T10:06:00Z",
+    "source": "codex",
     "rule": "",
     "suggest": null
+   }
+  ],
+  [
+   {
+    "id": "d-00000007",
+    "kind": "lesson",
+    "quote": "why did you bump the major version of react",
+    "context": "[Edit] package.json",
+    "score": 0.85,
+    "ts": "2026-10-24T10:07:00Z",
+    "source": "claude",
+    "rule": "Never bump a dependency's major version unless the task asks for it.",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "upgrade",
+      "bump",
+      "major"
+     ]
+    }
+   }
+  ],
+  [
+   {
+    "id": "d-00000008",
+    "kind": "preference",
+    "quote": "from now on, write commit messages in the imperative",
+    "context": "[Bash] git commit -m 'fixed the bug'",
+    "score": 0.85,
+    "ts": "2026-10-25T10:08:00Z",
+    "source": "claude",
+    "rule": "Write commit messages in the imperative: \"Fix login\", not \"Fixed the bug\".",
+    "suggest": {
+     "mechanism": "reflex",
+     "words": [
+      "commit message",
+      "commit"
+     ]
+    }
    }
   ]
  ],
@@ -776,577 +817,981 @@
   "drafted": 0,
   "per_lesson": [
    {
-    "id": "L-result-first",
-    "caught": 4,
-    "shown": 3,
-    "ask": 1,
-    "missed": 1,
+    "id": "L-testing-no-retry-flaky",
+    "caught": 6,
+    "shown": 6,
+    "ask": 0,
+    "missed": 2,
     "widen": [
      "race",
-     "timeout"
+     "ordering"
     ]
    },
    {
     "id": "L-verify-before-done",
     "caught": 5,
-    "shown": 3,
-    "ask": 1,
-    "missed": 0,
+    "shown": 5,
+    "ask": 0,
+    "missed": 1,
     "widen": [
-     "race",
-     "timeout"
-    ]
-   },
-   {
-    "id": "L-ask-before-force-push",
-    "caught": 5,
-    "shown": 3,
-    "ask": 1,
-    "missed": 0,
-    "widen": [
-     "race",
-     "timeout"
-    ]
-   },
-   {
-    "id": "L-git-no-verify",
-    "caught": 9,
-    "shown": 3,
-    "ask": 1,
-    "missed": 3,
-    "widen": [
-     "race",
-     "timeout"
-    ]
-   },
-   {
-    "id": "L-git-branch-first",
-    "caught": 0,
-    "shown": 3,
-    "ask": 1,
-    "missed": 3,
-    "widen": [
-     "race",
-     "timeout"
-    ]
-   },
-   {
-    "id": "L-git-no-rewrite-pushed",
-    "caught": 6,
-    "shown": 3,
-    "ask": 1,
-    "missed": 0,
-    "widen": [
-     "race",
-     "timeout"
+     "works",
+     "ran"
     ]
    },
    {
     "id": "L-git-stage-by-name",
-    "caught": 6,
-    "shown": 3,
-    "ask": 1,
-    "missed": 1,
+    "caught": 5,
+    "shown": 5,
+    "ask": 0,
+    "missed": 2,
     "widen": [
-     "race",
-     "timeout"
+     "build files",
+     "stage"
     ]
    },
    {
-    "id": "L-safety-rm-rf",
-    "caught": 9,
-    "shown": 3,
-    "ask": 1,
+    "id": "L-git-branch-first",
+    "caught": 4,
+    "shown": 0,
+    "ask": 4,
+    "missed": 0
+   },
+   {
+    "id": "L-testing-no-skip-to-green",
+    "caught": 4,
+    "shown": 4,
+    "ask": 0,
+    "missed": 2,
+    "widen": [
+     "xfail",
+     "skip"
+    ]
+   },
+   {
+    "id": "L-result-first",
+    "caught": 4,
+    "shown": 4,
+    "ask": 0,
     "missed": 1,
     "widen": [
-     "race",
-     "timeout"
+     "too long"
+    ]
+   },
+   {
+    "id": "L-secrets-no-commit-env",
+    "caught": 3,
+    "shown": 0,
+    "ask": 3,
+    "missed": 0
+   },
+   {
+    "id": "L-git-no-rewrite-pushed",
+    "caught": 0,
+    "shown": 0,
+    "ask": 0,
+    "missed": 1,
+    "widen": [
+     "amend",
+     "pushed"
     ]
    }
   ],
   "rows": [
    {
-    "session": "s0",
-    "agent": "codex",
-    "ts": "2026-10-01T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s1",
-    "agent": "codex",
-    "ts": "2026-10-02T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s2",
-    "agent": "codex",
-    "ts": "2026-10-03T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s3",
-    "agent": "codex",
-    "ts": "2026-10-04T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s4",
-    "agent": "claude",
-    "ts": "2026-10-05T09:00:00Z",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s5",
-    "agent": "claude",
-    "ts": "2026-10-06T09:00:00Z",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s6",
-    "agent": "claude",
-    "ts": "2026-10-07T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s7",
-    "agent": "claude",
-    "ts": "2026-10-08T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s8",
-    "agent": "codex",
-    "ts": "2026-10-09T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s9",
-    "agent": "codex",
-    "ts": "2026-10-10T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s10",
-    "agent": "codex",
-    "ts": "2026-10-11T09:00:00Z",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "tool"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s11",
-    "agent": "codex",
-    "ts": "2026-10-12T09:00:00Z",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "tool"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s12",
-    "agent": "claude",
-    "ts": "2026-10-13T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s13",
-    "agent": "codex",
-    "ts": "2026-10-14T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s14",
-    "agent": "claude",
-    "ts": "2026-10-15T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s15",
-    "agent": "claude",
-    "ts": "2026-10-16T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s16",
-    "agent": "claude",
-    "ts": "2026-10-17T09:00:00Z",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s17",
-    "agent": "claude",
-    "ts": "2026-10-18T09:00:00Z",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s18",
-    "agent": "claude",
-    "ts": "2026-10-19T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s19",
-    "agent": "claude",
-    "ts": "2026-10-20T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s20",
-    "agent": "claude",
-    "ts": "2026-10-21T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s21",
-    "agent": "claude",
-    "ts": "2026-10-22T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s22",
-    "agent": "codex",
-    "ts": "2026-10-23T09:00:00Z",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "missed",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s23",
-    "agent": "claude",
-    "ts": "2026-10-24T09:00:00Z",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s24",
-    "agent": "codex",
-    "ts": "2026-10-25T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s25",
-    "agent": "claude",
-    "ts": "2026-10-26T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s26",
-    "agent": "claude",
-    "ts": "2026-10-27T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "tool"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s27",
-    "agent": "claude",
-    "ts": "2026-10-28T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "tool"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s28",
-    "agent": "claude",
-    "ts": "2026-10-29T09:00:00Z",
-    "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "uncovered",
-    "score": 0.85,
-    "lessons": [],
-    "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s29",
+    "session": "s000",
     "agent": "claude",
     "ts": "2026-10-01T09:00:00Z",
-    "quote": "never commit the .env",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s001",
+    "agent": "claude",
+    "ts": "2026-10-01T10:07:00Z",
+    "quote": "don't git add everything, there are build files in there",
     "context": "[Bash] git add -A",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s002",
+    "agent": "claude",
+    "ts": "2026-10-01T11:14:00Z",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s003",
+    "agent": "claude",
+    "ts": "2026-10-02T12:21:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s004",
+    "agent": "claude",
+    "ts": "2026-10-02T13:28:00Z",
+    "quote": "stop reformatting files you didn't change",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s005",
+    "agent": "claude",
+    "ts": "2026-10-03T14:35:00Z",
+    "quote": "that endpoint is deprecated, use v2",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s006",
+    "agent": "claude",
+    "ts": "2026-10-03T15:42:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s007",
+    "agent": "codex",
+    "ts": "2026-10-04T16:49:00Z",
+    "quote": "don't add a dependency for this",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s008",
+    "agent": "claude",
+    "ts": "2026-10-04T17:56:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s009",
+    "agent": "codex",
+    "ts": "2026-10-05T09:03:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s010",
+    "agent": "claude",
+    "ts": "2026-10-05T10:10:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s011",
+    "agent": "claude",
+    "ts": "2026-10-05T11:17:00Z",
+    "quote": "why did you push to main",
+    "context": "[Bash] git push origin main",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s012",
+    "agent": "claude",
+    "ts": "2026-10-06T12:24:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s013",
+    "agent": "codex",
+    "ts": "2026-10-06T13:31:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s014",
+    "agent": "claude",
+    "ts": "2026-10-07T14:38:00Z",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s015",
+    "agent": "claude",
+    "ts": "2026-10-07T15:45:00Z",
+    "quote": "never push straight to main",
+    "context": "[Bash] git push origin HEAD:main",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s016",
+    "agent": "claude",
+    "ts": "2026-10-08T16:52:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s017",
+    "agent": "codex",
+    "ts": "2026-10-08T17:59:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s018",
+    "agent": "codex",
+    "ts": "2026-10-09T09:06:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s019",
+    "agent": "claude",
+    "ts": "2026-10-09T10:13:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.85,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s020",
+    "agent": "claude",
+    "ts": "2026-10-10T11:20:00Z",
+    "quote": "never push straight to main",
+    "context": "[Bash] git push origin HEAD:main",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s021",
+    "agent": "claude",
+    "ts": "2026-10-10T12:27:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s022",
+    "agent": "claude",
+    "ts": "2026-10-10T13:34:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s023",
+    "agent": "claude",
+    "ts": "2026-10-11T14:41:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s024",
+    "agent": "codex",
+    "ts": "2026-10-11T15:48:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s025",
+    "agent": "codex",
+    "ts": "2026-10-12T16:55:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s026",
+    "agent": "claude",
+    "ts": "2026-10-12T17:02:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s027",
+    "agent": "claude",
+    "ts": "2026-10-13T09:09:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s028",
+    "agent": "claude",
+    "ts": "2026-10-13T10:16:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s029",
+    "agent": "codex",
+    "ts": "2026-10-14T11:23:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s030",
+    "agent": "claude",
+    "ts": "2026-10-14T12:30:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s031",
+    "agent": "claude",
+    "ts": "2026-10-15T13:37:00Z",
+    "quote": "keep the error messages in English",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s032",
+    "agent": "claude",
+    "ts": "2026-10-15T14:44:00Z",
+    "quote": "never commit the .env",
+    "context": "[Bash] git add .env",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s033",
+    "agent": "codex",
+    "ts": "2026-10-15T15:51:00Z",
+    "quote": "stop reformatting files you didn't change",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s034",
+    "agent": "claude",
+    "ts": "2026-10-16T16:58:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s035",
+    "agent": "codex",
+    "ts": "2026-10-16T17:05:00Z",
+    "quote": "why did you amend a pushed commit",
+    "context": "[Bash] git commit --amend --no-edit",
+    "status": "missed",
+    "score": 0.85,
+    "lessons": [
+     "L-git-no-rewrite-pushed"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s036",
+    "agent": "claude",
+    "ts": "2026-10-17T09:12:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s037",
+    "agent": "claude",
+    "ts": "2026-10-17T10:19:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s038",
+    "agent": "codex",
+    "ts": "2026-10-18T11:26:00Z",
+    "quote": "never commit the .env",
+    "context": "[Bash] git add .env",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s039",
+    "agent": "claude",
+    "ts": "2026-10-18T12:33:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.85,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s040",
+    "agent": "claude",
+    "ts": "2026-10-19T13:40:00Z",
+    "quote": "that endpoint is deprecated, use v2",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s041",
+    "agent": "claude",
+    "ts": "2026-10-19T14:47:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s042",
+    "agent": "codex",
+    "ts": "2026-10-20T15:54:00Z",
+    "quote": "don't add a dependency for this",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s043",
+    "agent": "claude",
+    "ts": "2026-10-20T16:01:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s044",
+    "agent": "claude",
+    "ts": "2026-10-20T17:08:00Z",
+    "quote": "keep the error messages in English",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s045",
+    "agent": "claude",
+    "ts": "2026-10-21T09:15:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s046",
+    "agent": "claude",
+    "ts": "2026-10-21T10:22:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s047",
+    "agent": "claude",
+    "ts": "2026-10-22T11:29:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s048",
+    "agent": "codex",
+    "ts": "2026-10-22T12:36:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s049",
+    "agent": "codex",
+    "ts": "2026-10-23T13:43:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s050",
+    "agent": "codex",
+    "ts": "2026-10-23T14:50:00Z",
+    "quote": "start with the answer",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s051",
+    "agent": "claude",
+    "ts": "2026-10-24T15:57:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s052",
+    "agent": "claude",
+    "ts": "2026-10-24T16:04:00Z",
+    "quote": "you staged the .env file again",
+    "context": "[Bash] git add .env config.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s053",
+    "agent": "codex",
+    "ts": "2026-10-25T17:11:00Z",
+    "quote": "why did you push to main",
+    "context": "[Bash] git push origin main",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s054",
+    "agent": "codex",
+    "ts": "2026-10-25T09:18:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
     "status": "missed",
     "score": 0.85,
     "lessons": [
      "L-testing-no-retry-flaky"
     ],
     "fired": [],
-    "before_lesson": true
+    "before_lesson": false
    },
    {
-    "session": "s30",
+    "session": "s055",
+    "agent": "claude",
+    "ts": "2026-10-25T10:25:00Z",
+    "quote": "start with the answer",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s056",
+    "agent": "claude",
+    "ts": "2026-10-26T11:32:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s057",
     "agent": "codex",
-    "ts": "2026-10-02T09:00:00Z",
+    "ts": "2026-10-26T12:39:00Z",
     "quote": "why did you add a retry to the test, fix the race instead",
     "context": "[Edit] tests/test_api.py",
     "status": "caught",
@@ -1356,168 +1801,104 @@
     ],
     "fired": [
      {
-      "id": "L-safety-rm-rf",
+      "id": "L-testing-no-retry-flaky",
       "how": "words"
      }
     ],
-    "before_lesson": true
+    "before_lesson": false
    },
    {
-    "session": "s31",
-    "agent": "codex",
-    "ts": "2026-10-03T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s32",
-    "agent": "codex",
-    "ts": "2026-10-04T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s33",
+    "session": "s058",
     "agent": "claude",
-    "ts": "2026-10-05T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
+    "ts": "2026-10-27T13:46:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s059",
+    "agent": "codex",
+    "ts": "2026-10-27T14:53:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s060",
+    "agent": "claude",
+    "ts": "2026-10-28T15:00:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s061",
+    "agent": "codex",
+    "ts": "2026-10-28T16:07:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s062",
+    "agent": "claude",
+    "ts": "2026-10-29T17:14:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
     "status": "uncovered",
     "score": 0.85,
     "lessons": [],
     "fired": [],
-    "before_lesson": true
+    "before_lesson": false
    },
    {
-    "session": "s34",
-    "agent": "codex",
-    "ts": "2026-10-06T09:00:00Z",
+    "session": "s063",
+    "agent": "claude",
+    "ts": "2026-10-29T09:21:00Z",
     "quote": "stop reformatting files you didn't change",
-    "context": "[Bash] black .",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s35",
-    "agent": "codex",
-    "ts": "2026-10-07T09:00:00Z",
-    "quote": "never commit the .env",
-    "context": "[Bash] git add -A",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "ask"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s36",
-    "agent": "claude",
-    "ts": "2026-10-08T09:00:00Z",
-    "quote": "why did you add a retry to the test, fix the race instead",
-    "context": "[Edit] tests/test_api.py",
+    "context": "",
     "status": "uncovered",
-    "score": 0.85,
+    "score": 0.6,
     "lessons": [],
     "fired": [],
-    "before_lesson": true
-   },
-   {
-    "session": "s37",
-    "agent": "claude",
-    "ts": "2026-10-09T09:00:00Z",
-    "quote": "no, don't touch the public API, people script against it",
-    "context": "[Edit] src/cli.py",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s38",
-    "agent": "claude",
-    "ts": "2026-10-10T09:00:00Z",
-    "quote": "I told you to run the tests before saying it works",
-    "context": "Done! The parser now handles empty files.",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "tool"
-     }
-    ],
-    "before_lesson": true
-   },
-   {
-    "session": "s39",
-    "agent": "claude",
-    "ts": "2026-10-11T09:00:00Z",
-    "quote": "why did you push to main",
-    "context": "[Bash] git push origin main",
-    "status": "caught",
-    "score": 0.85,
-    "lessons": [
-     "L-testing-no-retry-flaky"
-    ],
-    "fired": [
-     {
-      "id": "L-safety-rm-rf",
-      "how": "words"
-     }
-    ],
-    "before_lesson": true
+    "before_lesson": false
    }
   ]
  },

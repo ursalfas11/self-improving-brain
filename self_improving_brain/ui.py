@@ -126,6 +126,10 @@ def make_handler(v: Vault | None, token: str, port_ref: list):
             u = urlparse(self.path)
             q = parse_qs(u.query)
             if not self._allowed(q):
+                if u.path == "/":
+                    return self._send(403, b"<!doctype html><meta charset=utf-8><title>brain ui</title><body style=\"font:16px "
+                                      b"system-ui;padding:2em\">Open the link that <code>brain ui</code> printed in your "
+                                      b"terminal.", "text/html")
                 return self._send(403, {"error": "open the link `brain ui` printed"})
             try:
                 if u.path == "/":
