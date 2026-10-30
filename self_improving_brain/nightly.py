@@ -129,6 +129,14 @@ def run(v: Vault, quick: bool = False) -> dict:
             except llm.NoLLM as e:
                 return str(e)
         step("distill", _distill)
+    if not quick:
+        from . import replay, skills
+        fresh = step("skills", lambda: len(skills.mine(v)))
+        if fresh:
+            rep["attention"].append(f"{fresh} repeated procedures could become skills → `brain skills`")
+        r = step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
+        if r and r.get("missed"):
+            rep["attention"].append(f"replay: {r['missed']} past corrections had a lesson whose trigger did not fire → `brain replay`")
     step("cache", lambda: metrics.refresh_cache(v))
     step("autotune", lambda: metrics.autotune(v))
     health = step("lessons_needing_care",

@@ -1,4 +1,4 @@
-"""Replay your past sessions against today's lessons: which corrections would they have prevented?
+"""Replay your past sessions against today's lessons: which corrections would they have caught?
 
 For every correction in your transcripts (the detection `brain learn` uses) replay looks at the
 moment before it: the prompt that started the turn and every tool call the agent made until you
@@ -158,8 +158,9 @@ def render(r: dict, show: int = 6) -> str:
         return (f"REPLAY ({r['days']} days, {r['sessions']} sessions): no corrections found — "
                 "nothing to replay yet, or `transcripts` in .brain/config.json points nowhere")
     out = [f"REPLAY · {r['sessions']} sessions · last {r['days']} days · {r['lessons']} active lessons",
-           f"  Your lessons would have prevented {r['caught']} of {r['corrections']} corrections ({r['caught_pct']} %)"
+           f"  Your lessons would have caught {r['caught']} of {r['corrections']} corrections ({r['caught_pct']} %)"
            + (f" — {r['would_ask']} of them by asking you first." if r["would_ask"] else "."),
+           "  (caught = a lesson about this mistake would have fired before it happened)",
            f"  missed {r['missed']} (a lesson exists, its triggers did not fire) · uncovered {r['uncovered']} (no lesson yet)"]
     if r.get("silent_lessons"):
         out.append(f"  {r['silent_lessons']} lessons are silent until you trust them (`brain trust`) and were not counted.")

@@ -136,7 +136,7 @@ def session_start(v: Vault, payload: dict) -> dict:
     if "checked_ts" not in st and tp and Path(str(tp)).is_file():
         # a resumed session starts with old turns: the knowledge check only looks at what comes next
         st["checked_ts"] = max((t.ts for t in _tail_turns(Path(str(tp))) if t.ts), default="")
-    always = [l for l in trust.effective(v, lib.lessons()) if l.mechanism == "always"][: int(v.get("always_max"))]
+    always = [l for l in trust.effective(v, cache.lessons(v)) if l.mechanism == "always"][: int(v.get("always_max"))]
     b = cli_name()
     lines = [f"SELF-IMPROVING-BRAIN vault: {v.root} — before answering from memory, run `{b} search \"<question>\"`;"
              f" open a note with `{b} read <note> [section]`; store new knowledge with"
@@ -174,7 +174,14 @@ def session_start(v: Vault, payload: dict) -> dict:
         pending.append(msg)
     for f in cache.must_findings(v)[:3]:
         pending.append("fix " + " ".join(f.split()))
-    silent = trust.untrusted(v, lib.lessons())
+    for n in rnotes:
+        if n.meta.get("atlas_sha"):
+            from .atlas import STALE_COMMITS, behind
+            k = behind(n, str(payload.get("cwd") or os.getcwd()))
+            if k is not None and k >= STALE_COMMITS:
+                pending.append(f"the atlas in {n.name} is {k} commits behind → `{b} atlas`")
+            break
+    silent = trust.untrusted(v, cache.lessons(v))
     if silent:
         pending.append(f"{len(silent)} lessons stay silent until the user checks them (written by an agent or never approved) → `{b} trust`")
     if pending:
@@ -208,7 +215,7 @@ def prompt(v: Vault, payload: dict) -> dict:
         st["shown"] += [h.note.name for h in chosen]
         lines.append(f"BRAIN-RECALL (open with `{cli_name()} read <note>` if relevant): " + " · ".join(
             f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
-    for l in trust.effective(v, lib.lessons()):
+    for l in trust.effective(v, cache.lessons(v)):
         if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words"):
             lines.append(f"LESSON {l.id}: {l.rule}")
     events.save_session_state(v, session, st)
@@ -219,7 +226,7 @@ WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
 # approving or trusting a rule is the user's call: an agent running these commands gets a permission prompt
 BRAIN_APPROVAL = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?"
-                            r"(approve|trust|promote|pack\s+add|team\s+(?:add|propose)|skills\s+approve)\b")
+                            r"(approve|trust|promote|pack\s+add|team\s+(?:add|propose|sync)|skills\s+approve)\b")
 
 
 def _paths_in(tool_input: dict) -> list[str]:

@@ -27,6 +27,8 @@ packages = ["self_improving_brain"]
 self_improving_brain = [
   "templates/commands/*.md",
   "packs/*.md",
+  "ui.html",
+  "ui_demo.json",
   "templates/vault/*/*.md",
   "templates/vault/.gitignore",
   "templates/vault/*/.gitkeep",

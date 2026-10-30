@@ -343,8 +343,8 @@ def c_lesson(a):
 
 def c_lessons(a):
     v = _vault(a)
-    lib = Library(v.root)
-    ls = lib.lessons()
+    from . import cache
+    ls = cache.lessons(v)
     if not ls:
         print("no lessons yet — they appear as you correct your agent (`brain learn`, `brain review`).")
     silent = {l.id: why for l, why in trust.untrusted(v, ls)}
@@ -361,15 +361,16 @@ def c_lessons(a):
 
 def c_trust(a):
     v = _vault(a)
-    lib = Library(v.root)
-    silent = trust.untrusted(v, lib.lessons())
+    from . import cache
+    every = cache.lessons(v)
+    silent = trust.untrusted(v, every)
     if a.ids or a.all:
         pick = [l for l, _ in silent if a.all or l.id in a.ids]
-        missing = [i for i in a.ids if i not in {l.id for l in lib.lessons()}]
+        missing = [i for i in a.ids if i not in {l.id for l in every}]
         if missing:
             print("no lesson " + ", ".join(missing))
             return 1
-        pick += [l for l in lib.lessons() if l.id in a.ids and l not in pick]
+        pick += [l for l in every if l.id in a.ids and l not in pick]
         if not pick:
             print("nothing to trust")
             return 0
@@ -546,6 +547,173 @@ def c_mcp(a):
     if a.action == "install":
         print("restart the client; it then has brain_context, brain_check, brain_correction, brain_handoff …")
     return rc
+
+
+def c_ui(a):
+    from . import ui
+    return ui.serve(None if a.demo else _vault(a), port=a.port, open_browser=not a.no_open)
+
+
+def c_report(a):
+    from . import report
+    st = report.build(_vault(a))
+    if not (a.public or a.badge):
+        print(report.text(st))
+        return 0
+    svg = report.badge(st) if a.badge else report.card(st)
+    out = Path(a.out or ("brain-badge.svg" if a.badge else "brain-report.svg")).expanduser()
+    out.write_text(svg, encoding="utf-8")
+    print(f"✓ {out} — numbers only: no notes, no rules, no quotes, no paths")
+    return 0
+
+
+def c_skills(a):
+    from . import skills
+    v = _vault(a)
+    try:
+        if a.action == "mine":
+            ds = skills.mine(v, days=a.days)
+            print(f"{len(ds)} procedures came back in ≥{skills.MIN_SESSIONS} sessions")
+        if a.action in ("mine", "list"):
+            for d in skills.drafts(v)[:a.limit]:
+                print(f"{d['id']}  {d['sessions']:3}×  {d['name']:28} {' → '.join(d['steps'])}")
+            for s in skills.installed(v):
+                print(f"✓ {s['name']:28} {s['description'][:80]}")
+            if skills.drafts(v):
+                print('→ brain skills approve <id> --name <name> --description "<when to use it>"  ·  brain skills reject <id>')
+            elif not skills.installed(v):
+                print("no recurring procedures yet — `brain skills mine` looks again")
+            return 0
+        if a.action == "show":
+            d = next((x for x in skills.drafts(v, None) if x["id"] == a.id), None)
+            if d is None:
+                print(f"no skill draft {a.id}")
+                return 1
+            print(f"{d['id']} · {d['sessions']} sessions · status {d['status']}")
+            for i, (st, ex) in enumerate(zip(d["steps"], d["examples"]), 1):
+                print(f"  {i}. {ex}")
+            for p in d.get("prompts", [])[:3]:
+                print(f"  started by: “{p[:120]}”")
+            return 0
+        if a.action == "approve":
+            r = skills.approve(v, a.id or "", name=a.name or "", description=a.description or "",
+                               words=_csv(a.words), claude=not a.no_claude)
+            print(f"✓ {r['note'].relative_to(v.root)} · lesson {r['lesson']}" + (f" · Claude Code skill {r['claude']}" if r["claude"] else ""))
+            maplib.write(v)
+            return 0
+        if a.action == "reject":
+            print("✓ rejected" if skills.reject(v, a.id or "") else f"no skill draft {a.id}")
+            return 0
+        for p in skills.sync(v):
+            print(f"✓ {p}")
+        return 0
+    except (KeyError, ValueError) as e:
+        print(f"✗ {str(e).strip(chr(39))}")
+        return 1
+
+
+def c_atlas(a):
+    from . import atlas
+    v = _vault(a)
+    dest, at = atlas.write(v, Path(a.path or os.getcwd()).expanduser())
+    print(f"✓ atlas of {at['repo']} ({at['files']} files, commit {at['sha'][:10] or '–'}) → {dest.relative_to(v.root)}")
+    if a.show:
+        print(atlas.render(at))
+    maplib.write(v)
+    return 0
+
+
+def c_ingest(a):
+    from . import ingest
+    v = _vault(a)
+    if a.refresh:
+        rows = ingest.refresh(v)
+        for r in rows:
+            extra = f" → {len(r.get('flagged', []))} notes to re-check" if r.get("status") == "changed" else ""
+            print(f"{r['status']:10} {r.get('note', '')}  {r['source'][:80]}{extra}")
+        if not rows:
+            print("no sources yet — `brain ingest <file|https-url|folder>`")
+        return 0
+    if not a.source:
+        print("brain ingest <file|https-url|folder>  ·  brain ingest --refresh")
+        return 1
+    srcs = ingest.sources(v, a.source) if Path(a.source).expanduser().is_dir() else [a.source]
+    rc = 0
+    for s in srcs:
+        try:
+            r = ingest.add(v, s)
+            print(f"✓ {r['status']:9} {r['note']}" + (f" → {len(r['flagged'])} notes to re-check" if r.get("flagged") else ""))
+        except (ValueError, OSError) as e:
+            print(f"✗ {e}")
+            rc = 1
+    maplib.write(v)
+    print("→ `brain distill` (or /brain-distill) works the new sources into your notes")
+    return rc
+
+
+def _review_team(name: str, rows, yes: bool) -> bool:
+    if not rows:
+        print(f"team {name}: nothing new")
+        return False
+    print(f"team {name}: {len(rows)} lessons to accept")
+    for l, why in rows:
+        print(f"  {why:7} {l.mechanism:7} {l.id}: {l.rule}")
+    if yes:
+        return True
+    if not sys.stdin.isatty():
+        print("these rules would reach your agent — read them, then run again with --yes")
+        return False
+    return input("accept them? [y/N] ").strip().lower() in ("y", "yes")
+
+
+def c_team(a):
+    from . import team
+    v = _vault(a)
+    try:
+        if a.action == "list":
+            led = team._ledger(v)
+            for n in team.names(v):
+                waiting = len(team.pending(v, n))
+                print(f"{n:16} {len(team.lessons(v, n)):3} lessons · {led.get(n, {}).get('url', '')}"
+                      + (f" · {waiting} waiting for your OK (`brain team sync {n}`)" if waiting else ""))
+            if not team.names(v):
+                print("no team brain — `brain team add <name> <git-url>`")
+            return 0
+        if a.action == "add":
+            if not a.name or not a.arg:
+                print("brain team add <name> <git-url>")
+                return 1
+            rows = team.clone(v, a.name, a.arg)
+            if _review_team(a.name, rows, a.yes):
+                team.accept(v, a.name, [l for l, _ in rows])
+                print(f"✓ {len(rows)} team lessons active")
+            return 0
+        if a.action == "sync":
+            for n in [a.name] if a.name else team.names(v):
+                rows = team.pull(v, n)
+                if _review_team(n, rows, a.yes):
+                    team.accept(v, n, [l for l, _ in rows])
+                    print(f"✓ team {n}: {len(rows)} lessons accepted")
+            return 0
+        if a.action == "remove":
+            print(f"✓ removed {team.remove(v, a.name or '')}")
+            return 0
+        lesson = next((l for l in Library(v.root).lessons() if l.id == a.name), None)
+        if lesson is None:
+            print(f"no lesson {a.name} in your vault")
+            return 1
+        target = a.arg or (team.names(v)[0] if len(team.names(v)) == 1 else "")
+        if not target:
+            print("which team? brain team propose <lesson-id> <team>")
+            return 1
+        r = team.propose(v, lesson, target)
+        print(f"✓ {lesson.id} on branch {r['branch']}" + (" (pushed)" if r["pushed"] else f" — push failed: {r.get('push_error')}"))
+        if r.get("pr") and r["pushed"]:
+            print(f"→ open the pull request: {r['pr']}")
+        return 0
+    except (ValueError, OSError, subprocess.SubprocessError) as e:
+        print(f"✗ {e}")
+        return 1
 
 
 def c_lint(a):
@@ -806,7 +974,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--file"); s.set_defaults(f=c_handoff)
     s = sub.add_parser("check", help="would this action trip a guard lesson? (agents without hooks)")
     s.add_argument("--command"); s.add_argument("--path"); s.add_argument("--tool"); s.set_defaults(f=c_check)
-    s = sub.add_parser("replay", help="replay past sessions: which corrections would today's lessons have prevented?")
+    s = sub.add_parser("replay", help="replay past sessions: which corrections would today's lessons have caught?")
     s.add_argument("--days", type=int, default=30); s.add_argument("--file", action="append", help="one transcript (repeatable)")
     s.add_argument("--draft", action="store_true", help="turn uncovered corrections into lesson drafts")
     s.add_argument("--json", action="store_true"); s.add_argument("--rows", action="store_true", help="with --json: every correction")
@@ -820,6 +988,25 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("action", nargs="?", default="serve", choices=["serve", "install", "uninstall", "config"])
     s.add_argument("client", nargs="?", help="claude-desktop, cursor, windsurf, gemini, vscode, codex (install: default all detected); config also: zed")
     s.set_defaults(f=c_mcp)
+    s = sub.add_parser("ui", help="the brain in your browser: progress, lessons, review, replay, graph (local only)")
+    s.add_argument("--port", type=int, default=0); s.add_argument("--no-open", action="store_true")
+    s.add_argument("--demo", action="store_true", help="example data, not your vault"); s.set_defaults(f=c_ui)
+    s = sub.add_parser("report", help="report card: is your agent getting better? (--public: a shareable SVG, numbers only)")
+    s.add_argument("--public", action="store_true"); s.add_argument("--badge", action="store_true", help="a small README badge")
+    s.add_argument("-o", "--out"); s.set_defaults(f=c_report)
+    s = sub.add_parser("skills", help="procedures your agent repeated, turned into skills (with your OK)")
+    s.add_argument("action", nargs="?", default="list", choices=["list", "mine", "show", "approve", "reject", "sync"])
+    s.add_argument("id", nargs="?"); s.add_argument("--name"); s.add_argument("--description"); s.add_argument("--words")
+    s.add_argument("--days", type=int, default=60); s.add_argument("--limit", type=int, default=15)
+    s.add_argument("--no-claude", action="store_true", help="approve: vault note and lesson only"); s.set_defaults(f=c_skills)
+    s = sub.add_parser("atlas", help="map a codebase (layout, entry points, test command, key modules) into its repo note")
+    s.add_argument("path", nargs="?"); s.add_argument("--show", action="store_true"); s.set_defaults(f=c_atlas)
+    s = sub.add_parser("ingest", help="store a file, https page or folder as source notes; --refresh flags notes whose source changed")
+    s.add_argument("source", nargs="?"); s.add_argument("--refresh", action="store_true"); s.set_defaults(f=c_ingest)
+    s = sub.add_parser("team", help="a team brain: shared lessons from a git repo, accepted by you")
+    s.add_argument("action", nargs="?", default="list", choices=["list", "add", "sync", "propose", "remove"])
+    s.add_argument("name", nargs="?", help="team name (propose: lesson id)"); s.add_argument("arg", nargs="?", help="add: git url · propose: team")
+    s.add_argument("--yes", action="store_true"); s.set_defaults(f=c_team)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)
