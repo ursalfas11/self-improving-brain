@@ -86,6 +86,8 @@ You have a persistent, self-improving memory at `{v.root}`. Use it — it is how
 - **Before answering from memory** (project facts, decisions, "how did we…"): `{b} search "<question>"`, then `{b} read <note> [section]`. Cite the note.
 - **Learned something worth keeping** (a decision, a pitfall, a user preference, a fact that took effort): `{b} remember <fact|decision|pitfall|preference|todo|status> "<one self-contained sentence>" --quote "<user's words>"`. Never store secrets — store the variable name and where the value lives.
 - **Lessons** (`LESSON …` lines) are rules learned from your past mistakes with this user. Follow them; they outrank your defaults.
+- **Before an irreversible action** (force push, deleting data, deploys, migrations): `{b} check --command "<command>"`. If it names a guard lesson, ask the user first.
+- **Picking work up again** ("continue", "where were we", after a break or in another agent): `{b} resume` shows the last session's handoff — the user's own words, the open question, the files in flight. Before you end a long task without hooks, write one: `{b} handoff`.
 - **Never** approve lesson drafts or delete notes on your own; show the user and wait for an explicit OK.
 {END}
 """
@@ -142,7 +144,8 @@ CLAUDE_HOOKS = [
     ("SessionStart", None, "session-start", 15, False),
     ("UserPromptSubmit", None, "prompt", 10, False),
     ("PreToolUse", "*", "pre-tool", 10, False),
-    ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit", "post-tool", 15, False),
+    ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit|NotebookEdit", "post-tool", 15, False),
+    ("PreCompact", None, "pre-compact", 20, False),
     ("Stop", None, "stop", 10, False),
     ("SessionEnd", None, "session-end", 5, True),
 ]

@@ -659,3 +659,47 @@ class TestTrustAndChecks(VaultCase):
             "file_path": "/repo/tests/test_b.py", "content": "@pytest.mark.flaky\ndef test_b(): pass"}})
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask", "a guard with a check asks before the write")
         self.assertIn("rule: Fix flaky tests", (self.root / "20-areas/tests.md").read_text(), "rest of the callout untouched")
+
+
+class TestHandoff(VaultCase):
+    def _transcript(self, cwd: Path) -> Path:
+        p = Path(self.tmp.name) / "h.jsonl"
+        rows = [
+            ("user", "rename the config loader and keep the old name as an alias"),
+            ("assistant", [{"type": "tool_use", "id": "t1", "name": "Edit",
+                            "input": {"file_path": str(cwd / "src/config.py"), "old_string": "a", "new_string": "b"}}]),
+            ("user", [{"type": "tool_result", "tool_use_id": "t1", "content": "ok"}]),
+            ("assistant", [{"type": "tool_use", "id": "t2", "name": "Bash", "input": {"command": "pytest -q tests/test_config.py"}}]),
+            ("user", [{"type": "tool_result", "tool_use_id": "t2", "content": "3 passed"}]),
+            ("user", "do not touch the CLI flags, users script against them"),
+            ("assistant", [{"type": "text", "text": "Renamed and tested. Should I also update the docs?"}]),
+        ]
+        lines = [{"type": r, "sessionId": "old-1", "cwd": str(cwd), "timestamp": f"2026-10-03T10:00:{i:02d}Z",
+                  "message": {"role": r, "content": c}} for i, (r, c) in enumerate(rows)]
+        p.write_text("\n".join(json.dumps(x) for x in lines))
+        return p
+
+    def test_compaction_keeps_the_users_words_and_resume_finds_them(self):
+        repo = Path(self.tmp.name) / "proj"
+        (repo / ".git").mkdir(parents=True)
+        tp = self._transcript(repo)
+        self.assertEqual(hooks.pre_compact(self.v, {"session_id": "old-1", "transcript_path": str(tp), "cwd": str(repo)}), {})
+        ctx = hooks.session_start(self.v, {"session_id": "old-1", "source": "compact", "cwd": str(repo)})
+        text = ctx["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("BRAIN-HANDOFF", text)
+        self.assertIn("do not touch the CLI flags, users script against them", text, "the user's words survive verbatim")
+        self.assertIn("src/config.py", text)
+        self.assertIn("pytest -q tests/test_config.py", text)
+        self.assertIn("not an approval", text, "an open question stays open")
+        later = hooks.session_start(self.v, {"session_id": "new-2", "source": "startup", "cwd": str(repo)})
+        self.assertIn("resume", later["hookSpecificOutput"]["additionalContext"], "a new session in the same repo is told")
+        other = hooks.session_start(self.v, {"session_id": "new-3", "source": "startup", "cwd": str(Path(self.tmp.name))})
+        self.assertNotIn("BRAIN-HANDOFF", json.dumps(other), "another repo is not")
+        os.chdir(repo)
+        try:
+            out = run_cli("resume")
+        finally:
+            os.chdir(Path(__file__).parent)
+        self.assertIn("rename the config loader", out)
+        self.assertIn("old-1", run_cli("resume", "--list"))
+

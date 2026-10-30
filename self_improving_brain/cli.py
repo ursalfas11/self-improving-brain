@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, distill, events, hooks, inbox, learn, llm, maplib, metrics, nightly, trust
+from . import adapters, distill, events, handoff, hooks, inbox, learn, llm, maplib, metrics, nightly, trust
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -403,6 +403,57 @@ def c_promote(a):
     return 0
 
 
+def c_resume(a):
+    v = _vault(a)
+    if a.list:
+        for e in reversed(handoff.load_index(v)):
+            print(f"{str(e.get('t', ''))[:16]}  {e.get('agent', '?'):6} {e.get('repo') or e.get('cwd') or '?':28} {e.get('session')}")
+        return 0
+    h = handoff.load(v, a.session) if a.session else None
+    if h is None and not a.session:
+        repo = "" if a.any else hooks.repo_of(os.getcwd())
+        h = handoff.latest(v, repo=repo) or (handoff.latest(v) if repo and not a.any else None)
+    if h is None:
+        print("no handoff yet — one is written before every compaction (Claude Code) or with `brain handoff`")
+        return 1
+    print(handoff.render(h, budget=20000))
+    return 0
+
+
+def c_handoff(a):
+    v = _vault(a)
+    path = Path(a.file).expanduser() if a.file else handoff.newest_transcript(v, os.getcwd())
+    if path is None or not path.is_file():
+        print("no transcript found — pass --file <session.jsonl>")
+        return 1
+    h = handoff.from_transcript(v, path, os.getcwd())
+    if h is None:
+        print(f"nothing to hand off in {path}")
+        return 1
+    print(f"✓ handoff for session {h['session'][:12]} ({h['agent']}, {h.get('repo') or '?'}) — `brain resume` shows it")
+    return 0
+
+
+def c_check(a):
+    """For agents without hooks: would this action trip a guard lesson?"""
+    v = _vault(a)
+    from . import cache
+    tool = a.tool or ("Bash" if a.command else "Write")
+    cmd = hooks.command_head(a.command or "")
+    lessons = trust.effective(v, cache.lessons(v))
+    guard, reflexes = hooks.guard_for(lessons, tool, cmd, [a.path] if a.path else [], "")
+    hits = hooks.check_hits([l for l in lessons if l.mechanism != "guard"], tool, cmd, [a.path] if a.path else [], "")
+    for l in reflexes + [l for l in hits if l not in reflexes]:
+        print(f"LESSON {l.id}: {l.rule}")
+    if guard:
+        events.log(v, "lesson", session=_ses(), id=guard.id, trigger="check:" + tool)
+        print(f"GUARD {guard.id}: {guard.rule}\n→ ask the user before you do this.")
+        return 3
+    if not reflexes and not hits:
+        print("no lesson applies")
+    return 0
+
+
 def c_lint(a):
     v = _vault(a)
     fs = lint(v)
@@ -654,6 +705,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ids", nargs="*"); s.add_argument("--all", action="store_true"); s.add_argument("--yes", "-y", action="store_true"); s.set_defaults(f=c_trust)
     s = sub.add_parser("promote", help="change how a lesson acts, e.g. reflex -> guard after repeated violations")
     s.add_argument("id"); s.add_argument("--to", required=True, choices=["reflex", "always", "guard", "skill"]); s.set_defaults(f=c_promote)
+    s = sub.add_parser("resume", help="show the last handoff (continue where a session stopped)")
+    s.add_argument("--session"); s.add_argument("--any", action="store_true", help="any repo"); s.add_argument("--list", action="store_true"); s.set_defaults(f=c_resume)
+    s = sub.add_parser("handoff", help="write a handoff from a session transcript (agents without hooks)")
+    s.add_argument("--file"); s.set_defaults(f=c_handoff)
+    s = sub.add_parser("check", help="would this action trip a guard lesson? (agents without hooks)")
+    s.add_argument("--command"); s.add_argument("--path"); s.add_argument("--tool"); s.set_defaults(f=c_check)
     s = sub.add_parser("lint", help="check the vault"); s.set_defaults(f=c_lint)
     s = sub.add_parser("index", help="regenerate INDEX.md"); s.set_defaults(f=c_index)
     s = sub.add_parser("stats", help="is the brain getting smarter?"); s.set_defaults(f=c_stats)

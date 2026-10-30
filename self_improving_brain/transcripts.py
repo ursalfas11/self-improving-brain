@@ -34,6 +34,7 @@ class Transcript:
     session: str
     source: str
     turns: list[Turn]
+    cwd: str = ""
 
     @property
     def internal(self) -> bool:
@@ -74,9 +75,10 @@ def _text_of(content) -> str:
 
 def _claude(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
-    session = ""
+    session = cwd = ""
     for d in lines:
         session = session or d.get("sessionId", "")
+        cwd = cwd or str(d.get("cwd") or "")
         t, msg, ts = d.get("type"), d.get("message"), str(d.get("timestamp") or "")
         if not isinstance(msg, dict) or d.get("isSidechain") or d.get("isMeta"):
             continue
@@ -101,16 +103,17 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                 elif c.get("type") == "tool_use":
                     turns.append(Turn("tool_call", json.dumps(c.get("input", {}), ensure_ascii=False)[:2000],
                                       tool=c.get("name", ""), ts=ts))
-    return Transcript(path, session or path.stem, "claude", turns)
+    return Transcript(path, session or path.stem, "claude", turns, cwd)
 
 
 def _codex(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
-    session = ""
+    session = cwd = ""
     for d in lines:
         p, ts = d.get("payload") or {}, str(d.get("timestamp") or "")
         if d.get("type") == "session_meta":
             session = p.get("id") or p.get("session_id") or session
+            cwd = cwd or str(p.get("cwd") or "")
             continue
         if d.get("type") != "response_item" or not isinstance(p, dict):
             continue
@@ -129,7 +132,7 @@ def _codex(lines: list[dict], path: Path) -> Transcript:
             txt = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
             rej = any(m in txt.lower() for m in REJECT_MARKERS)
             turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
-    return Transcript(path, session or path.stem, "codex", turns)
+    return Transcript(path, session or path.stem, "codex", turns, cwd)
 
 
 def _generic(lines: list[dict], path: Path) -> Transcript:
@@ -162,3 +165,21 @@ def parse_lines(raw_lines, path: Path) -> Transcript | None:
     if any("sessionId" in d or d.get("type") in ("user", "assistant") for d in lines[:50]):
         return _claude(lines, path)
     return _generic(lines, path)
+
+
+def read_part(path: Path, max_bytes: int, from_end: bool = True) -> Transcript | None:
+    """Parse only the start or the end of a (possibly huge) transcript."""
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            if from_end:
+                fh.seek(max(0, size - max_bytes))
+            raw = fh.read(max_bytes).decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    lines = raw.split("\n")  # not splitlines(): JSON strings may hold a raw U+2028
+    if from_end and size > max_bytes:
+        lines = lines[1:]
+    elif not from_end and size > max_bytes:
+        lines = lines[:-1]
+    return parse_lines(lines, path)

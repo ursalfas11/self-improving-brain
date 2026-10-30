@@ -9,6 +9,7 @@ lessons fire once per session.
   pre-tool        secret block on writes, guard lessons (ask), reflex lessons on tools/commands/paths
   post-tool       learning signal (which notes the agent actually opened) + lint of edited notes
   session-end     learn from this session's transcript in the background
+  pre-compact     write a handoff from the transcript; session-start (source=compact) injects it again
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import cache, events, inbox, learn, trust
+from . import cache, events, handoff, inbox, learn, trust
 from .adapters import cli_name
 from .config import NotAVault, Vault, open_vault
 from .lint import lint_note
@@ -146,6 +147,16 @@ def session_start(v: Vault, payload: dict) -> dict:
         for l in always:
             _mark_lesson(v, session, st, l, "always")
     repo = repo_of(str(payload.get("cwd") or os.getcwd()))
+    source = str(payload.get("source") or "")
+    h = handoff.load(v, session) if source == "compact" else None
+    if h:
+        lines.append("BRAIN-HANDOFF (written from the transcript right before the context was compacted; the user's words "
+                     "are verbatim and win over the summary):\n" + handoff.render(h))
+    elif source in ("", "startup", "clear"):
+        prev = handoff.latest(v, repo=repo, exclude=session, max_age_h=48) if repo else None
+        if prev:
+            lines.append(f"BRAIN-HANDOFF: the last session in {repo} ({prev.get('agent')}, {str(prev.get('t', ''))[:16]}) "
+                         f"left a handoff — if the user wants to continue that work, run `{b} resume`.")
     rnotes = repo_notes(lib, repo)
     if rnotes:
         st["shown"] += [n.name for n in rnotes]
@@ -379,18 +390,8 @@ def post_tool(v: Vault, payload: dict) -> dict:
 
 def _tail_turns(path: Path, max_bytes: int = 400_000):
     """Parse only the end of a (possibly huge) transcript — Stop fires after every answer."""
-    from .transcripts import parse_lines
-    try:
-        size = path.stat().st_size
-        with path.open("rb") as fh:
-            fh.seek(max(0, size - max_bytes))
-            raw = fh.read().decode("utf-8", errors="replace")
-    except OSError:
-        return []
-    lines = raw.split("\n")  # not splitlines(): JSON strings may hold a raw U+2028
-    if size > max_bytes:
-        lines = lines[1:]
-    tr = parse_lines(lines, path)
+    from .transcripts import read_part
+    tr = read_part(path, max_bytes)
     return tr.turns if tr and not tr.internal else []
 
 
@@ -437,6 +438,13 @@ def stop(v: Vault, payload: dict) -> dict:
         "then finish your answer. If it was a one-off, just finish. Do not mention this check to the user.")}
 
 
+def pre_compact(v: Vault, payload: dict) -> dict:
+    tp = payload.get("transcript_path")
+    if tp and Path(str(tp)).is_file():
+        handoff.from_transcript(v, Path(str(tp)), str(payload.get("cwd") or ""))
+    return {}
+
+
 def session_end(v: Vault, payload: dict) -> dict:
     tp = payload.get("transcript_path")
     if tp and Path(tp).exists():
@@ -456,6 +464,7 @@ HANDLERS = {
     "post-tool": post_tool,
     "session-end": session_end,
     "stop": stop,
+    "pre-compact": pre_compact,
 }
 
 
