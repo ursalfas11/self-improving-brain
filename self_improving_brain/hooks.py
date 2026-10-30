@@ -318,9 +318,12 @@ def pre_tool(v: Vault, payload: dict) -> dict:
         events.log(v, "lesson", session=session, id=guard.id, trigger="guard:" + tool)
     events.save_session_state(v, session, st)
     if guard:
+        # headless runs (CI, benchmarks) have nobody to ask: BRAIN_GUARD=deny refuses and tells the agent to ask
+        headless = os.environ.get("BRAIN_GUARD") == "deny"
         return _out("PreToolUse", "\n".join(lines), {
-            "permissionDecision": "ask",
-            "permissionDecisionReason": f"self-improving-brain lesson {guard.id}: {guard.rule}"})
+            "permissionDecision": "deny" if headless else "ask",
+            "permissionDecisionReason": f"self-improving-brain lesson {guard.id}: {guard.rule}"
+                                        + (" Ask the user before doing this." if headless else "")})
     return _out("PreToolUse", "\n".join(lines)) if lines else {}
 
 
