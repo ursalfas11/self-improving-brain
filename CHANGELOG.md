@@ -20,6 +20,12 @@ of a review queue.
 - **Cleans up.** A rule that has not fired for 60 days retires; at most eight `always` rules and 60 rules in all.
 - **Hard budget:** `llm_budget_usd` 0.10 and `llm_max_calls` 40 a day, booked per call. When it is used up, the
   rest waits for the next night.
+- **No night is lost.** A night the laptop slept through (cron and the Task Scheduler skip it) runs at the next
+  session, in the background. The lock is taken in one step, so two runs never overlap; on Windows it no longer
+  checks the other run with `os.kill`, which would have ended it.
+- **Several laptops, one brain.** Drafts, inbox and trust ledger are one file per machine, like the journal, and
+  the nightly run pulls before it learns: two laptops no longer stop each other's sync, and a rule is learned
+  once. The machine name is fixed on first use. Vaults from 0.1 are moved over on first use.
 
 ### A veto, not a duty
 - Every change the brain makes on its own goes into `.brain/journal/<host>.jsonl`. `brain review` lists the

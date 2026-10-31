@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import cache, events, handoff, trust
+from . import cache, events, handoff, nightly, trust
 from .adapters import cli_name
 from .config import NotAVault, Vault, open_vault
 from .lint import lint_note
@@ -174,6 +174,8 @@ def session_start(v: Vault, payload: dict) -> dict:
         st["shown"] += [n.name for n in rnotes]
         lines.append(f"BRAIN-REPO {repo}: " + " · ".join(f"{n.name} — {short(n.description, 100)}" for n in rnotes))
     events.save_session_state(v, session, st)
+    if source in ("", "startup") and session != "doctor" and nightly.overdue(v):
+        _background(v, "nightly")
     message = weekly_line(v) if source in ("", "startup") and session != "doctor" else ""
     return _out("SessionStart", "\n".join(lines), message=message)
 
@@ -394,15 +396,20 @@ def pre_compact(v: Vault, payload: dict) -> dict:
     return {}
 
 
+def _background(v: Vault, *args: str) -> None:
+    """Run a brain command detached from the agent: the hook returns at once."""
+    try:
+        subprocess.Popen([sys.executable, "-m", "self_improving_brain", "--vault", str(v.root), *args],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                         start_new_session=True, cwd=str(Path(__file__).resolve().parent.parent))
+    except OSError:
+        pass
+
+
 def session_end(v: Vault, payload: dict) -> dict:
     tp = payload.get("transcript_path")
     if tp and Path(tp).exists():
-        args = [sys.executable, "-m", "self_improving_brain", "--vault", str(v.root), "learn", "--file", str(tp), "--quiet"]
-        try:
-            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
-                             start_new_session=True, cwd=str(Path(__file__).resolve().parent.parent))
-        except OSError:
-            pass
+        _background(v, "learn", "--file", str(tp), "--quiet")
     return {}
 
 

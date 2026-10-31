@@ -18,12 +18,12 @@ import os
 import re
 from pathlib import Path
 
-from . import events, journal, llm, trust
+from . import events, journal, ledger, llm, trust
 from .config import Vault
 from .notes import MECHANISMS, Lesson, Library, atomic_write, dump_frontmatter, set_field
 from .transcripts import parse
 from .util import (append_jsonl, days_since, digest, iso_week, load_json, now_iso, read_jsonl, save_json, short,
-                   slugify, terms, today, write_jsonl)
+                   slugify, terms, today)
 
 # --- noticing a correction, in six languages (en de es fr pt it) ---------------------------------------------
 # Tuned on the dev half of eval/corrections.jsonl, measured on the other half: `python3 eval/run.py`.
@@ -234,17 +234,29 @@ def groups(ds: list[dict], threshold: float = 0.5, limit: int = 500) -> list[lis
     return gs
 
 
+# a draft only moves forward: what another machine decided later wins over an older copy
+RANK = {"open": 0, "held": 1, "once": 2, "noise": 2, "expired": 2, "approved": 3, "rejected": 3}
+
+
 def drafts_path(v: Vault) -> Path:
-    return v.path("drafts.jsonl")
+    """This machine's drafts (one file per machine, see ledger.py)."""
+    return ledger.own(v, "drafts")
+
+
+def all_drafts(v: Vault) -> list[dict]:
+    return ledger.load(v, "drafts", RANK)
+
+
+def save_drafts(v: Vault, records: list[dict]) -> None:
+    ledger.save(v, "drafts", records, RANK)
 
 
 def drafts(v: Vault, status: str | None = "open") -> list[dict]:
-    d = read_jsonl(drafts_path(v))
-    return [x for x in d if status is None or x.get("status") == status]
+    return [x for x in all_drafts(v) if status is None or x.get("status") == status]
 
 
 def rejected_topics(v: Vault) -> list[dict]:
-    return read_jsonl(v.path("rejected.jsonl"))
+    return [t for f in ledger.files(v, "rejected") for t in read_jsonl(f)]
 
 
 def _blocked(text: str, topics: list[dict]) -> bool:
@@ -401,8 +413,10 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
     """Send groups that hold new drafts to the LLM; store its verdict on each new draft. Returns groups judged."""
     total = 0
     for _ in range(batches):
-        all_d = read_jsonl(drafts_path(v))
-        todo = [g for g in groups(_candidates(all_d)) if any(x.get("status") == "open" for x in g)][:batch]
+        all_d = all_drafts(v)
+        mine = {x.get("id") for x in read_jsonl(drafts_path(v))}  # other machines judge their own drafts
+        todo = [g for g in groups(_candidates(all_d))
+                if any(x.get("status") == "open" and x.get("id") in mine for x in g)][:batch]
         if not todo:
             break
         rules = "\n".join(f"- {l.id}: {l.rule}" for l in Library(v.root).lessons()) or "(none yet)"
@@ -423,10 +437,10 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
         verdicts: dict[str, dict] = {}
         for i, g in enumerate(todo, 1):
             for x in g:
-                if x.get("status") == "open":
+                if x.get("status") == "open" and x.get("id") in mine:
                     verdicts[x["id"]] = by_n.get(i) or {}
         # the LLM call takes a while: update the file as it is *now*, so drafts appended meanwhile survive
-        fresh = read_jsonl(drafts_path(v))
+        fresh = all_drafts(v)
         for d in fresh:
             if d.get("id") not in verdicts or d.get("status") != "open":
                 continue
@@ -446,7 +460,7 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
             d["rule"] = short(str(r.get("rule") or ""), 220)
             d["existing"] = str(r.get("existing") or "")
             d["suggest"] = {k: r.get(k) for k in ("mechanism", "words", "tools", "commands", "class")}
-        write_jsonl(drafts_path(v), fresh)
+        save_drafts(v, fresh)
         total += len(todo)
     return total
 
@@ -570,7 +584,7 @@ def _relapse(v: Vault, l: Lesson, g: list[dict], best: dict, always_n: int) -> d
 def adopt(v: Vault) -> dict:
     """Judged drafts become lessons (or facts in the inbox) by fixed rules. Returns what changed."""
     from . import inbox
-    all_d = read_jsonl(drafts_path(v))
+    all_d = all_drafts(v)
     for d in all_d:  # what never came back in months was not a pattern
         if d.get("status") in ("open", "held", "once") and (days_since(str(d.get("t", ""))[:10]) or 0) > EXPIRE_DAYS:
             d["status"] = "expired"
@@ -626,7 +640,7 @@ def adopt(v: Vault) -> dict:
         active = {l.id: l for l in lib.lessons()}
         for d in g:
             d["status"], d["lesson"] = "approved", lesson.id
-    write_jsonl(drafts_path(v), all_d)
+    save_drafts(v, all_d)
     return out
 
 
@@ -662,7 +676,7 @@ def approve(v: Vault, draft_id: str, *, rule: str = "", mechanism: str = "", not
             words: list[str] | None = None, tools: list[str] | None = None, commands: str = "",
             paths: str = "", klass: str = "") -> Lesson:
     """Turn one draft (and the drafts like it) into a lesson by hand — for what the nightly run left alone."""
-    all_d = read_jsonl(drafts_path(v))
+    all_d = all_drafts(v)
     d = next((x for x in all_d if x["id"] == draft_id), None)
     if d is None:
         raise KeyError(f"no draft {draft_id}")
@@ -689,7 +703,7 @@ def approve(v: Vault, draft_id: str, *, rule: str = "", mechanism: str = "", not
         if x["id"] in group_ids:  # the whole group of similar corrections is answered by this lesson
             x["status"] = "approved"
             x["lesson"] = lesson.id
-    write_jsonl(drafts_path(v), all_d)
+    save_drafts(v, all_d)
     return lesson
 
 
@@ -722,7 +736,7 @@ def set_lesson_field(v: Vault, lesson_id: str, key: str, value: str, by: str = "
 
 
 def reject(v: Vault, draft_id: str, block_words: list[str] | None = None, reason: str = "") -> bool:
-    all_d = read_jsonl(drafts_path(v))
+    all_d = all_drafts(v)
     ids = next(({x["id"] for x in g} for g in groups([x for x in all_d if x.get("status") in ("open", "held")])
                 if any(x["id"] == draft_id for x in g)), {draft_id})
     ok = False
@@ -730,7 +744,7 @@ def reject(v: Vault, draft_id: str, block_words: list[str] | None = None, reason
         if d["id"] in ids:
             d["status"] = "rejected"
             ok = True
-    write_jsonl(drafts_path(v), all_d)
+    save_drafts(v, all_d)
     if ok and block_words:
         block(v, block_words, reason)
     return ok
@@ -738,4 +752,4 @@ def reject(v: Vault, draft_id: str, block_words: list[str] | None = None, reason
 
 def block(v: Vault, words: list[str], reason: str = "") -> None:
     """Never draft this topic again."""
-    append_jsonl(v.path("rejected.jsonl"), {"t": now_iso(), "words": words, "reason": reason})
+    append_jsonl(ledger.own(v, "rejected"), {"t": now_iso(), "words": words, "reason": reason})

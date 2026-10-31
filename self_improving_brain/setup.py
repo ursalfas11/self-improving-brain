@@ -193,8 +193,7 @@ def schedule(o: Out, v, allow: bool) -> bool:
     except (OSError, subprocess.CalledProcessError) as e:
         o.row("warn", "Nightly", f"could not schedule it: {e} — try `brain schedule install`")
         return False
-    o.row("ok", "Nightly", "every night at 03:17" + (" (a missed run catches up when the Mac wakes)"
-                                                    if sys.platform == "darwin" else ""))
+    o.row("ok", "Nightly", "every night at 03:17 (a night the laptop slept through runs at your next session)")
     return True
 
 

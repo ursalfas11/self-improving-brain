@@ -458,3 +458,133 @@ class TestNightly(VaultCase):
         self.assertIn("skipped", nightly.run(self.v))
         lock.write_text(f"{os.getpid()} {time.time() - 4 * 3600}")
         self.assertNotIn("skipped", nightly.run(self.v, quick=True))
+
+    def test_a_missed_night_runs_at_the_next_session(self):
+        import time
+        from self_improving_brain.util import save_json
+        ago = lambda h: time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(time.time() - h * 3600))
+        start = lambda: hooks.session_start(self.v, {"session_id": f"s{time.time()}", "source": "startup"})
+        with mock.patch.object(hooks.subprocess, "Popen") as popen:
+            start()
+            self.assertEqual(popen.call_count, 0, "not scheduled here: nothing runs on its own")
+            save_json(self.v.path("state", "schedule.json"), {"t": ago(30), "hour": 3})
+            start()
+            self.assertEqual(popen.call_count, 1, "the laptop slept through the night: the first session starts it")
+            self.assertEqual(popen.call_args[0][0][-1], "nightly")
+            save_json(self.v.path("state", "nightly.json"), {"t": ago(5)})
+            start()
+            self.assertEqual(popen.call_count, 1, "last night's run happened")
+            self.v.path("state", "schedule.json").unlink()  # what `brain schedule remove` does to the vault
+            save_json(self.v.path("state", "nightly.json"), {"t": ago(50)})
+            start()
+            self.assertEqual(popen.call_count, 1, "unscheduled again: no catch-up either")
+
+    def test_only_one_run_gets_the_lock(self):
+        self.assertTrue(nightly._lock(self.v))
+        self.assertFalse(nightly._lock(self.v), "a second run in the same second must not start")
+        self.v.path("state", "nightly.lock").unlink()
+        self.assertTrue(nightly._lock(self.v))
+
+
+class TestMachines(VaultCase):
+    """Two laptops share one vault through git: each writes only its own files, so the sync never stops."""
+
+    IDENT = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+
+    def git(self, cwd, *args):
+        return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True)
+
+    def on(self, machine):
+        return mock.patch.dict(os.environ, {**self.IDENT, "BRAIN_HOST": machine})
+
+    def test_two_laptops_learn_together_without_a_conflict(self):
+        from self_improving_brain.config import open_vault
+        bare = Path(self.tmp.name) / "remote.git"
+        self.git(self.tmp.name, "init", "-q", "--bare", "-b", "main", str(bare))
+        self.git(self.root, "init", "-q", "-b", "main")
+        self.git(self.root, "remote", "add", "origin", str(bare))
+        with self.on("laptop"):
+            append_jsonl(learn.drafts_path(self.v), held(1, "s1"))
+            self.assertEqual(learn.adopt(self.v)["waiting"], 1, "once is not a pattern")
+            self.assertEqual(nightly.sync(self.v), "synced")
+        other = Path(self.tmp.name) / "desktop-vault"
+        self.git(self.tmp.name, "clone", "-q", str(bare), str(other))
+        w = open_vault(str(other))
+        with self.on("desktop"):
+            append_jsonl(learn.drafts_path(w), held(2, "s2"))
+            self.assertEqual(len(learn.adopt(w)["rules"]), 1, "the same correction on the other laptop: a rule")
+            self.assertEqual(nightly.sync(w), "synced")
+        with self.on("laptop"):  # the same night, before it pulled: its own drafts and inbox change too
+            append_jsonl(learn.drafts_path(self.v), held(3, "s3", rule="Run the linter before committing.",
+                                                         quote="you forgot the linter"))
+            inbox.add(self.v, "fact", "The staging server is staging.example.internal.")
+            learn.adopt(self.v)
+            self.assertEqual(nightly.sync(self.v), "synced", "no file both machines write")
+            self.assertEqual(learn.adopt(self.v)["rules"], [], "the desktop's rule is not learned a second time")
+        rules = [l.rule for l in Library(self.root).lessons()]
+        self.assertEqual(rules.count("Never push to main; open a pull request."), 1)
+        self.assertEqual({d["id"]: d["status"] for d in learn.all_drafts(self.v)}["d-1"], "approved")
+        mine = {d["id"] for d in read_jsonl(learn.drafts_path(self.v))}
+        self.assertNotIn("d-2", mine, "the laptop never rewrites the desktop's drafts")
+
+    def test_the_old_shared_files_become_this_machines(self):
+        from self_improving_brain import trust
+        self.v.path("drafts.jsonl").write_text(json.dumps(held(1, "s1")) + "\n")
+        self.v.path("inbox.jsonl").write_text(json.dumps({"id": "i-1", "type": "fact", "claim": "The api runs on 8080.",
+                                                          "status": "open"}) + "\n")
+        self.v.path("trust.json").write_text(json.dumps({"trusted": {"L-a": {"h": "x", "t": "2026-10-01T10:00:00"}},
+                                                         "pending": {}}))
+        with self.on("laptop"):
+            self.assertEqual([d["id"] for d in learn.all_drafts(self.v)], ["d-1"])
+            self.assertEqual([i["id"] for i in inbox.items(self.v)], ["i-1"])
+            self.assertIn("L-a", trust.load(self.v)["trusted"])
+        for old in ("drafts.jsonl", "inbox.jsonl", "trust.json"):
+            self.assertFalse(self.v.path(old).exists(), old)
+        self.assertTrue(self.v.path("drafts", "laptop.jsonl").exists())
+        self.assertTrue(self.v.path("trust", "laptop.json").exists())
+
+    def test_trust_is_merged_across_machines(self):
+        from self_improving_brain import trust
+        from self_improving_brain.notes import Lesson
+        l = Lesson(id="L-x", note="n", rule="Never push to main.", mechanism="reflex")
+        with self.on("laptop"):
+            trust.record(self.v, [l], "learned")
+        with self.on("desktop"):
+            self.assertEqual(trust.effective(self.v, [l]), [l], "trusted on the laptop counts here too")
+            changed = Lesson(id="L-x", note="n", rule="Always push to main.", mechanism="reflex")
+            self.assertEqual(trust.mark_pending(self.v, [changed], "s", "Edit"), ["L-x"])
+        with self.on("laptop"):
+            self.assertEqual(trust.effective(self.v, [changed]), [], "an agent's edit on the desktop stays silent here")
+        self.assertFalse(self.v.path("trust", "laptop.json").read_text().count("Edit"))
+
+    def test_the_machine_name_is_fixed_on_first_use(self):
+        from self_improving_brain import util
+        os.environ.pop("BRAIN_HOST", None)
+        (Path(os.environ["XDG_CONFIG_HOME"]) / "self-improving-brain" / "host").unlink(missing_ok=True)
+        with mock.patch.object(util.socket, "gethostname", return_value="Urs-MacBook.fritz.box"):
+            self.assertEqual(util.host(), "urs-macbook")
+        with mock.patch.object(util.socket, "gethostname", return_value="mac.home"):
+            self.assertEqual(util.host(), "urs-macbook", "a new network must not start a second set of files")
+
+    def test_your_edit_survives_a_pull_that_conflicts(self):
+        from self_improving_brain.config import open_vault
+        bare = Path(self.tmp.name) / "remote.git"
+        self.git(self.tmp.name, "init", "-q", "--bare", "-b", "main", str(bare))
+        self.git(self.root, "init", "-q", "-b", "main")
+        self.git(self.root, "remote", "add", "origin", str(bare))
+        note = self.note("20-areas/infra.md", "---\nname: infra\ndescription: servers\n---\n# Infra\n\nPort 8080.\n")
+        with self.on("laptop"):
+            self.assertEqual(nightly.sync(self.v), "synced")
+        other = Path(self.tmp.name) / "desktop-vault"
+        self.git(self.tmp.name, "clone", "-q", str(bare), str(other))
+        (other / "20-areas/infra.md").write_text(note.read_text().replace("8080", "9090"))
+        with self.on("desktop"):
+            self.assertEqual(nightly.sync(open_vault(str(other))), "synced")
+        note.write_text(note.read_text().replace("8080", "7070"))  # not committed yet, the same line
+        with self.on("laptop"):
+            self.assertTrue(nightly.pull(self.v).startswith("pull failed"))
+        self.assertIn("7070", note.read_text(), "your edit stays where you made it")
+        self.assertNotIn("<<<<<<<", note.read_text())
+        self.assertFalse(any((self.root / ".git" / d).exists() for d in ("rebase-merge", "rebase-apply")),
+                         "no half-done rebase")

@@ -314,10 +314,10 @@ A rule is a callout **in the note that owns the topic**, so there is no separate
 
 ## 🌙 Every night, on your laptop
 
-At 03:17 (launchd, cron or Task Scheduler; a run the Mac slept through catches up when it wakes), the brain runs one pass and backs itself up to your **private** repo:
+At 03:17 (launchd, cron or Task Scheduler; a night the laptop slept through runs at your next session), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
-read sessions → weigh corrections* → adopt rules → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
+pull → read sessions → weigh corrections* → adopt rules → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
 ```
 
 \*These steps use the LLM CLI that setup found, under a hard daily budget: `llm_budget_usd` 0.10 and `llm_max_calls` 40. When the budget is used up, the rest waits for the next night. The brain never holds an API key. Another CLI: `brain config llm_cmd "codex exec -"` or `"ollama run llama3.1"`.
@@ -437,7 +437,7 @@ Yes: `brain setup --vault ~/notes`. It adds `.brain/`, a generated `INDEX.md` an
 <details>
 <summary><b>What if my laptop dies? Multiple machines?</b></summary>
 
-`brain setup --github` creates a **private** GitHub repo for your brain (with the `gh` CLI); any other private remote works with one git command. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>`. Every machine keeps its own events and journal, so every laptop learns from all the others. If two machines change the same file on the same night, the sync stops and `brain` tells you, instead of guessing.
+`brain setup --github` creates a **private** GitHub repo for your brain (with the `gh` CLI); any other private remote works with one git command. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>`. Each machine writes its own file for everything the brain keeps (drafts, inbox, trust, journal, events) and starts each night from what the others pushed, so every laptop learns from all the others and a rule is learned once. Only your notes are shared files: if two machines change the same note on the same night, the sync stops and `brain` tells you, instead of guessing.
 </details>
 
 ## 🗺️ Roadmap

@@ -111,7 +111,7 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     report = []
     lib = Library(v.root)
     hubs = ", ".join(n.name for n in lib.notes.values() if n.is_hub) or "(none)"
-    for it in inbox.items(v)[:limit]:
+    for it in inbox.items(v, mine=True)[:limit]:
         if it.get("conflict"):
             continue
         cands = candidates(lib, it["claim"])
@@ -207,9 +207,9 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
 
 
 def _flag_conflict(v: Vault, item_id: str, reason: str) -> None:
-    from .util import read_jsonl, write_jsonl
-    items = read_jsonl(inbox.path(v))
+    from . import ledger
+    items = inbox.items(v, include_done=True)
     for it in items:
         if it["id"] == item_id:
             it["conflict"] = reason
-    write_jsonl(inbox.path(v), items)
+    ledger.save(v, "inbox", items, inbox.RANK)

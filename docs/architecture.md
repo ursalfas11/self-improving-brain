@@ -45,7 +45,8 @@ can change them with confidence.
 | `cache.py` | parsed vault + BM25 index cached in `~/.cache/self-improving-brain/`, keyed by a fingerprint of every note's size and mtime plus the code version |
 | `setup.py` | `brain setup` without questions: vault, agents, PATH, history baseline, LLM CLI, nightly schedule, `--github` backup |
 | `adapters.py` | install/uninstall into Claude Code, Codex, Gemini, project `AGENTS.md`; the plugin's hooks and commands |
-| `nightly.py` | the nightly pass with a lock, its launchd/cron/Task Scheduler entry, git sync |
+| `nightly.py` | the nightly pass with a lock, its launchd/cron/Task Scheduler entry, the catch-up check, git pull and sync |
+| `ledger.py` | records several machines change (drafts, inbox): one file per machine, merged on read |
 | `lint.py` | MUST: secrets, dead links, duplicate lesson ids. SHOULD: orphans, stale projects, near-duplicates, trigger-less lessons |
 | `trust.py` | the trust ledger: which lessons count, in which exact form (fingerprint), and which wait for `brain trust` |
 | `handoff.py` | PreCompact handoff: your last words verbatim, the open question, files in flight; `brain resume` |
@@ -91,6 +92,7 @@ one event per call: characters injected, injections, writes checked, violations.
 ## The nightly pass
 
 ```
+pull       what the other machines pushed (git sync on)                    no LLM
 learn      new transcripts: corrections → drafts, turns → events          no LLM
 judge*     draft groups → rule | fact | once | noise                      ≤ 3 batches of 20 groups
 adopt      fixed rules: lessons, facts, sharpenings, escalations          no LLM
@@ -102,8 +104,10 @@ replay · cache · autotune · index · lint · sync
 
 \*LLM steps. They are skipped with `brain nightly --quick` and stop when the day's budget is used up
 (`llm_budget_usd` 0.10, `llm_max_calls` 40, booked per call in `.brain/state/llm.json` on each machine;
-the cost comes from the `total_cost_usd` Claude Code reports, other CLIs count calls). A lock keeps two
-runs from overlapping. `claude` runs headless with no tools, no settings, no MCP servers and no saved session,
+the cost comes from the `total_cost_usd` Claude Code reports, other CLIs count calls). A lock, taken in one
+step, keeps two runs from overlapping. A night the laptop slept through (cron and the Task Scheduler skip it,
+launchd skips it when the Mac was off) starts at the next session: the session-start hook sees that the
+scheduled run is more than 26 hours old and starts it in the background. `claude` runs headless with no tools, no settings, no MCP servers and no saved session,
 and every prompt starts with `[self-improving-brain:internal]`, so these transcripts are never mined.
 
 ## Adoption policy
@@ -197,6 +201,19 @@ measured in [`eval/`](../eval/README.md).
 - `llm_cmd` and `llm_timeout` describe the machine, not the vault: they live in
   `~/.config/self-improving-brain/config.json` and are never synced to your other laptops.
 
+## Several machines
+
+Everything the brain itself writes is one file per machine: `drafts/`, `inbox/`, `rejected/`, `trust/`,
+`journal/`, `events/` and `tally/` under `.brain/`, each with a `<host>.jsonl` or `<host>.json`. A machine
+writes only its own file, so two laptops never edit the same lines and the git sync does not stop over them.
+Reading merges all files. A draft or an inbox item only moves forward (open → held → approved), so per id the
+record whose status got furthest wins; when a machine changes a record another machine wrote (it adopted a
+rule from drafts of both), the changed copy goes into its own file. Each machine judges and files only what it
+found itself. The name of the machine is fixed on first use (`~/.config/self-improving-brain/host`), because a
+laptop's hostname can change with the network. The nightly run pulls before it learns, so a rule adopted on
+one laptop is not adopted again on the other. Vaults from 0.1 move their shared files into this machine's
+file on first use.
+
 ## Repo awareness
 
 At session start the hook resolves the git repo of `cwd` and injects up to three notes that declare
@@ -204,8 +221,8 @@ At session start the hook resolves the git repo of `cwd` and injects up to three
 
 ## Trust ledger
 
-A lesson is plain text in a note, so anything that can write a file can plant one. `.brain/trust.json`
-records, for every lesson, the fingerprint (rule, mechanism, triggers, check) it had when it was trusted.
+A lesson is plain text in a note, so anything that can write a file can plant one. `.brain/trust/<host>.json`
+(one file per machine, merged on read: the latest entry per lesson counts) records, for every lesson, the fingerprint (rule, mechanism, triggers, check) it had when it was trusted.
 
 - `trust_mode agent` (default): a lesson you wrote by hand counts once the brain has seen it. A lesson that
   appears or changes while an agent's tool call runs is `pending` and never reaches the agent until

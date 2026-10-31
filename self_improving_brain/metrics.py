@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from . import events
 from .config import Vault
 from .notes import Library
-from .util import days_since, iso_week, read_jsonl, save_json, terms
+from .util import days_since, iso_week, save_json, terms
 
 
 def _within(t0: str, t1: str, seconds: int) -> bool:
@@ -81,7 +81,8 @@ def _sessions(v: Vault) -> dict[str, dict]:
 
 
 def weekly_curve(v: Vault, weeks: int = 8) -> list[dict]:
-    noise = {d.get("id") for d in read_jsonl(v.path("drafts.jsonl")) if d.get("status") == "noise"}
+    from .learn import all_drafts
+    noise = {d.get("id") for d in all_drafts(v) if d.get("status") == "noise"}
     false_alarms = Counter(e.get("session", "") for e in events.all_events(v, "correction") if e.get("draft") in noise)
     per = defaultdict(lambda: [0, 0])
     for s, e in _sessions(v).items():

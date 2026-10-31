@@ -1,5 +1,6 @@
 """The autonomous loop. Runs on your laptop via launchd (macOS), cron (Linux) or the Task Scheduler — no server.
 
+  pull       what your other machines learned (if the vault syncs through git)
   learn      mine new transcripts for your corrections (no LLM)
   judge      the LLM sorts them: lasting rule, one-off steering, fact to remember, or noise   (budgeted)
   adopt      policy, no LLM: what you said twice or as "always/never" becomes a rule; a rule that comes
@@ -25,13 +26,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from xml.sax.saxutils import escape
 
-from . import curate, distill, extract, inbox, learn, llm, maplib, metrics
 from .config import Vault
-from .lint import lint
-from .notes import Library
-from .util import day_label, days_since, now_iso, save_json
+from .util import day_label, days_since, load_json, now_iso, save_json
 
 LABEL = "dev.self-improving-brain.nightly"
 
@@ -83,9 +80,8 @@ def backup_state(root: Path) -> tuple[str, str]:
     return url, (f"{ahead} commits not pushed yet" if ahead not in ("", "0") else "")
 
 
-def sync(v: Vault, message: str = "brain: sync") -> str:
-    if not (v.root / ".git").exists():
-        return "no git repo"
+def _commit(v: Vault, message: str) -> str:
+    """Commit what the brain may commit. '' when that worked, else the problem."""
     if v.get("git_owned"):
         git(v, "add", "-A")
     else:  # a repo the brain joined: notes and brain state only, never your other files
@@ -94,6 +90,15 @@ def sync(v: Vault, message: str = "brain: sync") -> str:
         c = git(v, "commit", "-q", "-m", message)
         if c.returncode != 0:
             return "commit failed (secret scan?): " + (c.stdout + c.stderr).strip()[:200]
+    return ""
+
+
+def sync(v: Vault, message: str = "brain: sync") -> str:
+    if not (v.root / ".git").exists():
+        return "no git repo"
+    problem = _commit(v, message)
+    if problem:
+        return problem
     names = git(v, "remote").stdout.split()
     if not names:
         return "committed (no remote)"
@@ -110,25 +115,60 @@ def sync(v: Vault, message: str = "brain: sync") -> str:
     return "synced" if push.returncode == 0 else "push failed: " + push.stderr.strip()[:200]
 
 
+def pull(v: Vault) -> str:
+    """Start from what the other machines pushed, so no rule is learned twice. Your edits of the day are committed
+    first, so the rebase never has to set them aside. A conflict is left to `sync`, which reports it."""
+    if git(v, "rev-parse", "--abbrev-ref", "@{u}").returncode != 0:
+        return "no upstream"
+    problem = _commit(v, "brain: sync")
+    if problem:
+        return problem
+    r = git(v, "pull", "--rebase", "--autostash", "-q")
+    if r.returncode != 0:
+        git(v, "rebase", "--abort")
+        return "pull failed: " + r.stderr.strip()[:200]
+    return "pulled"
+
+
 def _locked(v: Vault) -> bool:
-    """Another run is busy (the one `brain setup` starts, and launchd at night, must not overlap)."""
+    """Another run is busy (the one `brain setup` starts, a catch-up and launchd at night must not overlap)."""
     import time
     lock = v.path("state", "nightly.lock")
     try:
         pid, started = lock.read_text().split()
-        os.kill(int(pid), 0)
+        if os.name != "nt":  # on Windows os.kill(pid, 0) would end that process: there the age alone decides
+            os.kill(int(pid), 0)
         return time.time() - float(started) < 3 * 3600
     except (OSError, ValueError):
         return False
 
 
-def run(v: Vault, quick: bool = False) -> dict:
+def _lock(v: Vault) -> bool:
+    """Take the lock in one step, so two runs starting in the same second cannot both get it."""
     import time
-    if _locked(v):
-        return {"t": now_iso(), "skipped": "another nightly run is busy"}
     lock = v.path("state", "nightly.lock")
     lock.parent.mkdir(parents=True, exist_ok=True)
-    lock.write_text(f"{os.getpid()} {time.time()}")
+    for _ in range(2):
+        try:
+            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if _locked(v):
+                return False
+            try:  # left behind by a run that died
+                lock.unlink()
+            except OSError:
+                pass
+            continue
+        with os.fdopen(fd, "w") as fh:
+            fh.write(f"{os.getpid()} {time.time()}")
+        return True
+    return False
+
+
+def run(v: Vault, quick: bool = False) -> dict:
+    if not _lock(v):
+        return {"t": now_iso(), "skipped": "another nightly run is busy"}
+    lock = v.path("state", "nightly.lock")
     try:
         return _run(v, quick)
     finally:
@@ -139,6 +179,10 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 
 def _run(v: Vault, quick: bool) -> dict:
+    # imported here, so the hooks that only ask `overdue()` stay fast
+    from . import curate, distill, extract, inbox, learn, llm, maplib, metrics
+    from .lint import lint
+    from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": []}
     s = rep["steps"]
 
@@ -153,6 +197,8 @@ def _run(v: Vault, quick: bool) -> dict:
             return None
         return s[name]
 
+    if v.get("git_sync") and not quick and (v.root / ".git").exists():
+        step("pull", lambda: pull(v))
     step("learn", lambda: learn.scan(v))
     think = llm.available(v) and not quick
     if think:
@@ -216,6 +262,7 @@ TASK = "self-improving-brain-nightly"
 
 
 def schedule_plan(v: Vault, hour: int = 3) -> tuple[str, str]:
+    from xml.sax.saxutils import escape  # pulls in urllib: not on the path of every hook
     cmd = _cmd(v)
     log = v.path("state", "nightly.log")
     if platform.system() == "Windows":
@@ -240,23 +287,38 @@ def schedule_plan(v: Vault, hour: int = 3) -> tuple[str, str]:
     return "crontab", line
 
 
+def overdue(v: Vault) -> bool:
+    """The scheduled run was missed: the laptop slept or was off at night (cron and the Task Scheduler skip it then,
+    launchd skips it when the Mac was off). The first session after that starts it."""
+    import datetime as dt
+    plan = load_json(v.path("state", "schedule.json"), None)
+    if not isinstance(plan, dict) or v.path("state", "nightly.lock").exists():
+        return False
+    last = str(load_json(v.path("state", "nightly.json"), {}).get("t") or plan.get("t") or "")
+    try:
+        return (dt.datetime.now() - dt.datetime.fromisoformat(last[:19])).total_seconds() > 26 * 3600
+    except ValueError:
+        return True
+
+
 def schedule_install(v: Vault, hour: int = 3) -> str:
     target, body = schedule_plan(v, hour)
     v.path("state").mkdir(parents=True, exist_ok=True)
+    save_json(v.path("state", "schedule.json"), {"t": now_iso(), "hour": hour})
     if target == "schtasks":
         subprocess.run(body, check=True, shell=True, capture_output=True)
-        return f"installed Windows task {TASK} (daily at {hour:02d}:17 while the PC is on)"
+        return f"installed Windows task {TASK} (daily at {hour:02d}:17; a missed night runs at your next session)"
     if target == "crontab":
         cur = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
         lines = [l for l in cur.splitlines() if LABEL not in l] + [body]
         subprocess.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True, check=True)
-        return "installed cron job (missed runs while the laptop sleeps are skipped; launchd/anacron catch up)"
+        return "installed cron job (a night the laptop slept through runs at your next session)"
     p = Path(target)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(body, encoding="utf-8")
     subprocess.run(["launchctl", "unload", str(p)], capture_output=True)
     subprocess.run(["launchctl", "load", str(p)], capture_output=True)
-    return f"installed {p} (launchd runs a missed job when the Mac wakes up)"
+    return f"installed {p} (a night the Mac slept through runs when it wakes, or at your next session)"
 
 
 def schedule_installed() -> bool:
@@ -272,7 +334,12 @@ def schedule_installed() -> bool:
     return False
 
 
-def schedule_remove() -> str:
+def schedule_remove(v: Vault | None = None) -> str:
+    if v is not None:  # no catch-up runs either
+        try:
+            v.path("state", "schedule.json").unlink()
+        except OSError:
+            pass
     if platform.system() == "Windows":
         r = subprocess.run(["schtasks", "/Delete", "/F", "/TN", TASK], capture_output=True)
         return f"removed Windows task {TASK}" if r.returncode == 0 else "nothing installed"

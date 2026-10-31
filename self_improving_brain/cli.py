@@ -317,7 +317,10 @@ def c_uninstall(a):
                 print(f"{c}: {mcp.uninstall(c)}")
         except (ValueError, OSError) as e:
             print(f"{c}: {e}")
-    print(nightly.schedule_remove())
+    try:
+        print(nightly.schedule_remove(_vault(a)))
+    except NotAVault:
+        print(nightly.schedule_remove())
     try:
         print(f"Your notes stay where they are ({_home(_vault(a).root)}); delete the folder if you want them gone.")
     except NotAVault:
@@ -595,7 +598,7 @@ def c_schedule(a):
         print(f"# would write to: {target}\n{body}")
         return 0
     if a.action == "remove":
-        print(nightly.schedule_remove())
+        print(nightly.schedule_remove(v))
         return 0
     print(nightly.schedule_install(v, a.hour))
     return 0
