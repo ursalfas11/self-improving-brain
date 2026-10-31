@@ -10,6 +10,8 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _sandbox  # noqa: E402,F401  (first: a throwaway home)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from self_improving_brain import adapters, cli, hooks, inbox, journal, learn, llm, metrics, nightly, replay  # noqa: E402
@@ -186,7 +188,20 @@ class TestHooks(VaultCase):
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_heredoc_body_does_not_trigger(self):
-        self.assertEqual(hooks.command_head("cat > f <<EOF\ngit push --force\nEOF"), "cat > f ")
+        self.assertEqual(hooks.command_head("cat > f <<EOF\ngit push --force\nEOF"), "cat > f")
+
+    def test_guards_see_the_whole_command(self):
+        self.note("20-areas/git.md", "---\nname: git\ndescription: git rules\n---\n# Git\n\n"
+                  "> [!lesson]- L-no-force\n> rule: Ask before a force push.\n> mechanism: guard\n"
+                  "> tools: Bash\n> commands: git\\s+push\\s+.*--force\n")
+        ask = lambda cmd: hooks.pre_tool(self.v, {"session_id": "g", "tool_name": "Bash", "tool_input": {
+            "command": cmd}}).get("hookSpecificOutput", {}).get("permissionDecision")
+        for cmd in ("git push --force origin main", "cd ~/work/shop\ngit push --force origin main",
+                    "git fetch origin && \\\n  git push --force origin main",
+                    "git commit -m \"$(cat <<'EOF'\nfix\nEOF\n)\" && git push --force origin main"):
+            self.assertEqual(ask(cmd), "ask", cmd)
+        for cmd in ("git status", "ls -la", "npm test", "cat >> notes.md <<'EOF'\ngit push --force\nEOF"):
+            self.assertIsNone(ask(cmd), f"`tools: Bash` narrows, the command decides: {cmd}")
 
     def test_read_feeds_learning(self):
         hooks.prompt(self.v, {"session_id": "s1", "prompt": "where do lessons go when no topic note fits"})

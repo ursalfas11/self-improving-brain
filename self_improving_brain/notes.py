@@ -313,14 +313,14 @@ def strip_code(body: str) -> str:
     return INLINE_CODE.sub("", FENCE.sub("", body))
 
 
-def load_note(path: Path, root: Path) -> Note | None:
+def load_note(path: Path, root: Path, name: str | None = None) -> Note | None:
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
     meta, body = parse_frontmatter(text)
     rel = path.relative_to(root).as_posix()
-    name = str(meta.get("name") or path.stem)
+    name = name or str(meta.get("name") or path.stem)
     title, sections = split_sections(body)
     prose = strip_code(body)
     links = []
@@ -347,12 +347,16 @@ class Library:
         self.root = root
         self.notes: dict[str, Note] = {}
         self.by_stem: dict[str, str] = {}
+        self.shadowed: dict[str, str] = {}  # a note that goes by its path -> the note that has its name
         for p in iter_note_paths(root):
             n = load_note(p, root)
             if n is None:
                 continue
+            if n.name in self.notes:  # two notes share a name: the second goes by its path, and lint names both
+                first, n = n.name, load_note(p, root, n.rel.removesuffix(".md"))
+                self.shadowed[n.name] = first
             self.notes[n.name] = n
-            self.by_stem[p.stem.lower()] = n.name
+            self.by_stem.setdefault(p.stem.lower(), n.name)
 
     def find(self, ref: str) -> Note | None:
         ref = ref.strip().removesuffix(".md")

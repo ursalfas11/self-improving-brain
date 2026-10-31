@@ -77,9 +77,34 @@ def tool_match(lesson: Lesson, tool: str) -> bool:
     return any(tool == t or tool.endswith("__" + t) for t in lesson.tools)
 
 
+def fires(lesson: Lesson, tool: str, cmd: str, paths: list[str]) -> bool:
+    """Does a proposed action trigger the lesson? Its tools narrow, its commands and paths decide: `tools: Bash` with
+    a command regex fires on that command, not on every shell call. Tools alone fire on that tool."""
+    if lesson.tools and not tool_match(lesson, tool):
+        return False
+    if lesson.commands or lesson.paths:
+        return (regex_match(lesson.commands, cmd) or any(regex_match(lesson.paths, p) for p in paths)
+                or bool(cmd and regex_match(lesson.paths, cmd)))
+    return bool(lesson.tools)
+
+
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][\w-]*)\1")
+
+
 def command_head(cmd: str) -> str:
-    """First line, heredoc bodies stripped: writing a lesson via heredoc must not trigger it."""
-    return (cmd.split("<<", 1)[0].splitlines() or [""])[0] if cmd else ""
+    """The command as the shell runs it: every line (a guard must see `cd x` + newline + `git push --force`),
+    continuation lines joined, heredoc bodies left out (writing a lesson via a heredoc must not trigger it)."""
+    out, end = [], None
+    for line in (cmd or "").replace("\\\n", " ").split("\n"):
+        if end is not None:
+            if line.strip() == end:
+                end = None
+            continue
+        m = HEREDOC.search(line)
+        if m:
+            end, line = m.group(2), line[:m.start()] + line[m.end():]
+        out.append(line)
+    return "\n".join(out).strip()
 
 
 def regex_match(rx: str, text: str) -> bool:
@@ -204,7 +229,8 @@ def prompt(v: Vault, payload: dict) -> dict:
     lines = []
     if chosen:
         st["shown"] += [h.note.name for h in chosen]
-        lines.append(f"BRAIN-RECALL (open with `{cli_name()} read <note>` if relevant): " + " · ".join(
+        # `brain` is spelled out once, in the session start line; here it stays short
+        lines.append("BRAIN-RECALL (open with `brain read <note>` if relevant): " + " · ".join(
             f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
     for l in trust.effective(v, cache.lessons(v)):
         if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words"):
@@ -261,8 +287,7 @@ def guard_for(lessons, tool: str, cmd: str, paths: list[str], content: str = "")
     """(first guard lesson that fires, reflex lessons whose triggers fire) for one proposed action."""
     reflexes = []
     for l in lessons:
-        fired = (tool_match(l, tool) or regex_match(l.commands, cmd)
-                 or any(regex_match(l.paths, p) for p in paths) or (cmd and regex_match(l.paths, cmd)))
+        fired = fires(l, tool, cmd, paths)
         if l.mechanism == "guard":
             if fired or (l.check and check_hits([l], tool, cmd, paths, content)):
                 return l, reflexes
@@ -322,14 +347,6 @@ def pre_tool(v: Vault, payload: dict) -> dict:
 READ_CMD = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\"']?\s+(?:--vault\s+\S+\s+)?read\s+[\"']?([\w\-./]+)")
 
 
-def _touches_vault(v: Vault, payload: dict, command: str) -> bool:
-    cwd = str(payload.get("cwd") or "")
-    home = str(Path.home())
-    root = str(v.root)
-    return bool((cwd and _in(cwd, v.root)) or root in command
-                or (root.startswith(home) and "~" + root[len(home):] in command))
-
-
 def _rule_checks(v: Vault, session: str, tool: str, cmd: str, paths: list[str], content: str) -> list[str]:
     """Rules that check themselves: a lesson's `check:` matched what the agent just did."""
     lessons = [l for l in trust.effective(v, cache.lessons(v)) if l.check and l.mechanism != "guard"]
@@ -359,8 +376,8 @@ def post_tool(v: Vault, payload: dict) -> dict:
             n = cache.library(v).find(m.group(1))
             if n:
                 events.log(v, "read", session=session, note=n.name, via="cli")
-        if _touches_vault(v, payload, full):
-            trust.mark_pending(v, cache.lessons(v), session, "Bash")
+        # a lesson that changed while a shell command ran was written by the agent, whatever path the command used
+        trust.mark_pending(v, cache.lessons(v), session, "Bash")
         lines += _rule_checks(v, session, tool, command_head(full), [], "")
         return _out("PostToolUse", "\n".join(lines)) if lines else {}
     in_vault = [p for p in paths if p.endswith(".md") and _in(p, v.root)]
@@ -381,7 +398,7 @@ def post_tool(v: Vault, payload: dict) -> dict:
         silent = trust.mark_pending(v, [l for n in edited for l in n.lessons], session, tool)
         if silent:
             lines.append(f"BRAIN: you wrote the lesson(s) {', '.join(silent)}. They stay silent until the user checks them "
-                         f"with `{cli_name()} trust` — tell the user.")
+                         "with `brain trust` — tell the user.")
     lines += _rule_checks(v, session, tool, "", paths, written_text(ti))
     found = [str(f) for n in edited for f in lint_note(n, lib, int(v.get("stale_days")))[:5]]
     if found:

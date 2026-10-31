@@ -11,12 +11,14 @@ import sys
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _sandbox  # noqa: E402,F401  (first: a throwaway home)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from test_brain import VaultCase, run_cli, write_claude  # noqa: E402
 
-from self_improving_brain import curate, distill, events, extract, hooks, inbox, journal, learn, llm, metrics, nightly  # noqa: E402
+from self_improving_brain import (curate, distill, events, extract, hooks, inbox, journal, learn, ledger, lint,  # noqa: E402
+                                  llm, metrics, nightly, trust)
 from self_improving_brain.notes import Library  # noqa: E402
 from self_improving_brain.transcripts import parse  # noqa: E402
 from self_improving_brain.util import append_jsonl, read_jsonl, today  # noqa: E402
@@ -231,7 +233,9 @@ class TestJournalAndFacts(VaultCase):
             journal.undo(self.v, "2")  # the note changed after it was created: not silently thrown away
         journal.undo(self.v, "1")
         self.assertNotIn("idempotent", p.read_text())
-        journal.undo(self.v, "1")
+        with self.assertRaises(ValueError):
+            journal.undo(self.v, "1")  # it keeps its number: a second `undo 1` does not hit the next change
+        journal.undo(self.v, "2")
         self.assertFalse(p.exists())
         self.assertNotIn("[[payments]]", (self.root / "00-hubs/hub-projects.md").read_text())
 
@@ -588,3 +592,141 @@ class TestMachines(VaultCase):
         self.assertNotIn("<<<<<<<", note.read_text())
         self.assertFalse(any((self.root / ".git" / d).exists() for d in ("rebase-merge", "rebase-apply")),
                          "no half-done rebase")
+
+
+class TestSafeguards(VaultCase):
+    """Each test is one way an unattended night could have hurt your notes, your rules or your history."""
+
+    def fact(self, answer, claim="The staging DB moved to eu-west-2 in October."):
+        self.v.cfg["llm_cmd"] = "x"
+        inbox.add(self.v, "fact", claim)
+        with mock.patch.object(llm, "ask_json", lambda v, p: answer):
+            return distill.auto(self.v)
+
+    def test_a_fact_never_rewrites_a_rule(self):
+        p = self.note("20-areas/deploy.md", "---\nname: deploy\ndescription: Deploys\n---\n# Deploy\n\n"
+                      "> [!lesson]- L-tag\n> rule: Tag every release before deploying.\n\nPart of [[hub-brain]].\n")
+        out = self.fact({"action": "update", "note": "deploy", "old": "Tag every release before deploying.",
+                         "text": "Releases are not tagged any more.", "reason": "changed"})
+        self.assertIn("would change a rule", out[0])
+        self.assertIn("Tag every release", p.read_text())
+
+    def test_a_new_note_never_takes_a_name_you_use(self):
+        self.note("10-projects/payments.md", "---\nname: payments\ndescription: Old\n---\n# Payments\n\nPart of [[hub-brain]].\n")
+        out = self.fact({"action": "new", "title": "Payments", "description": "How payments work",
+                         "text": "Payments use Stripe webhooks."}, "Payments use Stripe webhooks, not polling.")
+        self.assertIn("payments-2.md", out[0])
+        self.assertIn("Old", (self.root / "10-projects/payments.md").read_text())
+
+    def test_items_left_for_you_do_not_block_the_queue(self):
+        self.v.cfg["llm_cmd"] = "x"
+        for claim in ("The staging DB moved to eu-west-2.", "Deploys run on Fridays only.", "Invoices go out monthly."):
+            inbox.add(self.v, "fact", claim)
+        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
+            distill.auto(self.v, limit=1)
+        first = inbox.items(self.v)[0]
+        self.assertEqual((first.get("tries"), first.get("conflict")), (1, None), "one stumble: tried again next night")
+        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
+            distill.auto(self.v, limit=1)
+        self.assertTrue(inbox.items(self.v)[0].get("conflict"), "twice: left for you")
+        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
+            distill.auto(self.v, limit=1)
+        self.assertEqual(inbox.items(self.v)[1].get("tries"), 1, "the next item gets its turn")
+
+    def test_a_record_written_meanwhile_is_kept(self):
+        inbox.add(self.v, "fact", "First claim about the staging DB.")
+        items = inbox.items(self.v, include_done=True)
+        inbox.add(self.v, "fact", "Second claim, from a session that just ended.")
+        items[0]["status"] = "done"
+        ledger.save(self.v, "inbox", items, inbox.RANK)
+        self.assertEqual({i["claim"][:6]: i["status"] for i in inbox.items(self.v, include_done=True)},
+                         {"First ": "done", "Second": "open"})
+
+    def test_one_broken_group_does_not_stop_the_night(self):
+        for d in (held(1, "s1"), held(2, "s2"),
+                  held(3, "s1", rule="Write commit messages in English.", quote="commit messages in english please",
+                       suggest={"mechanism": "reflex", "words": ["commit", "english"]}),
+                  held(4, "s2", rule="Write commit messages in English.", quote="commit messages in english please",
+                       suggest={"mechanism": "reflex", "words": ["commit", "english"]})):
+            append_jsonl(learn.drafts_path(self.v), d)
+        real, calls = learn._adopt_group, []
+
+        def flaky(*a, **kw):
+            calls.append(1)
+            if len(calls) == 1:
+                raise OSError("disk full")
+            return real(*a, **kw)
+        with mock.patch.object(learn, "_adopt_group", flaky):
+            out = learn.adopt(self.v)
+        self.assertEqual(len(out["rules"]), 1)
+        self.assertIn("disk full", " ".join(out["errors"]))
+
+    def test_the_brain_never_vouches_for_a_rule_that_waits_for_you(self):
+        self.note("20-areas/ops.md", "---\nname: ops\ndescription: Ops\n---\n# Ops\n\n"
+                  "> [!Lesson]+ L-rm A title\n> rule: Ask before deleting a folder.\n> mechanism: guard\n"
+                  "> commands: rm -rf\n\nPart of [[hub-brain]].\n")
+        l = next(x for x in Library(self.root).lessons() if x.id == "L-rm")
+        self.assertFalse(trust.vouched(self.v, l))
+        l = learn.set_lesson_field(self.v, "L-rm", "words", "delete folder")
+        self.assertEqual(l.words, ["delete folder"], "a titled header in any case is found")
+        self.assertFalse(trust.vouched(self.v, l), "still waits for `brain trust`")
+
+    def test_a_guard_on_the_shell_asks_only_on_its_command(self):
+        self.note("20-areas/git2.md", "---\nname: git2\ndescription: Git\n---\n# Git\n\n"
+                  "> [!lesson]- L-force\n> rule: Ask before a force push.\n> mechanism: guard\n> tools: Bash\n"
+                  "> commands: git push .*--force\n\nPart of [[hub-brain]].\n")
+        l = next(x for x in Library(self.root).lessons() if x.id == "L-force")
+        self.assertFalse(hooks.fires(l, "Bash", "git status", []))
+        self.assertTrue(hooks.fires(l, "Bash", "git push origin main --force", []))
+        self.assertFalse(hooks.fires(l, "Edit", "git push --force", []), "its tool narrows")
+
+    def test_undo_never_glues_your_sentence_to_another_line(self):
+        with self.assertRaises(ValueError):
+            journal._drop_block("- one\n- added by the brain, and more by you\n", "- added by the brain")
+        self.assertEqual(journal._drop_block("- one\n\n- added\n", "- added"), "- one\n")
+
+    def test_the_schedule_carries_your_path_and_folders(self):
+        env = {"PATH": "/opt/bin:/usr/bin", "XDG_CONFIG_HOME": "/x/conf"}
+        with mock.patch.dict(os.environ, env), mock.patch.object(nightly.platform, "system", return_value="Linux"):
+            where, line = nightly.schedule_plan(self.v)
+        self.assertEqual(where, "crontab")
+        self.assertIn("PATH=/opt/bin:/usr/bin XDG_CONFIG_HOME=/x/conf", line)
+        with mock.patch.dict(os.environ, env), mock.patch.object(nightly.platform, "system", return_value="Darwin"):
+            _, body = nightly.schedule_plan(self.v)
+        self.assertIn("<key>XDG_CONFIG_HOME</key><string>/x/conf</string>", body)
+
+    def test_what_you_did_not_type_is_not_a_correction(self):
+        home = Path(os.environ["HOME"])
+        write_claude(home / ".claude/projects/p/ide.jsonl", "s9", [
+            ("user", "<ide_opened_file>The user opened src/app.py</ide_opened_file>\nno, use the v2 endpoint"),
+            ("user", [{"type": "tool_result", "tool_use_id": "t", "is_error": True,
+                       "content": "Traceback (most recent call last):\n  File \"tests/test_auth.py\", line 12\n"
+                                  "AssertionError: user denied"}]),
+        ])
+        tr = parse(home / ".claude/projects/p/ide.jsonl")
+        self.assertEqual([t.text for t in tr.user_messages], ["no, use the v2 endpoint"])
+        self.assertFalse(any(t.rejected for t in tr.turns), "a failing test that mentions a denial is no denial")
+        p = home / ".codex/sessions/c.jsonl"
+        msg = lambda text: {"type": "response_item", "payload": {"type": "message", "role": "user",  # noqa: E731
+                                                                 "content": [{"type": "input_text", "text": text}]}}
+        out = lambda o: {"type": "response_item", "payload": {"type": "function_call_output", "output": o}}  # noqa: E731
+        rows = [{"type": "session_meta", "payload": {"id": "cx"}},
+                msg("# AGENTS.md instructions for /repo\n\n<INSTRUCTIONS>\nNever push to main.\n</INSTRUCTIONS>"),
+                msg("no, use the v2 endpoint"),
+                out(json.dumps({"output": "user denied by fixture", "metadata": {"exit_code": 1}})),
+                out("exec command rejected by user")]
+        p.parent.mkdir(parents=True)
+        p.write_text("\n".join(json.dumps(r) for r in rows))
+        tr = parse(p)
+        self.assertEqual([t.text for t in tr.user_messages], ["no, use the v2 endpoint"], "your AGENTS.md is not something you said")
+        self.assertEqual([t.rejected for t in tr.turns if t.role == "tool_result"], [False, True])
+
+    def test_two_notes_with_one_name_both_stay_reachable(self):
+        self.note("10-projects/runbook.md", "---\ndescription: a\n---\n# A\n\nPart of [[hub-brain]].\n")
+        self.note("20-areas/runbook.md", "---\ndescription: b\n---\n# B\n\n> [!lesson]- L-b\n> rule: Rule b.\n"
+                  "\nPart of [[hub-brain]].\n")
+        lib = Library(self.root)
+        self.assertEqual((lib.notes["runbook"].rel, lib.notes["20-areas/runbook"].rel),
+                         ("10-projects/runbook.md", "20-areas/runbook.md"))
+        self.assertIn("L-b", {l.id for l in lib.lessons()}, "the second note's rules are not lost")
+        self.assertTrue(any("same name as 10-projects/runbook.md" in f.msg for f in lint.lint(self.v, lib)))

@@ -12,7 +12,7 @@ Contradictions are settled while learning: a newer rule on the same topic replac
 """
 from __future__ import annotations
 
-from . import events, journal, learn
+from . import events, journal, learn, trust
 from .config import Vault
 from .notes import Library
 from .util import days_since, today
@@ -28,13 +28,17 @@ def _last_fired(v: Vault) -> dict[str, str]:
 
 def run(v: Vault) -> dict:
     lib = Library(v.root)
-    active = lib.lessons()
+    active = trust.effective(v, lib.lessons(), record_seen=False)  # a silent rule an agent wrote is not counted
     last = _last_fired(v)
     days = int(v.get("retire_after_days"))
     out = {"retired": [], "demoted": []}
 
     def retire(l, why: str) -> None:
-        learn.set_lesson_field(v, l.id, "retired", f"{today()} · {why}", by="retired")
+        try:
+            learn.set_lesson_field(v, l.id, "retired", f"{today()} · {why}", by="retired")
+        except (OSError, KeyError, UnicodeError) as e:  # one odd note must not stop the cleanup of the others
+            out.setdefault("errors", []).append(f"{l.id}: {type(e).__name__}: {e}"[:160])
+            return
         journal.log(v, "retire", lesson=l.id, note=l.note, rule=l.rule, why=why)
         out["retired"].append(l.id)
 
@@ -49,7 +53,11 @@ def run(v: Vault) -> dict:
     left = [l for l in active if l.id not in out["retired"]]
     always = sorted((l for l in left if l.mechanism == "always"), key=lambda l: last.get(l.id, l.since or ""))
     for l in always[: max(0, len(always) - int(v.get("always_max")))]:
-        learn.set_lesson_field(v, l.id, "mechanism", "reflex", by="demoted")
+        try:
+            learn.set_lesson_field(v, l.id, "mechanism", "reflex", by="demoted")
+        except (OSError, KeyError, UnicodeError) as e:
+            out.setdefault("errors", []).append(f"{l.id}: {type(e).__name__}: {e}"[:160])
+            continue
         journal.log(v, "mechanism", lesson=l.id, note=l.note, rule=l.rule, before="always", after="reflex",
                     why=f"more than {v.get('always_max')} rules for every session; this one fired least recently")
         out["demoted"].append(l.id)

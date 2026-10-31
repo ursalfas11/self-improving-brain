@@ -34,9 +34,13 @@ LABEL = "dev.self-improving-brain.nightly"
 
 
 def git_in(root: Path, *args: str) -> subprocess.CompletedProcess:
-    # never wait for a password prompt: this runs at night, without anyone at the keyboard
-    return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True,
-                          env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+    # never wait for a password prompt or a dead connection: this runs at night, without anyone at the keyboard,
+    # and holds the lock while it waits
+    try:
+        return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=300,
+                              env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(["git", *args], 124, "", "git timed out after 300 s")
 
 
 def git(v: Vault, *args: str) -> subprocess.CompletedProcess:
@@ -227,6 +231,7 @@ def _run(v: Vault, quick: bool) -> dict:
         if isinstance(res, str) and not res.startswith(("synced", "committed (no remote)", "no git repo")):
             rep["attention"].append(f"backup: {res[:160]}")
     rep["llm"] = llm.spent(v)
+    rep["llm_cmd"] = bool(v.get("llm_cmd"))  # `brain` compares: set in your shell, missing at night
     save_json(v.path("state", "nightly.json"), rep)
     return rep
 
@@ -261,6 +266,14 @@ def _cmd(v: Vault) -> list[str]:
 TASK = "self-improving-brain-nightly"
 
 
+def _env() -> dict:
+    """What the scheduled run needs from your shell: PATH for the LLM CLI, and where your settings live if you
+    moved them (XDG_*): without it the run at night would not find `llm_cmd` and learn nothing."""
+    out = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    out.update({k: os.environ[k] for k in ("XDG_CONFIG_HOME", "XDG_CACHE_HOME") if os.environ.get(k)})
+    return out
+
+
 def schedule_plan(v: Vault, hour: int = 3) -> tuple[str, str]:
     from xml.sax.saxutils import escape  # pulls in urllib: not on the path of every hook
     cmd = _cmd(v)
@@ -272,18 +285,21 @@ def schedule_plan(v: Vault, hour: int = 3) -> tuple[str, str]:
     if platform.system() == "Darwin":
         plist = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
         args = "".join(f"<string>{escape(c)}</string>" for c in cmd)
+        env = "".join(f"<key>{k}</key><string>{escape(val)}</string>" for k, val in _env().items())
         body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>Label</key><string>{LABEL}</string>
 <key>ProgramArguments</key><array>{args}</array>
 <key>StartCalendarInterval</key><dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>17</integer></dict>
-<key>EnvironmentVariables</key><dict><key>PATH</key><string>{escape(os.environ.get('PATH', '/usr/bin:/bin'))}</string></dict>
+<key>EnvironmentVariables</key><dict>{env}</dict>
 <key>StandardOutPath</key><string>{escape(str(log))}</string><key>StandardErrorPath</key><string>{escape(str(log))}</string>
 </dict></plist>
 """
         return str(plist), body
-    line = f"17 {hour} * * * {' '.join(shlex.quote(c) for c in cmd)} >> {shlex.quote(str(log))} 2>&1  # {LABEL}"
+    env = " ".join(f"{k}={shlex.quote(val)}" for k, val in _env().items())  # cron's own PATH lacks ~/.local/bin
+    line = (f"17 {hour} * * * {env + ' ' if env else ''}{' '.join(shlex.quote(c) for c in cmd)} "
+            f">> {shlex.quote(str(log))} 2>&1  # {LABEL}")
     return "crontab", line
 
 

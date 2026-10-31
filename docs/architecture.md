@@ -107,8 +107,17 @@ replay · cache · autotune · index · lint · sync
 the cost comes from the `total_cost_usd` Claude Code reports, other CLIs count calls). A lock, taken in one
 step, keeps two runs from overlapping. A night the laptop slept through (cron and the Task Scheduler skip it,
 launchd skips it when the Mac was off) starts at the next session: the session-start hook sees that the
-scheduled run is more than 26 hours old and starts it in the background. `claude` runs headless with no tools, no settings, no MCP servers and no saved session,
-and every prompt starts with `[self-improving-brain:internal]`, so these transcripts are never mined.
+scheduled run is more than 26 hours old and starts it in the background. `claude` runs headless with no tools,
+no settings, no MCP servers, no saved session and without the variables of the session that started it, and every
+prompt starts with `[self-improving-brain:internal]`, so these transcripts are never mined. The schedule carries
+your `PATH` and XDG folders (cron's own `PATH` lacks `~/.local/bin`, where `claude` usually is); a git call that
+hangs (a password prompt, a dead remote) gives up after five minutes.
+
+`distill` replaces outdated text only when it is one line found exactly once, and never inside a lesson, the
+frontmatter or code. A new note never takes a name in use. An item the LLM stumbles on gets a second night, then
+waits in `brain inbox`; it never blocks the items behind it. A bad answer is about that item; an LLM that is
+gone or out of budget stops the step. Text an IDE or Codex puts in front of your message (open files, your
+`AGENTS.md`) is not read as something you said, and only a refusal at the start of a tool result counts as one.
 
 ## Adoption policy
 
@@ -124,7 +133,10 @@ The judge only sorts. What changes the vault is decided by fixed rules in `learn
   the lesson has tools or commands and one of the corrections was a rejected tool call, otherwise to `always`
   while there is a free slot.
 - A new **guard** needs a rejected tool call and a command regex that stays silent on harmless commands
-  (`git status`, `ls -la`, `npm test` …): the brain only asks where you once said no.
+  (`git status`, `ls -la`, `npm test` …): the brain only asks where you once said no. On a lesson, `tools`
+  narrow and `commands`/`paths` decide (`hooks.fires`): `tools: Bash` with a command regex fires on that
+  command, not on every shell call. A broad tool alone (Bash, Edit, Read …) never makes a guard.
+- One group that fails (a disk error, a note that no longer parses) is logged and skipped; the others go on.
 - Drafts that never came back expire after 120 days.
 
 `curate` keeps the set small: a `reflex` or `skill` lesson that has not fired for `retire_after_days` (60) retires,
@@ -146,7 +158,9 @@ syncing never conflicts on it), with what it takes to undo it:
 | `fact` | appended, updated or a new note | the text leaves the note, the old text comes back, or the new note goes (only if nobody edited it since) |
 
 An undo is itself a journal line (`{"kind": "undo", "target": …}`). `brain review` numbers the changes of the
-last 14 days, newest first, and `brain undo <n>` uses those numbers.
+last 14 days, newest first, and `brain undo <n>` uses those numbers. An undone change keeps its number (shown
+dimmed), so a second `undo 1` never hits the next change. Taking back an appended block works only while it
+still stands as whole lines; a sentence you added to its line is never glued to the line before.
 
 ## Token share
 
@@ -229,6 +243,8 @@ A lesson is plain text in a note, so anything that can write a file can plant on
   `brain trust`.
 - `trust_mode strict`: only lessons the brain wrote itself (the nightly adoption, `brain lesson`) or lessons
   trusted with `brain trust` count. `trust_mode off` turns the ledger off.
+- A change the brain makes to a lesson (sharpen, escalate, retire) keeps its trust only if it had it: a lesson
+  that waits for `brain trust` keeps waiting. The judge and the adoption see the same effective set the agent does.
 - The commands that change rules, trust or config (`undo`, `trust`, `promote`, `lesson`, `config`, `approve`)
   match `BRAIN_APPROVAL` in `hooks.py`; when an agent runs one, the pre-tool hook asks you first.
 

@@ -14,7 +14,7 @@ from pathlib import Path
 from .config import Vault
 from .notes import Library, iter_note_paths
 
-VERSION = 3
+VERSION = 4
 
 
 @functools.lru_cache(maxsize=1)

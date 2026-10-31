@@ -3,8 +3,12 @@ quietly cost another. No LLM, no network."""
 from __future__ import annotations
 
 import importlib.util
+import sys
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _sandbox  # noqa: E402,F401  (first: a throwaway home)
 
 # loaded by path: bench/ has a run.py too
 _spec = importlib.util.spec_from_file_location("eval_run", Path(__file__).resolve().parent.parent / "eval" / "run.py")

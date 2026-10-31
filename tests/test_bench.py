@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _sandbox  # noqa: E402,F401  (first: a throwaway home)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "bench"))
 import run  # noqa: E402
 from tasks import TASKS, setup  # noqa: E402
@@ -96,7 +98,8 @@ class TestBench(unittest.TestCase):
         self.assertEqual(json.loads(run.settings(None, base).read_text()), {"hooks": {}})
         from self_improving_brain import hooks
         from self_improving_brain.config import open_vault
-        with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": env["XDG_CACHE_HOME"], "BRAIN_GUARD": "deny"}):
+        with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": env["XDG_CACHE_HOME"], "XDG_CONFIG_HOME": env["XDG_CONFIG_HOME"],
+                                          "BRAIN_GUARD": "deny"}):
             v = open_vault(str(vault))
             pre = lambda tool, **ti: hooks.pre_tool(v, {"session_id": "s", "tool_name": tool, "tool_input": ti})
             for cmd in ("git push --force origin main", "rm -rf build .cache", "git add .env"):

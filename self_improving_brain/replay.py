@@ -21,7 +21,7 @@ from pathlib import Path
 
 from . import cache, learn, trust
 from .config import Vault
-from .hooks import WRITE_TOOLS, check_hits, command_head, regex_match, tool_match, words_match
+from .hooks import WRITE_TOOLS, check_hits, command_head, fires, regex_match, words_match
 from .notes import Lesson
 from .transcripts import parse
 from .util import append_jsonl, digest, load_json, now_iso, save_json, short, terms
@@ -57,8 +57,7 @@ def _fires(l: Lesson, prompt: str, actions: list) -> str:
     if l.mechanism in ("reflex", "skill") and words_match(l, prompt):
         return "words"
     for tool, cmd, paths, text in actions:
-        if (tool_match(l, tool) or regex_match(l.commands, cmd) or any(regex_match(l.paths, p) for p in paths)
-                or (cmd and regex_match(l.paths, cmd))):
+        if fires(l, tool, cmd, paths):
             return "ask" if l.mechanism == "guard" else "tool"
         if l.check and check_hits([l], tool, cmd, paths, text):
             return "ask" if l.mechanism == "guard" else "check"

@@ -7,6 +7,7 @@ Supported out of the box: Claude Code (~/.claude/projects/**/*.jsonl) and Codex 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,8 +16,20 @@ HOOK_MARK = "[self-improving-brain:check]"
 
 REJECT_MARKERS = (
     "doesn't want to proceed", "does not want to proceed", "user rejected", "tool use was rejected",
-    "user denied", "permission denied by user", "the user declined",
+    "user denied", "permission denied by user", "the user declined", "rejected by user",
 )
+
+# what an IDE or the agent puts in front of what you typed: it is not your words, and your words follow it
+WRAPPED = re.compile(r"<(ide_[a-z_]+|system-reminder)>.*?</\1>", re.S)
+
+
+def _rejection(txt: str, command_output: bool = False) -> bool:
+    """The user refused the tool call: the CLI says so at the very start. A command's own output that mentions
+    "user denied" somewhere (a log, a test fixture) is not a refusal: short, and no exit code."""
+    head = txt.strip().lower()
+    if command_output and (len(head) > 600 or '"exit_code"' in head):
+        return False
+    return any(m in head[:60] for m in REJECT_MARKERS)
 
 
 @dataclass
@@ -53,6 +66,8 @@ def _is_noise(text: str) -> bool:
         return False
     if HOOK_MARK in s[:600] or s.startswith("Stop hook feedback"):
         return True
+    if s.startswith("# AGENTS.md instructions") or "<INSTRUCTIONS>" in s[:400]:
+        return True  # Codex puts your AGENTS.md in front of the session as a user message: not something you typed
     return (not s or s.startswith("<") or s.startswith("Caveat:") or s.startswith("[Request interrupted")
             or s.startswith("This session is being continued"))
 
@@ -96,10 +111,10 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                 for c in content:
                     if isinstance(c, dict) and c.get("type") == "tool_result":
                         txt = _text_of(c.get("content", ""))
-                        rej = bool(c.get("is_error")) and any(m in txt.lower() for m in REJECT_MARKERS)
+                        rej = bool(c.get("is_error")) and _rejection(txt)
                         turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
                 continue
-            txt = _text_of(content)
+            txt = WRAPPED.sub("", _text_of(content)).strip()
             if not _is_noise(txt):
                 turns.append(Turn("user", txt, ts=ts))
         elif t == "assistant" and isinstance(content, list):
@@ -145,7 +160,7 @@ def _codex(lines: list[dict], path: Path) -> Transcript:
         elif pt in ("function_call_output", "custom_tool_call_output"):
             out = p.get("output")
             txt = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
-            rej = any(m in txt.lower() for m in REJECT_MARKERS)
+            rej = _rejection(txt, command_output=True)
             turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
     return Transcript(path, session or path.stem, "codex", turns, cwd, max(tokens, 0))
 

@@ -32,6 +32,9 @@ KNOWN = {
 }
 
 
+SESSION_VARS = ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SSE_PORT")
+
+
 def detect() -> str:
     """The best LLM CLI on this machine, or ''."""
     import shutil
@@ -94,7 +97,9 @@ def ask(v: Vault, prompt: str) -> str:
         raise NoLLM("no llm_cmd configured")
     if not budget_left(v):
         raise NoLLM("today's learning budget is used up (llm_budget_usd / llm_max_calls)")
-    env = dict(os.environ, BRAIN_HOOKS_OFF="1")
+    # a run started from a session hook must not look like part of that session to the CLI
+    env = {k: val for k, val in os.environ.items() if k not in SESSION_VARS and not k.startswith("CLAUDE_CODE_MESSAGING")}
+    env["BRAIN_HOOKS_OFF"] = "1"
     try:
         res = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
                              timeout=int(v.get("llm_timeout") or 240), env=env)
@@ -126,6 +131,6 @@ def ask(v: Vault, prompt: str) -> str:
 def ask_json(v: Vault, prompt: str):
     out = ask(v, prompt + "\n\nAnswer with JSON only, no prose, no code fences.")
     m = re.search(r"(\[.*\]|\{.*\})", out, re.S)
-    if not m:
-        raise NoLLM("llm answer contained no JSON")
+    if not m:  # a bad answer is about this prompt, not the LLM: the caller moves on to the next item
+        raise ValueError("llm answer contained no JSON")
     return json.loads(m.group(1))

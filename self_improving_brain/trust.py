@@ -104,14 +104,23 @@ def mark_pending(v: Vault, lessons: list[Lesson], session: str, tool: str) -> li
     return out
 
 
-def effective(v: Vault, lessons: list[Lesson]) -> list[Lesson]:
-    """The lessons hooks may inject. Bootstraps the ledger on first use (an existing vault keeps working)."""
+def vouched(v: Vault, l: Lesson) -> bool:
+    """Trusted exactly as it is now: only then may the brain carry the trust over to a change it makes itself."""
+    if str(v.get("trust_mode") or "agent") == "off":
+        return True
+    return (load(v).get("trusted") or {}).get(l.id, {}).get("h") == fingerprint(l)
+
+
+def effective(v: Vault, lessons: list[Lesson], record_seen: bool = True) -> list[Lesson]:
+    """The lessons hooks may inject. Bootstraps the ledger on first use (an existing vault keeps working).
+    `record_seen=False` (the nightly run, nobody at the keyboard) selects the same lessons but writes nothing."""
     mode = str(v.get("trust_mode") or "agent")
     if mode == "off":
         return lessons
     data = load(v)
     if not data:
-        record(v, lessons, "bootstrap")
+        if record_seen:
+            record(v, lessons, "bootstrap")
         return lessons
     out, seen = [], []
     for l in lessons:
@@ -123,7 +132,7 @@ def effective(v: Vault, lessons: list[Lesson]) -> list[Lesson]:
         else:
             seen.append(l)  # written by you outside any agent tool call
             out.append(l)
-    if seen:
+    if seen and record_seen:
         record(v, seen, "seen")
     return out
 

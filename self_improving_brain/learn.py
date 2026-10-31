@@ -135,6 +135,9 @@ EXPIRE_DAYS = 120   # a correction that never came back in four months was not a
 # a guard's command regex must not stop everyday work
 HARMLESS = ("git status", "git diff", "git log --oneline", "ls -la", "cat README.md", "npm test", "pytest -q",
             "python3 -m unittest", "grep -rn foo .", "cd src")
+# tools an agent uses all the time: a guard on one of them alone would ask before every call
+BROAD_TOOLS = {"Bash", "Edit", "Write", "MultiEdit", "NotebookEdit", "Read", "Glob", "Grep", "WebFetch", "WebSearch",
+               "Task", "shell", "apply_patch"}
 
 
 def correction_score(text: str, agent_asked: bool) -> float:
@@ -419,7 +422,8 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
                 if any(x.get("status") == "open" and x.get("id") in mine for x in g)][:batch]
         if not todo:
             break
-        rules = "\n".join(f"- {l.id}: {l.rule}" for l in Library(v.root).lessons()) or "(none yet)"
+        lessons = trust.effective(v, Library(v.root).lessons(), record_seen=False)
+        rules = "\n".join(f"- {l.id}: {l.rule}" for l in lessons) or "(none yet)"
         body = "\n\n".join(_render_group(i, g) for i, g in enumerate(todo, 1))
         try:
             res = llm.ask_json(v, JUDGE_PROMPT.replace("@RULES@", rules).replace("@GROUPS@", body))
@@ -524,9 +528,10 @@ def _new_lesson(v: Vault, lib: Library, g: list[dict], best: dict, always_n: int
     commands = str(sug.get("commands") or "")
     commands = commands if _regex_ok(commands) and len(commands) <= 300 else ""
     if mech == "guard":
-        # the brain only asks where you once said no: a guard needs a rejected tool call and a precise trigger
+        # the brain only asks where you once said no: a guard needs a rejected tool call and a precise trigger,
+        # a command regex or a narrow tool (never Bash or Edit alone: that would ask before every call)
         commands = _guard_regex(commands)
-        if not any(d.get("rejected") for d in g) or not (commands or tools):
+        if not any(d.get("rejected") for d in g) or not (commands or set(tools) - BROAD_TOOLS):
             mech = "reflex"
     if mech == "always" and always_n >= int(v.get("always_max")):
         mech = "reflex"
@@ -568,7 +573,7 @@ def _relapse(v: Vault, l: Lesson, g: list[dict], best: dict, always_n: int) -> d
                            why="the mistake came back although the rule existed" + (f": “{q}”" if q else ""))
     sug = best.get("suggest") or {}
     commands = l.commands or _guard_regex(str(sug.get("commands") or ""))
-    if (l.tools or commands) and any(d.get("rejected") for d in after):
+    if (commands or set(l.tools) - BROAD_TOOLS) and any(d.get("rejected") for d in after):
         to = "guard"
     elif always_n < int(v.get("always_max")):
         to = "always"
@@ -583,65 +588,78 @@ def _relapse(v: Vault, l: Lesson, g: list[dict], best: dict, always_n: int) -> d
 
 def adopt(v: Vault) -> dict:
     """Judged drafts become lessons (or facts in the inbox) by fixed rules. Returns what changed."""
-    from . import inbox
     all_d = all_drafts(v)
     for d in all_d:  # what never came back in months was not a pattern
         if d.get("status") in ("open", "held", "once") and (days_since(str(d.get("t", ""))[:10]) or 0) > EXPIRE_DAYS:
             d["status"] = "expired"
     topics = rejected_topics(v)
     lib = Library(v.root)
-    active = {l.id: l for l in lib.lessons()}
+    # only the rules that reach your agent: a rule an agent wrote stays silent and is not built on
+    active = {l.id: l for l in trust.effective(v, lib.lessons(), record_seen=False)}
     always_n = sum(1 for l in active.values() if l.mechanism == "always")
     out = {"rules": [], "sharpened": [], "escalated": [], "facts": 0, "waiting": 0}
     cap = int(v.get("learn_max_new"))
     held = [d for d in _candidates(all_d) if d.get("status") == "held"]
-    for g in groups(held):
-        best = max(g, key=lambda d: (str(d.get("t", "")), _score(d)))
-        rule = str(best.get("rule") or "")
-        if not rule:
-            continue
-        if _blocked(rule + " " + best.get("quote", ""), topics):
-            for d in g:
-                d["status"] = "rejected"  # a topic you undid once is not learned again
-            continue
-        if best.get("verdict") == "fact":
-            if not _suspicious(rule):
-                try:
-                    inbox.add(v, "fact", rule, quote=best.get("quote", ""), source="learn", session=best.get("session", ""))
-                    out["facts"] += 1
-                except inbox.Rejected:
-                    pass
-            for d in g:
-                d["status"] = "approved"
-            continue
-        ex = active.get(str(best.get("existing") or "")) or _similar_lesson(rule, active)
-        if ex is not None:
-            j = _relapse(v, ex, g, best, always_n)
-            if j:
-                out["sharpened" if j["kind"] == "sharpen" else "escalated"].append(ex.id)
-                if j["kind"] == "mechanism" and j["after"] == "always":
-                    always_n += 1
-                lib = Library(v.root)
-                active = {l.id: l for l in lib.lessons()}
-            for d in g:
-                d["status"], d["lesson"] = "approved", ex.id
-            continue
-        sessions = len({d.get("session") for d in g})
-        explicit = any(d.get("explicit") or (d.get("kind") == "preference" and _score(d) >= 0.8) for d in g)
-        if not (sessions >= 2 or explicit) or _suspicious(rule) or len(out["rules"]) >= cap:
-            out["waiting"] += 1  # once is not a pattern yet; it is adopted when it comes back
-            continue
-        lesson = _new_lesson(v, lib, g, best, always_n)
-        always_n += lesson.mechanism == "always"
-        journal.log(v, "rule", lesson=lesson.id, note=lesson.note, rule=lesson.rule, mechanism=lesson.mechanism,
-                    why=_why(g, explicit), drafts=[d["id"] for d in g])
-        out["rules"].append(lesson.id)
-        lib = Library(v.root)
-        active = {l.id: l for l in lib.lessons()}
-        for d in g:
-            d["status"], d["lesson"] = "approved", lesson.id
-    save_drafts(v, all_d)
+    try:
+        for g in groups(held):
+            try:
+                lib, active, always_n = _adopt_group(v, g, topics, lib, active, always_n, out, cap)
+            except (OSError, ValueError, KeyError, UnicodeError) as e:  # one odd note must not stop the night
+                events.log(v, "error", where="adopt", msg=f"{type(e).__name__}: {e}"[:200])
+                out.setdefault("errors", []).append(f"{type(e).__name__}: {e}"[:160])
+    finally:
+        save_drafts(v, all_d)
     return out
+
+
+def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, cap):
+    """One group of similar drafts: a rule, a fact, a sharpening, or wait. Returns the updated rule set."""
+    from . import inbox
+    best = max(g, key=lambda d: (str(d.get("t", "")), _score(d)))
+    rule = str(best.get("rule") or "")
+    if not rule:
+        return lib, active, always_n
+    if _blocked(rule + " " + best.get("quote", ""), topics):
+        for d in g:
+            d["status"] = "rejected"  # a topic you undid once is not learned again
+        return lib, active, always_n
+    if best.get("verdict") == "fact":
+        if not _suspicious(rule):
+            try:
+                inbox.add(v, "fact", rule, quote=best.get("quote", ""), source="learn", session=best.get("session", ""))
+                out["facts"] += 1
+            except inbox.Rejected:
+                pass
+        for d in g:
+            d["status"] = "approved"
+        return lib, active, always_n
+    ex = active.get(str(best.get("existing") or "")) or _similar_lesson(rule, active)
+    if ex is not None:
+        j = _relapse(v, ex, g, best, always_n)
+        if j:
+            out["sharpened" if j["kind"] == "sharpen" else "escalated"].append(ex.id)
+            if j["kind"] == "mechanism" and j["after"] == "always":
+                always_n += 1
+            lib = Library(v.root)
+            active = {l.id: l for l in trust.effective(v, lib.lessons(), record_seen=False)}
+        for d in g:
+            d["status"], d["lesson"] = "approved", ex.id
+        return lib, active, always_n
+    sessions = len({d.get("session") for d in g})
+    explicit = any(d.get("explicit") or (d.get("kind") == "preference" and _score(d) >= 0.8) for d in g)
+    if not (sessions >= 2 or explicit) or _suspicious(rule) or len(out["rules"]) >= cap:
+        out["waiting"] += 1  # once is not a pattern yet; it is adopted when it comes back
+        return lib, active, always_n
+    lesson = _new_lesson(v, lib, g, best, always_n)
+    always_n += lesson.mechanism == "always"
+    journal.log(v, "rule", lesson=lesson.id, note=lesson.note, rule=lesson.rule, mechanism=lesson.mechanism,
+                why=_why(g, explicit), drafts=[d["id"] for d in g])
+    out["rules"].append(lesson.id)
+    lib = Library(v.root)
+    active = {l.id: l for l in trust.effective(v, lib.lessons(), record_seen=False)}
+    for d in g:
+        d["status"], d["lesson"] = "approved", lesson.id
+    return lib, active, always_n
 
 
 # --- lessons in notes ------------------------------------------------------------------------------
@@ -713,9 +731,14 @@ def set_lesson_field(v: Vault, lesson_id: str, key: str, value: str, by: str = "
     hit = next(((n, l) for n in lib.notes.values() for l in n.lessons if l.id == lesson_id), None)
     if hit is None:
         raise KeyError(f"no lesson {lesson_id}")
-    note, _ = hit
+    note, before = hit
+    was_trusted = trust.vouched(v, before)
     lines = note.path.read_text(encoding="utf-8").split("\n")
-    head = next(i for i, ln in enumerate(lines) if re.match(rf"^>\s*\[!lesson\][+-]?\s*{re.escape(lesson_id)}\s*$", ln))
+    # the same header forms the parser accepts: any case, a title after the id
+    head = next((i for i, ln in enumerate(lines)
+                 if re.match(rf"^>\s*\[!lesson\][+-]?\s*{re.escape(lesson_id)}(\s.*)?$", ln, re.I)), None)
+    if head is None:
+        raise KeyError(f"no lesson header for {lesson_id} in {note.rel}")
     end = head + 1
     while end < len(lines) and lines[end].startswith(">"):
         end += 1
@@ -731,7 +754,8 @@ def set_lesson_field(v: Vault, lesson_id: str, key: str, value: str, by: str = "
             lines.insert(end, f"> {key}: {value}")
     atomic_write(note.path, set_field("\n".join(lines), "updated", today()))
     lesson = next(l for l in Library(v.root).lessons(retired=True) if l.id == lesson_id)
-    trust.record(v, [lesson], by or f"set {key}")
+    if was_trusted:  # a rule that waits for `brain trust` stays waiting: a change by the brain does not vouch for it
+        trust.record(v, [lesson], by or f"set {key}")
     return lesson
 
 

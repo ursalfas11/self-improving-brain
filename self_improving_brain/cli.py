@@ -125,6 +125,8 @@ def c_status(a):
         attention.append("The nightly run is not scheduled on this machine → brain setup")
     elif rep.get("t") and (days_since(str(rep["t"])[:10]) or 0) > 2:
         attention.append(f"The nightly run last ran on {day_label(rep['t'])} → brain doctor")
+    if llm.available(v) and rep.get("llm_cmd") is False:
+        attention.append("Last night's run could not see your LLM setting, so it learned nothing → brain schedule install")
     attention += [x for x in rep.get("attention") or []][:3]
     silent = trust.untrusted(v, lessons)
     if silent:
@@ -142,7 +144,7 @@ def c_review(a):
     v = _vault(a)
     from . import cache
     c = _Paint()
-    rows = journal.recent(v, days=a.days)
+    rows = journal.recent(v, days=a.days, undone=True)  # undone ones keep their number, so the others keep theirs
     silent = trust.untrusted(v, cache.lessons(v))
     if not rows and not silent:
         print(f"Nothing learned in the last {a.days} days. It keeps learning from your sessions every night.")
@@ -152,6 +154,9 @@ def c_review(a):
         for i, e in enumerate(rows, 1):
             what, text, why = journal.describe(e)
             day = day_label(e.get("t", ""))
+            if e.get("status") == "undone":
+                print(c.d(f"  {i:>2}  {day:<6}  {'undone':<15} {short(text, 110)}"))
+                continue
             print(f"  {i:>2}  {c.d(f'{day:<6}')}  {c.b(f'{what:<15}')} {short(text, 110)}")
             if why:
                 print(" " * 30 + c.d(short(why, 110)))

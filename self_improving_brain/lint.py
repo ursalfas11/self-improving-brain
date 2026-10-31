@@ -51,6 +51,8 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
     stale = int(v.get("stale_days"))
     for n in lib.notes.values():
         out.extend(lint_note(n, lib, stale))
+    for name, first in lib.shadowed.items():
+        out.append(Finding("SHOULD", lib.notes[name].rel, f"same name as {lib.notes[first].rel}: [[{first}]] reaches only that one — rename one"))
     ids = {}
     for l in lib.lessons():
         if l.id in ids:

@@ -26,18 +26,25 @@ of a review queue.
 - **Several laptops, one brain.** Drafts, inbox and trust ledger are one file per machine, like the journal, and
   the nightly run pulls before it learns: two laptops no longer stop each other's sync, and a rule is learned
   once. The machine name is fixed on first use. Vaults from 0.1 are moved over on first use.
+- **Safe while you sleep.** A fact replaces one line found exactly once, never inside a rule, the frontmatter or
+  code; a new note never takes a name you use. An item the LLM stumbles on waits for you without blocking the
+  rest, and one broken group no longer stops the night. The schedule finds `claude` (cron's `PATH` lacked
+  `~/.local/bin`), and a hanging git gives up after five minutes.
 
 ### A veto, not a duty
 - Every change the brain makes on its own goes into `.brain/journal/<host>.jsonl`. `brain review` lists the
   last two weeks, `brain undo <n>` takes one back, and an undone topic is never learned again.
 - Once a week the first session shows one line: what was learned, the trend, what the brain costs you.
 - `brain ui`: Overview, Learned (with undo), Rules, Replay, Map.
+- An undone change keeps its number, so a second `brain undo 1` never hits the next one.
 
 ### Measures itself
 - `brain` shows mistakes per 100 messages against your first two weeks. Corrections the judge called noise
   leave the curve.
 - The brain's share of your agent's tokens: what the hooks injected against the session tokens in your
   transcripts (Claude Code and Codex).
+- What an IDE or Codex puts in front of your message (open files, your `AGENTS.md`) is not read as yours, and a
+  failing test that mentions a denial is no refusal. Two notes with one name both stay reachable; lint names them.
 - `eval/`: 250 hand-labelled replies in six languages. The correction detector learned Spanish, French,
   Portuguese and Italian. On the held-out half it now flags with 93 % precision and finds 86 % of the
   lasting corrections, up from 12 %.
@@ -61,8 +68,10 @@ of a review queue.
 - `check:` on a rule: a regex on what the agent writes or runs. A match is a violation the brain counts on its
   own; on a guard it asks before the write.
 - `BRAIN_GUARD=deny` refuses instead of asking in headless runs.
-- Trust ledger: a rule that appears during an agent's tool call stays silent until you trust it. Undo, trust and
-  config are commands an agent has to ask you for.
+- A guard's tools narrow and its command decides: a guard learned on the shell asks on its command, not on every
+  `git status`. Guards read every line of a command, but not a heredoc's body.
+- Trust ledger: a rule that appears during an agent's tool call stays silent until you trust it, and a change the
+  brain makes to it does not trust it either. Undo, trust and config are commands an agent has to ask you for.
 
 ### Never lose the thread
 - PreCompact handoff: your last words verbatim, the open question, the files in flight. They come back

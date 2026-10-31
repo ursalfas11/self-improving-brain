@@ -49,8 +49,12 @@ def load(v: Vault, name: str, rank: dict) -> list[dict]:
 
 
 def save(v: Vault, name: str, records: list[dict], rank: dict) -> None:
-    """Write this machine's file: what it already held, and every record of another machine that changed here."""
+    """Write this machine's file: what it already held, and every record of another machine that changed here.
+    Records appended since `records` were read (a session that just ended) are kept too."""
     mine = own(v, name)
-    kept = {r.get("id") for r in read_jsonl(mine)}
+    current = read_jsonl(mine)
+    kept = {r.get("id") for r in current}
+    ids = {r.get("id") for r in records}
     theirs = _merge([f for f in files(v, name) if f != mine], rank)
-    write_jsonl(mine, [r for r in records if r.get("id") in kept or theirs.get(r.get("id") or id(r)) != r])
+    write_jsonl(mine, [r for r in records if r.get("id") in kept or theirs.get(r.get("id") or id(r)) != r]
+                + [r for r in current if r.get("id") not in ids])

@@ -49,10 +49,12 @@ def entries(v: Vault) -> list[dict]:
     return sorted(rows, key=lambda e: str(e.get("t", "")))
 
 
-def recent(v: Vault, days: int = 14) -> list[dict]:
-    """Changes still in force from the last `days` days, newest first. Their order is what `brain undo <n>` counts."""
+def recent(v: Vault, days: int = 14, undone: bool = False) -> list[dict]:
+    """Changes from the last `days` days, newest first: the ones still in force, and with `undone` the ones you took
+    back too. That full list is what `brain undo <n>` counts, so the numbers do not shift after an undo."""
     from .util import days_since
-    out = [e for e in entries(v) if e.get("status") == "done" and (days_since(str(e.get("t", ""))[:10]) or 0) <= days]
+    out = [e for e in entries(v) if (undone or e.get("status") == "done")
+           and (days_since(str(e.get("t", ""))[:10]) or 0) <= days]
     return out[::-1]  # entries() keeps the written order within one second, so the last change is number 1
 
 
@@ -88,8 +90,8 @@ def sha(text: str) -> str:
 def find(v: Vault, ref: str) -> dict | None:
     """An entry by id (j-…) or by its number in `brain review`."""
     ref = ref.strip()
-    if ref.isdigit():
-        rows = recent(v)
+    if ref.isdigit():  # newest first, so a longer window only adds rows at the end: the numbers stay the same
+        rows = recent(v, days=366, undone=True)
         return rows[int(ref) - 1] if 0 < int(ref) <= len(rows) else None
     return next((e for e in entries(v) if e.get("id") == ref), None)
 
@@ -103,7 +105,8 @@ def undo(v: Vault, ref: str) -> str:
     if e is None:
         raise ValueError(f"nothing to undo for {ref!r} — `brain review` lists what can be undone")
     if e.get("status") != "done":
-        raise ValueError(f"{e['id']} was already undone")
+        what, text, _ = describe(e)
+        raise ValueError(f"{what} “{short(text, 60)}” was already undone")
     kind, lid = e.get("kind"), e.get("lesson", "")
     if kind == "rule":
         lesson = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)
@@ -154,7 +157,12 @@ def undo(v: Vault, ref: str) -> str:
 
 
 def _drop_block(text: str, block: str) -> str:
-    """Remove an appended block and the blank line the append put before it."""
+    """Remove an appended block and the blank line the append put before it. Only while it still stands as whole
+    lines: a sentence you added to its line would otherwise end up glued to the line before."""
+    i = text.find(block)
+    end = i + len(block)
+    if i < 0 or (i and text[i - 1] != "\n") or (end < len(text) and text[end] != "\n"):
+        raise ValueError("the note changed around what the brain added — edit it by hand")
     for cand in ("\n\n" + block, "\n" + block, block):
         if cand in text:
             return text.replace(cand, "", 1)

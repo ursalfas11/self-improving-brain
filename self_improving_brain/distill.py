@@ -10,6 +10,7 @@ Two ways, same rules:
 """
 from __future__ import annotations
 
+import re
 import subprocess
 
 from . import events, inbox, journal, llm
@@ -19,6 +20,41 @@ from .notes import Library, atomic_write, dump_frontmatter, parse_frontmatter, s
 from .search import Index
 from .secrets import scan
 from .util import short, slugify, today
+
+# what a fact may never touch: the frontmatter, code, and the rules (a fact from the agent's words must not
+# rewrite one), and text that would turn into a rule
+LESSON_LIKE = re.compile(r"\[!lesson\]", re.I)
+
+
+def _protected(text: str) -> list[tuple[int, int]]:
+    """Character spans of the frontmatter, fenced code and lesson callouts."""
+    spans, pos, fence, callout = [], 0, None, None
+    if text.startswith("---\n"):
+        end = text.find("\n---", 4)
+        if end > 0:
+            spans.append((0, end + 4))
+    for line in text.split("\n"):
+        start, pos = pos, pos + len(line) + 1
+        if line.startswith("```"):
+            if fence is None:
+                fence = start
+            else:
+                spans.append((fence, pos))
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        if callout is None and LESSON_LIKE.search(line) and line.lstrip().startswith(">"):
+            callout = start
+        elif callout is not None and not line.lstrip().startswith(">"):
+            spans.append((callout, start))
+            callout = None
+    if fence is not None:
+        spans.append((fence, pos))
+    if callout is not None:
+        spans.append((callout, pos))
+    return spans
+
 
 FOLDER_FOR = {"fact": "20-areas", "decision": "20-areas", "pitfall": "20-areas", "preference": "20-areas",
               "status": "10-projects", "todo": "10-projects", "lesson": "20-areas"}
@@ -72,7 +108,7 @@ def _append(path, section: str, text: str) -> None:
     raw = set_field(path.read_text(encoding="utf-8"), "updated", today())
     _, body = parse_frontmatter(raw)
     head = raw[: len(raw) - len(body)]
-    lines = body.splitlines()
+    lines = body.split("\n")  # splitlines() would also break at U+2028, form feeds and other rare characters
     heads, fence = [], False
     for i, l in enumerate(lines):
         if l.startswith("```"):
@@ -90,7 +126,7 @@ def _append(path, section: str, text: str) -> None:
     while insert_at > 0 and insert_at == len(lines) and not lines[-1].strip():
         lines.pop()
         insert_at = len(lines)
-    block = text.rstrip().splitlines()
+    block = text.rstrip().split("\n")
     prev = lines[insert_at - 1] if insert_at else ""
     bullet = block and block[0].lstrip().startswith(("- ", "* "))
     if prev.strip() and not (bullet and prev.lstrip().startswith(("- ", "* "))):
@@ -111,9 +147,8 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     report = []
     lib = Library(v.root)
     hubs = ", ".join(n.name for n in lib.notes.values() if n.is_hub) or "(none)"
-    for it in inbox.items(v, mine=True)[:limit]:
-        if it.get("conflict"):
-            continue
+    # an item that could not be filed waits for you; it must not block the ones behind it
+    for it in [i for i in inbox.items(v, mine=True) if not i.get("conflict")][:limit]:
         cands = candidates(lib, it["claim"])
         ctext = "\n\n".join(f"### {h.note.name} ({h.note.rel})\n{h.note.description}\n"
                             f"{(h.section.body if h.section else '')[:1500]}" for h in cands) or "(none)"
@@ -125,9 +160,11 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             report.append(f"stopped: {e}")
             break  # budget used up or the CLI is gone: the rest waits for the next night
         except ValueError as e:
+            _flag_conflict(v, it["id"], f"llm error: {e}", soft=True)
             report.append(f"{it['id']}: llm error {e}")
             continue
         if not isinstance(d, dict):
+            _flag_conflict(v, it["id"], "llm error: expected a JSON object", soft=True)
             report.append(f"{it['id']}: llm error: expected a JSON object")
             continue
         act = str(d.get("action", "")).lower()
@@ -140,22 +177,29 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             report.append(f"{it['id']}: left for you — {d.get('reason', '')}")
             continue
         text = str(d.get("text", "")).strip()
-        if not text or scan(text):
-            report.append(f"{it['id']}: refused (empty or secret-like text)")
+        if not text or scan(text) or LESSON_LIKE.search(text):
+            _flag_conflict(v, it["id"], "the text was empty, looked like a secret, or like a rule")
+            report.append(f"{it['id']}: refused (empty, secret-like or rule-like text)")
             continue
         entry: dict = {"action": act, "claim": it["claim"], "text": text, "why": d.get("reason", "")}
         if act in ("append", "update"):
             target = lib.find(str(d.get("note", "")))
             if target is None:
+                _flag_conflict(v, it["id"], f"note {d.get('note')!r} not found")
                 report.append(f"{it['id']}: note {d.get('note')!r} not found, left in inbox")
                 continue
             must_before = {f.msg for f in lint_note(target, lib) if f.level == "MUST"}
             path, before, hub_before = target.path, target.path.read_text(encoding="utf-8"), None
             old = str(d.get("old") or "").strip()
             if act == "update":
-                if not old or before.count(old) != 1:
-                    _flag_conflict(v, it["id"], "the outdated text to replace was not found exactly once")
+                at = before.find(old) if old else -1
+                if at < 0 or before.count(old) != 1 or "\n" in old or "\n" in text:
+                    _flag_conflict(v, it["id"], "the outdated text to replace was not one line found exactly once")
                     report.append(f"{it['id']}: update target not found, left for you")
+                    continue
+                if any(a < at + len(old) and at < b for a, b in _protected(before)):
+                    _flag_conflict(v, it["id"], "the text to replace is part of a rule, the frontmatter or code")
+                    report.append(f"{it['id']}: would change a rule, left for you")
                     continue
                 atomic_write(path, set_field(before.replace(old, text, 1), "updated", today()))
                 entry["old"] = old
@@ -163,11 +207,15 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
                 _append(path, str(d.get("section", "")), text)
         else:
             title = str(d.get("title") or it["claim"][:60])
-            name = slugify(title)
+            base = name = slugify(title)
+            k = 2
+            while name in lib.notes or name.lower() in lib.by_stem:  # never a second note with a name you use
+                name, k = f"{base}-{k}", k + 1
             folder = v.root / FOLDER_FOR.get(it["type"], "20-areas")
             folder.mkdir(parents=True, exist_ok=True)
             path, before, hub_before, must_before = folder / f"{name}.md", None, None, set()
             if path.exists():
+                _flag_conflict(v, it["id"], f"{path.name} exists")
                 report.append(f"{it['id']}: {path.name} exists, left in inbox")
                 continue
             hub_note = lib.find(str(d.get("hub") or "")) if d.get("hub") else None
@@ -191,6 +239,7 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             else:
                 path.write_text(before, encoding="utf-8")
             lib = Library(v.root)
+            _flag_conflict(v, it["id"], f"rolled back: {bad[0].msg}")
             report.append(f"{it['id']}: rolled back ({bad[0].msg})")
             continue
         rel = path.relative_to(v.root).as_posix()
@@ -199,17 +248,23 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
         if act == "new":
             entry["after"] = journal.sha(path.read_text(encoding="utf-8"))
         journal.log(v, "fact", note=path.stem, path=rel, **entry)
-        if (v.root / ".git").exists():
-            _git(v, "add", "-A", "--", "*.md")
-            _git(v, "commit", "-q", "-m", f"distill: {short(it['claim'], 60)}", "-m", f"Brain-Source: {it['id']}")
+        if (v.root / ".git").exists() and (v.get("git_owned") or v.get("git_sync")):
+            # only the files this item changed: an edit of yours in another note is not part of it
+            touched = [rel] + ([entry["hub"]] if entry.get("hub") else [])
+            _git(v, "add", "--", *touched)
+            _git(v, "commit", "-q", "-m", f"distill: {short(it['claim'], 60)}", "-m", f"Brain-Source: {it['id']}",
+                 "--", *touched)
         report.append(f"{it['id']}: {act} → {rel}")
     return report
 
 
-def _flag_conflict(v: Vault, item_id: str, reason: str) -> None:
+def _flag_conflict(v: Vault, item_id: str, reason: str, soft: bool = False) -> None:
+    """Leave an item for you. `soft` (the LLM stumbled): once more next night, then leave it."""
     from . import ledger
     items = inbox.items(v, include_done=True)
     for it in items:
         if it["id"] == item_id:
-            it["conflict"] = reason
+            it["tries"] = int(it.get("tries") or 0) + 1
+            if not soft or it["tries"] >= 2:
+                it["conflict"] = reason
     ledger.save(v, "inbox", items, inbox.RANK)
