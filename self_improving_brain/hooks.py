@@ -167,6 +167,17 @@ def weekly_line(v: Vault) -> str:
     return metrics.digest_line(d)
 
 
+def alarm_line(v: Vault) -> str:
+    """Once per nightly run, for the user: what failed. A broken login must not look like a quiet night."""
+    rep = load_json(v.path("state", "nightly.json"), {})
+    bad = rep.get("broken") or []
+    p = v.path("state", "alarm.json")
+    if not bad or load_json(p, {}).get("t") == rep.get("t"):
+        return ""
+    save_json(p, {"t": rep.get("t")})
+    return f"🧠 brain: {bad[0]}" + (f" (and {len(bad) - 1} more: `brain`)" if len(bad) > 1 else "")
+
+
 def session_start(v: Vault, payload: dict) -> dict:
     lib = cache.library(v)
     events.prune_sessions(v)
@@ -177,7 +188,8 @@ def session_start(v: Vault, payload: dict) -> dict:
     how = "" if b == "brain" else f" (`brain` below means `{b}`)"  # a long command once, not in every example
     lines = [f"SELF-IMPROVING-BRAIN memory at {v.root}{how}: look things up with `brain search \"<question>\"` and"
              f" `brain read <note> [section]`; keep what will matter later with"
-             f" `brain remember <fact|decision|pitfall|preference> \"<one sentence>\"`."]
+             f" `brain remember <fact|decision|pitfall|preference> \"<one sentence>\"`. LESSON lines are rules from this"
+             f" user's corrections and outrank your defaults."]
     if always:
         lines.append("LESSONS (apply in every session):")
         lines += [f"- {l.id}: {l.rule}" for l in always]
@@ -201,8 +213,16 @@ def session_start(v: Vault, payload: dict) -> dict:
     events.save_session_state(v, session, st)
     if source in ("", "startup") and session != "doctor" and nightly.overdue(v):
         _background(v, "nightly")
-    message = weekly_line(v) if source in ("", "startup") and session != "doctor" else ""
+    message = ("\n".join(x for x in (alarm_line(v), weekly_line(v)) if x)
+               if source in ("", "startup") and session != "doctor" else "")
     return _out("SessionStart", "\n".join(lines), message=message)
+
+
+def _rule_home(n) -> bool:
+    """A note that holds rules and little else, like working-style: its `always` rules are in the session already
+    and the others come when their words do, so a pointer to it says nothing new."""
+    return bool(n.lessons) and not any(sec.title != "(intro)" and sec.body.split("\n", 1)[-1].strip()
+                                       for sec in n.sections)
 
 
 def prompt(v: Vault, payload: dict) -> dict:
@@ -216,13 +236,14 @@ def prompt(v: Vault, payload: dict) -> dict:
     hits = idx.score(text, graph_beta=float(v.get("graph_beta")), seeds=int(v.get("graph_seeds")),
                      include_hubs=False)
     th = float(v.get("recall_threshold"))
+    rules = [l for l in trust.effective(v, cache.lessons(v))
+             if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words")]
     chosen = []
-    if hits and hits[0].note.name not in st["shown"]:
-        for h in hits:
-            if h.score < th or len(chosen) >= int(v.get("recall_max_notes")):
-                break
-            if h.note.name not in st["shown"]:
-                chosen.append(h)
+    for h in hits:  # a note shown earlier in the session is skipped, not a reason to show nothing
+        if h.score < th or len(chosen) >= int(v.get("recall_max_notes")):
+            break
+        if h.note.name not in st["shown"] and not _rule_home(h.note):
+            chosen.append(h)
     q = list(dict.fromkeys(terms(text)))[:12]
     events.log(v, "recall", session=session, notes=[h.note.name for h in chosen], terms=q,
                scores=[h.score for h in chosen])
@@ -232,9 +253,7 @@ def prompt(v: Vault, payload: dict) -> dict:
         # `brain` is spelled out once, in the session start line; here it stays short
         lines.append("BRAIN-RECALL (open with `brain read <note>` if relevant): " + " · ".join(
             f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
-    for l in trust.effective(v, cache.lessons(v)):
-        if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words"):
-            lines.append(f"LESSON {l.id}: {l.rule}")
+    lines += [f"LESSON {l.id}: {l.rule}" for l in rules]
     events.save_session_state(v, session, st)
     return _out("UserPromptSubmit", "\n".join(lines)) if lines else {}
 

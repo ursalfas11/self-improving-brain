@@ -19,8 +19,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, learn, llm, nightly
+from . import adapters, learn, llm, metrics, nightly
 from .config import candidate_roots, is_vault, open_vault
+from .util import load_json
 
 PKG_ROOT = Path(__file__).resolve().parent.parent
 NAMES = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "claude-desktop": "Claude Desktop",
@@ -30,6 +31,7 @@ NAMES = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "cla
 class Out:
     def __init__(self):
         self.color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+        self.todo: list[str] = []
 
     def c(self, code: str, text: str) -> str:
         return f"\033[{code}m{text}\033[0m" if self.color else text
@@ -37,6 +39,8 @@ class Out:
     def row(self, mark: str, label: str, text: str) -> None:
         sym = {"ok": self.c("32", "✓"), "skip": self.c("2", "·"), "warn": self.c("33", "!")}[mark]
         print(f"  {sym} {label:<10} {text}")
+        if mark == "warn":
+            self.todo.append(text)
 
 
 def default_vault() -> Path:
@@ -78,9 +82,7 @@ def make_vault(o: Out, path: str | None) -> Path | None:
     owned = open_vault(str(root)).get("git_owned")  # only a repo the brain created gets everything committed
     if owned and shutil.which("git") and git(root, "rev-parse", "HEAD").returncode != 0:
         git(root, "add", "-A")
-        identity = [] if git(root, "config", "user.email").stdout.strip() else \
-            ["-c", "user.name=brain", "-c", "user.email=brain@localhost"]
-        git(root, *identity, "commit", "-q", "-m", "brain: init")
+        git(root, *nightly.identity(root), "commit", "-q", "-m", "brain: init")
     o.row("ok", "Vault", f"{_home(root)} — " + ("added to your notes" if force else "new, with its own git history"))
     return root
 
@@ -160,11 +162,16 @@ def learn_history(o: Out, v) -> int:
     if not files:
         o.row("skip", "History", "no past sessions yet — it starts learning with your next one")
         return 0
-    st = learn.scan(v, max_age_days=60)
-    per100 = 100 * st["corrections"] / st["user_messages"] if st["user_messages"] else 0
-    o.row("ok", "History", f"{st['transcripts']:,} sessions · {st['user_messages']:,} of your messages · "
-                           f"{per100:.1f} corrections per 100 (your baseline)")
-    return st["transcripts"]
+    learn.scan(v, max_age_days=60)
+    day = metrics.installed(v)  # from here on, a change is the brain's; before, it is your history
+    curve = metrics.weekly_curve(v, 104)
+    messages, mistakes = sum(r["messages"] for r in curve), sum(r["corrections"] for r in curve)
+    base = metrics.since_start(curve, installed=day)
+    per100 = base["base"] if base else (100 * mistakes / messages if messages else 0.0)
+    sessions = metrics.session_count(v)  # all it has read, also on a second `brain setup`
+    o.row("ok", "History", f"{sessions:,} session{'s' * (sessions != 1)} · {messages:,} of your messages · "
+                           f"{per100:.1f} mistakes per 100 (your baseline)")
+    return sessions
 
 
 def choose_llm(o: Out, v, allow: bool) -> bool:
@@ -180,7 +187,8 @@ def choose_llm(o: Out, v, allow: bool) -> bool:
             return False
         v.set("llm_cmd", cmd)
     model = " (Haiku)" if " haiku" in cmd else ""
-    o.row("ok", "Learning", f"{cmd.split()[0]}{model} with your login · at most ${float(v.get('llm_budget_usd')):.2f} a day")
+    how = "on this machine" if cmd.split()[0] == "ollama" else "with your login"
+    o.row("ok", "Learning", f"{cmd.split()[0]}{model} {how} · at most ${float(v.get('llm_budget_usd')):.2f} a day")
     return True
 
 
@@ -300,10 +308,14 @@ def run(args: argparse.Namespace) -> int:
     thinks = choose_llm(o, v, not args.no_llm)
     schedule(o, v, not args.no_schedule)
     backup(o, v, bool(getattr(args, "github", False)))
-    if thinks and sessions and not os.environ.get("BRAIN_SETUP_NO_RUN"):
+    last = load_json(v.path("state", "nightly.json"), {})
+    # the first run, or the first since learning was switched on (setup once more after installing an LLM CLI)
+    if thinks and sessions and not last.get("llm_cmd") and not os.environ.get("BRAIN_SETUP_NO_RUN"):
         first_run(v)
         print("\n  Done. It is learning from your history right now; the first rules are in place in a few minutes.")
     else:
         print("\n  Done.")
-    print("  Nothing else to do. " + o.c("1", "brain") + " shows how it is doing.\n")
+    left = len(o.todo)
+    print(("  Nothing else to do. " if not left else "  One thing above (!) needs you. " if left == 1
+           else f"  {left} things above (!) need you. ") + o.c("1", "brain") + " shows how it is doing.\n")
     return 0

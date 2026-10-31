@@ -877,6 +877,8 @@ function heroSection(st){
     main.appendChild(h('div',{class:'big '+(ss.change<0?'':ss.change>0?'up':'flat')},signedPct(ss.change)));
     main.appendChild(h('p',{class:'hero-text'},'mistakes since ',h('span',{class:'nw',text:sinceLabel(ss.since)})));
     main.appendChild(h('p',{class:'hero-sub',text:f1(ss.base)+' → '+f1(ss.now)+' per 100 messages'}));
+  }else if(ss&&ss.base!=null){
+    main.appendChild(h('p',{class:'hero-measure',text:'Before the brain: '+f1(ss.base)+' mistakes per 100 messages. The change shows after two weeks with it.'}));
   }else{
     main.appendChild(h('p',{class:'hero-measure',text:'Measuring — the trend shows after a few weeks of sessions.'}));
   }
@@ -964,7 +966,7 @@ function replayBar(r){
 }
 function replayHeadline(r){
   var by=r.would_ask>0?[' ',h('span',{class:'by',text:'· '+r.would_ask+' by asking first'})]:null;
-  return h('h2',{},'Your rules would have caught ',h('em',{text:String(r.caught)}),' of ',h('em',{text:String(r.corrections)}),' past corrections',by);
+  return h('h2',{},'Your rules would fire before ',h('em',{text:String(r.caught)}),' of ',h('em',{text:String(r.corrections)}),' past corrections',by);
 }
 
 /* ================= RULES ================= */
@@ -1147,7 +1149,7 @@ async function runReplay(){
   try{
     var r=await api('/api/replay',{method:'POST',body:{days:S.replayDays}});
     if(r&&r.demo){await sleep(1100);S.replayNote='Demo: nothing changed. The sample result stays.'}
-    else if(r&&r.replay){S.state.replay=r.replay;toast('Replay done: '+r.replay.caught+' of '+r.replay.corrections+' corrections would have been caught.','ok')}
+    else if(r&&r.replay){S.state.replay=r.replay;toast('Replay done: today\'s rules would fire before '+r.replay.caught+' of '+r.replay.corrections+' corrections.','ok')}
     S.replayBusy=false;await load();
   }catch(e){
     S.replayBusy=false;
@@ -1174,7 +1176,7 @@ function renderReplay(){
   if(r.corrections){
     top.appendChild(replayBar(r));
     top.appendChild(h('div',{class:'statrow'},
-      sbox('caught','Caught',r.caught,r.caught_pct!=null?r.caught_pct+'% of corrections. A rule about this mistake would have fired before it.':''),
+      sbox('caught','Caught',r.caught,(r.learned_from?r.learned_from+' of them taught a rule, so they match by design. ':'')+(r.caught_pct!=null?'Of the others, '+r.caught_pct+'% are caught.':'A rule about this mistake would have fired before it.')),
       sbox('missed','Missed',r.missed,'A rule exists, but none of its triggers fired. Widen its words or commands.'),
       sbox('uncovered','Not covered',r.uncovered,'No rule is about this yet.'),
       sbox('caught','Asks first',r.would_ask,'Of the caught ones, a guard would have asked before the tool call.')));

@@ -134,11 +134,15 @@ def run(v: Vault, days: int = 30, files: list[Path] | None = None, draft: bool =
                 drafted += 1
     n = len(rows)
     by = Counter(r["status"] for r in rows)
+    # a rule learned from a correction matches it by construction: only the others say how well rules carry over
+    unseen = [r for r in rows if not r["before_lesson"]]
+    unseen_caught = sum(1 for r in unseen if r["status"] == "caught")
     out = {
         "t": now_iso(), "days": days, "sessions": sessions, "lessons": len(lessons), "silent_lessons": len(silent),
         "corrections": n, "caught": by["caught"], "missed": by["missed"], "uncovered": by["uncovered"],
         "would_ask": sum(1 for r in rows if any(x["how"] == "ask" for x in r["fired"])),
-        "caught_pct": round(100 * by["caught"] / n) if n else None, "drafted": drafted,
+        "learned_from": by["caught"] - unseen_caught, "unseen": len(unseen), "unseen_caught": unseen_caught,
+        "caught_pct": round(100 * unseen_caught / len(unseen)) if unseen else None, "drafted": drafted,
         "per_lesson": [{"id": lid, **c, "widen": [w for w, _ in words_seen[lid].most_common(3)]}
                        for lid, c in sorted(per.items(), key=lambda x: -(x[1]["caught"] + x[1]["missed"])) if c],
         "rows": rows[-400:],
@@ -156,10 +160,12 @@ def render(r: dict, show: int = 6) -> str:
     if not r["corrections"]:
         return (f"REPLAY ({r['days']} days, {r['sessions']} sessions): no corrections found — "
                 "nothing to replay yet, or `transcripts` in .brain/config.json points nowhere")
-    out = [f"REPLAY · {r['sessions']} sessions · last {r['days']} days · {r['lessons']} active rules",
-           f"  Your rules would have caught {r['caught']} of {r['corrections']} corrections ({r['caught_pct']} %)"
-           + (f" — {r['would_ask']} of them by asking you first." if r["would_ask"] else "."),
-           "  (caught = a rule about this mistake would have fired before it happened)",
+    pct = f" ({r['caught_pct']} %)" if r.get("caught_pct") is not None else ""
+    out = [f"REPLAY · {r['sessions']} session{'s' * (r['sessions'] != 1)} · last {r['days']} days · {r['lessons']} active rules",
+           f"  Today's rules would fire before {r['caught']} of {r['corrections']} past corrections"
+           + (f", {r['would_ask']} of them by asking you first." if r["would_ask"] else "."),
+           f"  {r.get('learned_from', 0)} of these taught a rule, so they match by design; of the {r.get('unseen', 0)}"
+           f" others, the rules catch {r.get('unseen_caught', 0)}{pct}.",
            f"  missed {r['missed']} (a rule exists, its triggers did not fire) · uncovered {r['uncovered']} (no rule yet)"]
     if r.get("silent_lessons"):
         out.append(f"  {r['silent_lessons']} rules are silent until you trust them (`brain review`) and were not counted.")

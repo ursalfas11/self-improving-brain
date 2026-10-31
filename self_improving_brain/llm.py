@@ -91,7 +91,18 @@ def budget_left(v: Vault) -> bool:
     return s["calls"] < int(v.get("llm_max_calls")) and s["usd"] < float(v.get("llm_budget_usd"))
 
 
+PROBLEMS: list[str] = []  # why the LLM stopped in this process: the nightly report shows it, not only the log
+
+
 def ask(v: Vault, prompt: str) -> str:
+    try:
+        return _ask(v, prompt)
+    except NoLLM as e:
+        PROBLEMS.append(str(e))
+        raise
+
+
+def _ask(v: Vault, prompt: str) -> str:
     cmd = str(v.get("llm_cmd") or "").strip()
     if not cmd:
         raise NoLLM("no llm_cmd configured")

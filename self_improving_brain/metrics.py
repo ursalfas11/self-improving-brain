@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from . import events
 from .config import Vault
 from .notes import Library
-from .util import days_since, iso_week, save_json, terms
+from .util import days_since, iso_week, load_json, save_json, terms
 
 
 def _within(t0: str, t1: str, seconds: int) -> bool:
@@ -72,6 +72,10 @@ def recall_numbers(v: Vault, days: int = 30) -> dict:
             "fire_rate": round(sum(1 for e in prompts if e.get("notes")) / len(prompts), 2) if prompts else None}
 
 
+def session_count(v: Vault) -> int:
+    return len(_sessions(v))
+
+
 def _sessions(v: Vault) -> dict[str, dict]:
     """The newest `turns` event per session (a session is re-read while it grows)."""
     last: dict[str, dict] = {}
@@ -96,25 +100,42 @@ def weekly_curve(v: Vault, weeks: int = 8) -> list[dict]:
 
 def efficiency(v: Vault, weeks: int = 4) -> dict:
     """What the brain costs your agent: injected tokens against the tokens your sessions used (last `weeks`)."""
+    from . import adapters
     tal = events.tallies(v)
-    used = defaultdict(int)
+    used, codex = defaultdict(int), defaultdict(int)
     for e in _sessions(v).values():
         used[e.get("week", "?")] += int(e.get("tokens") or 0)
+        codex[e.get("week", "?")] += e.get("source") == "codex"
     keys = sorted(set(tal) | set(used))[-weeks:]
-    injected = sum(int(tal.get(w, {}).get("inject_chars", 0)) for w in keys) // 4
+    # Codex has no hooks: the block in ~/.codex/AGENTS.md sits in each of its sessions, so it counts there
+    block = len(adapters.block(v)) if adapters.has_block(adapters.TARGETS["codex"]()) else 0
+    injected = (sum(int(tal.get(w, {}).get("inject_chars", 0)) for w in keys) + block * sum(codex[w] for w in keys)) // 4
     calls = sum(int(tal.get(w, {}).get("inject_calls", 0)) for w in keys)
     total = sum(used[w] for w in keys)
     return {"weeks": len(keys), "injected": injected, "calls": calls, "session_tokens": total,
             "share": round(injected / total, 5) if total else None}
 
 
-def trend(curve: list[dict], min_messages: int = 30) -> float | None:
-    """Change of the last full week against the four weeks before it, in percent (negative = fewer mistakes)."""
+def installed(v: Vault) -> str:
+    """The day the brain started working for you: the line between your history and what the brain changed.
+    Kept once; for a vault from before 0.2, the first day a hook showed something."""
+    p = v.path("state", "installed.json")
+    day = str(load_json(p, {}).get("day") or "")
+    if not day:
+        first = next((e.get("t") for e in events.all_events(v) if e.get("k") in ("recall", "lesson", "read")), "")
+        day = str(first or dt.date.today().isoformat())[:10]
+        save_json(p, {"day": day})
+    return day
+
+
+def trend(curve: list[dict], min_messages: int = 30, installed: str = "") -> float | None:
+    """Change of the last full week against the four weeks before it, in percent (negative = fewer mistakes).
+    None until a full week with the brain is over: a change in your history is not the brain's."""
     rows = [r for r in curve if r["messages"] >= min_messages]
     this = iso_week(dt.date.today().isoformat())
     if rows and rows[-1]["week"] == this:
         rows = rows[:-1]  # the running week is not over yet
-    if len(rows) < 2:
+    if len(rows) < 2 or (installed and rows[-1]["week"] <= iso_week(installed)):
         return None
     last, before = rows[-1], rows[-5:-1]
     base = sum(r["corrections"] for r in before) / max(1, sum(r["messages"] for r in before)) * 100
@@ -129,15 +150,26 @@ def week_digest(v: Vault) -> dict:
     kinds = Counter(e.get("kind") for e in js)
     eff = efficiency(v)
     return {"rules": kinds["rule"], "sharpened": kinds["sharpen"] + kinds["mechanism"], "retired": kinds["retire"],
-            "facts": kinds["fact"], "trend": trend(weekly_curve(v, 12)), "share": eff["share"],
+            "facts": kinds["fact"], "trend": trend(weekly_curve(v, 12), installed=installed(v)), "share": eff["share"],
             "cost": llm.spent_since(v, first)}
 
 
-def since_start(curve: list[dict], min_messages: int = 30) -> dict | None:
-    """The last full week against your first two weeks of data (the baseline from before the brain knew you)."""
+def since_start(curve: list[dict], min_messages: int = 30, installed: str = "") -> dict | None:
+    """The last full week against the weeks before the brain (up to four), shown after two full weeks with it.
+    Without history from before, the brain's own first two weeks are the baseline."""
     rows = [r for r in curve if r["messages"] >= min_messages]
     if rows and rows[-1]["week"] == iso_week(dt.date.today().isoformat()):
         rows = rows[:-1]
+    start = iso_week(installed) if installed else ""
+    before = [r for r in rows if r["week"] < start][-4:]
+    if before:
+        base = 100 * sum(r["corrections"] for r in before) / max(1, sum(r["messages"] for r in before))
+        after = [r for r in rows if r["week"] > start]  # the week it came in is half yours, half the brain's
+        out = {"now": None, "base": round(base, 1), "change": None, "since": installed[:10]}
+        if len(after) >= 2 and base:
+            out.update(now=after[-1]["per100"], change=round(100 * (after[-1]["per100"] - base) / base))
+        return out
+    rows = [r for r in rows if r["week"] >= start]
     if len(rows) < 3:
         return None
     base = 100 * sum(r["corrections"] for r in rows[:2]) / sum(r["messages"] for r in rows[:2])

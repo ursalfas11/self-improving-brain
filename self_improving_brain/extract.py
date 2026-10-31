@@ -58,7 +58,7 @@ def condense(turns, limit: int = 6000) -> str:
 def _todo(v: Vault, state: dict, max_sessions: int) -> list[tuple[Path, object, int]]:
     """(file, transcript, first new turn) for sessions with something new, newest first."""
     out = []
-    cutoff = time.time() - 4 * 86400
+    cutoff = time.time() - 14 * 86400  # newest first and capped per night, so a backlog drains over a few nights
     for f in reversed(learn.transcript_files(v)):
         try:
             st = f.stat()

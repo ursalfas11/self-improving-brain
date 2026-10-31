@@ -60,7 +60,7 @@ Prompt words, a tool, a shell command or a path trigger a rule. Where you once s
 <td width="33%" valign="top">
 
 ### 📉 Proves it works
-`brain` shows your mistakes per 100 messages since the week you installed it. `brain replay` shows which of your past corrections today's rules would have caught.
+`brain` shows your mistakes per 100 messages since the week you installed it, against the weeks before. `brain replay` shows which past corrections today's rules would fire before, counting apart the ones a rule was learned from.
 
 </td>
 </tr>
@@ -88,7 +88,7 @@ A rule that keeps getting broken gets sharper, then stricter. A rule that never 
 <td valign="top">
 
 ### 🪶 Costs almost nothing
-The hooks add one line at session start, and a rule shows up only when it matches. The nightly model has a hard cap of $0.10 a day. `brain` shows what the brain costs you, measured.
+The hooks add a few lines at session start, and a rule shows up only when it matches. The nightly model has a hard cap of $0.10 a day. `brain` shows what the brain costs you, measured.
 
 </td>
 <td valign="top">
@@ -134,7 +134,7 @@ pipx install git+https://github.com/ursalfas11/self-improving-brain && brain set
 # or, from a clone, no install at all:
 git clone https://github.com/ursalfas11/self-improving-brain && cd self-improving-brain && ./brain setup
 ```
-`--no-llm` and `--no-schedule` leave out learning and the nightly run. `brain update` updates, `brain uninstall` takes it out of every agent again, and your notes stay.
+`--no-llm` and `--no-schedule` leave out learning and the nightly run. `brain update` updates. `brain uninstall` takes it out of every agent, the schedule and your notes' git hook, removes the `brain` link, its cache and settings, and prints the one command that removes the program (`rm -rf ~/.local/share/self-improving-brain` after the installer). Your notes stay.
 </details>
 
 <details>
@@ -160,7 +160,7 @@ $ brain
   Mistakes     3.8 per 100 messages · −60 % since Aug 3
   This week    2 new rules · 2 sharpened · 3 facts filed · 1 retired
   Cost         1.2 % of your agent's tokens · $0.19 for the nights
-  Last night   03:17 · 1 new rule, 2 facts filed, backed up
+  Last run     03:17 · 1 new rule, 2 facts filed, backed up
 
   23 rules (3 always, 5 guards) · 11 notes · 412 sessions read
 ```
@@ -245,11 +245,11 @@ Most memory tools store things and hope. This one shows its work, on your own hi
 ```text
 $ brain replay                                    # example output
 REPLAY · 127 sessions · last 30 days · 24 active rules
-  Your rules would have caught 31 of 64 corrections (48 %) — 7 of them by asking you first.
-  (caught = a rule about this mistake would have fired before it happened)
+  Today's rules would fire before 31 of 64 past corrections, 7 of them by asking you first.
+  19 of these taught a rule, so they match by design; of the 45 others, the rules catch 12 (27 %).
   missed 9 (a rule exists, its triggers did not fire) · uncovered 24 (no rule yet)
 RULES
-  L-testing-no-retry-flaky                 caught   6 · missed   2  → widen: words race, timeout
+  L-flaky-tests-root                       caught   6 · missed   2  → widen: words race, timeout
 ```
 
 Nothing leaves your machine, and no LLM is involved.
@@ -257,7 +257,7 @@ Nothing leaves your machine, and no LLM is involved.
 **Does it notice when you correct it?** Measured on 250 hand-labelled replies in six languages, tuned on one half and tested on the other. On the test half, 93 % of what it flags is a real correction, and it finds 86 % of the ones that should become a rule. Then the nightly judge threw out every false alarm and kept every lasting correction, for one cent. The data, the method and the numbers per language are in [eval/](eval/README.md).
 
 <p align="center">
-  <img src="docs/assets/report.svg" alt="Example report card: corrections per 100 messages down 61 % over 12 weeks; 20 lessons; 48 % of past mistakes caught; 7 risky actions flagged" width="80%">
+  <img src="docs/assets/report.svg" alt="Example report card: corrections per 100 messages down 61 % over 12 weeks; 20 lessons; 27 % of unseen mistakes caught; 7 risky actions flagged" width="80%">
 </p>
 
 `brain report --public` draws this card from your numbers: no notes, no rules, no quotes, no paths, so you can post it. `brain report --badge` makes a small README badge. (The card above uses the example data of `brain ui --demo`.)
@@ -374,7 +374,7 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 | Every change it makes can be undone | – | varies | ✅ |
 | Shows whether your agent's mistakes go down | ✗ | ✗ | ✅ |
 | A planted rule stays silent until you trust it | ✗ | ✗ | ✅ |
-| Context cost per session | grows forever | tool schemas | **one line** (hooks) |
+| Context cost per session | grows forever | tool schemas | **a few lines** (hooks) |
 | Runs on | – | a server / cloud | **your laptop** |
 | Format | one big file | a database | **Markdown + links** |
 
@@ -383,13 +383,13 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 <details>
 <summary><b>Does the model itself learn?</b></summary>
 
-No, and nothing running on your laptop can do that. What improves is *what the agent is told, and when*. You can see the improvement: `brain` shows your mistakes per 100 messages against your first two weeks, and `brain replay` shows what your current rules would have caught.
+No, and nothing running on your laptop can do that. What improves is *what the agent is told, and when*. You can see the improvement: `brain` shows your mistakes per 100 messages against the weeks before you installed it, and `brain replay` shows which past corrections your current rules would fire before.
 </details>
 
 <details>
 <summary><b>What does it cost?</b></summary>
 
-In your sessions: one line at session start plus your always-on rules (eight at most), and a rule only when it matches. `brain` shows the brain's measured share of your agent's tokens. At night: a small model through the CLI you already use (Haiku with your Claude login, by default), capped at $0.10 and 40 calls a day; `brain` shows what the nights cost this week.
+In your sessions: a few lines at session start (where the memory is, your always-on rules, eight at most), and a rule only when it matches. `brain` shows the brain's measured share of your agent's tokens. At night: a small model through the CLI you already use (Haiku with your Claude login, by default), capped at $0.10 and 40 calls a day; `brain` shows what the nights cost this week.
 </details>
 
 <details>
@@ -413,7 +413,7 @@ A rule about that mistake (its words, command or check match what happened) woul
 <details>
 <summary><b>CLI or MCP server?</b></summary>
 
-Both. In Claude Code the brain uses hooks and a CLI: the hooks add one line at session start and fire rules only when they match, while MCP tool schemas would cost tokens in every request. Clients without hooks get the MCP server, whose instructions tell the agent to call `brain_context` first and `brain_check` before irreversible commands.
+Both. In Claude Code the brain uses hooks and a CLI: the hooks add a few lines at session start and fire rules only when they match, while MCP tool schemas would cost tokens in every request. Clients without hooks get the MCP server, whose instructions tell the agent to call `brain_context` first and `brain_check` before irreversible commands.
 </details>
 
 <details>

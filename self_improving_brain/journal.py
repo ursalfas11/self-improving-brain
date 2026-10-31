@@ -112,7 +112,8 @@ def undo(v: Vault, ref: str) -> str:
         lesson = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)
         if lesson is not None and not lesson.retired:
             learn.set_lesson_field(v, lid, "retired", f"{today()} · undone by you", by="undo")
-        words = (lesson.words if lesson and len(lesson.words) >= 2 else terms(e.get("rule", ""))[:4])
+        words = (lesson.words if lesson and len(lesson.words) >= 2
+                 else [w for w in terms(e.get("rule", "")) if w not in learn.FILLER][:4])
         learn.block(v, words, f"undone: {short(e.get('rule', ''), 120)}")
         msg = f"rule {lid} retired; this topic is not learned again"
     elif kind == "sharpen":
@@ -134,7 +135,7 @@ def undo(v: Vault, ref: str) -> str:
                 raise ValueError(f"{e['path']} changed since the brain wrote it — edit it by hand")
             else:
                 p.unlink()
-                msg = f"removed {e['path']}"
+                msg = f"removed the note the brain wrote, {e['path']}"
             hub = e.get("hub")
             if hub and (v.root / hub).exists():
                 h = (v.root / hub).read_text(encoding="utf-8")
@@ -146,9 +147,10 @@ def undo(v: Vault, ref: str) -> str:
                 raise ValueError(f"{e['path']} changed since the brain wrote it — edit it by hand")
             if e.get("action") == "update" and old is not None:
                 atomic_write(p, cur.replace(added, old, 1))
+                msg = f"{e.get('note') or e['path']} says again: “{short(old, 80)}”"
             else:
                 atomic_write(p, _drop_block(cur, added))
-            msg = f"{e['path']}: the brain's change is out again"
+                msg = f"took “{short(added, 80)}” out of {e.get('note') or e['path']}"
     else:
         raise ValueError(f"{e['id']} ({kind}) cannot be undone")
     append_jsonl(path(v), {"id": "j-" + digest("undo", e["id"], now_iso())[:8], "t": now_iso(), "kind": "undo",

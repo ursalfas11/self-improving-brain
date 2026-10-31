@@ -43,10 +43,13 @@ def fingerprint(root: Path) -> str:
     return h.hexdigest()
 
 
+def base_dir() -> Path:
+    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "self-improving-brain"
+
+
 def _cache_dir(v: Vault) -> Path:
     """Outside the vault on purpose: a vault cloned from elsewhere can never ship a poisoned cache."""
-    base = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "self-improving-brain"
-    return base / hashlib.sha1(str(v.root).encode()).hexdigest()[:16]
+    return base_dir() / hashlib.sha1(str(v.root).encode()).hexdigest()[:16]
 
 
 def _path(v: Vault, name: str) -> Path:

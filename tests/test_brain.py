@@ -224,7 +224,7 @@ class TestAdapters(VaultCase):
         adapters.uninstall("claude")
         data = json.loads(settings.read_text())
         self.assertEqual(data["hooks"]["PreToolUse"][0]["hooks"][0]["command"], "mine")
-        self.assertNotIn("self-improving-brain", (Path(os.environ["HOME"]) / ".claude/CLAUDE.md").read_text())
+        self.assertFalse((Path(os.environ["HOME"]) / ".claude/CLAUDE.md").exists(), "it held only the brain's block")
 
     def test_codex_block(self):
         adapters.install(self.v, "codex")
@@ -392,7 +392,9 @@ class TestImprovements(VaultCase):
         out = run_cli("setup", "--vault", str(target), "--no-llm", "--no-schedule", "--agents", "claude")
         self.assertIn("new, with its own git history", out)
         self.assertIn("Claude Code", out)
-        self.assertIn("1 sessions · 1 of your messages", out)
+        self.assertIn("1 session · 1 of your messages", out)
+        again = run_cli("setup", "--vault", str(target), "--no-llm", "--no-schedule", "--agents", "claude")
+        self.assertIn("1 session · 1 of your messages", again, "a second setup still knows your history")
         settings = json.loads((Path(os.environ["HOME"]) / ".claude/settings.json").read_text())
         self.assertIn("SessionStart", settings["hooks"])
         self.assertNotIn("Stop", settings["hooks"])
@@ -709,7 +711,7 @@ class TestReplay(VaultCase):
         self.assertEqual(r["drafted"], 1)
         self.assertTrue(any("french" in d["quote"] for d in learn.drafts(self.v)))
         self.assertEqual(replay.run(self.v, files=[p], draft=True)["drafted"], 0, "no duplicate drafts")
-        self.assertIn("caught 2 of 3", run_cli("replay", "--file", str(p)))
+        self.assertIn("fire before 2 of 3", run_cli("replay", "--file", str(p)))
 
 
 class TestMcp(VaultCase):

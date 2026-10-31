@@ -33,7 +33,8 @@ def numbers(st: dict) -> dict:
         "messages": sum(x["messages"] for x in curve), "corrections": sum(x["corrections"] for x in curve),
         "curve": [x["per100"] for x in curve],
         "lessons": sum(mech.values()), "mechanisms": dict(mech),
-        "replay": {k: r.get(k) for k in ("corrections", "caught", "would_ask", "caught_pct", "sessions", "days")} if r else None,
+        "replay": {k: r.get(k) for k in ("corrections", "caught", "would_ask", "caught_pct", "unseen", "unseen_caught",
+                                         "learned_from", "sessions", "days")} if r else None,
         "violations_change": vio, "precision": (st.get("recall") or {}).get("precision"),
     }
 
@@ -54,8 +55,9 @@ def text(st: dict) -> str:
     out.append(f"  lessons: {n['lessons']} ({', '.join(f'{v} {k}' for k, v in sorted(m.items(), key=lambda x: -x[1]))})")
     r = n["replay"]
     if r and r.get("corrections"):
-        out.append(f"  replay: today's lessons would have caught {r['caught']} of {r['corrections']} past corrections "
-                   f"({r['caught_pct']} %), {r['would_ask']} by asking first")
+        out.append(f"  replay: today's lessons fire before {r['caught']} of {r['corrections']} past corrections, "
+                   f"{r['would_ask']} by asking first; of the {r.get('unseen') or 0} that taught no rule, "
+                   f"{r.get('unseen_caught') or 0} are caught")
     else:
         out.append("  replay: not run yet (the nightly run does it)")
     if n["violations_change"] is not None:
@@ -94,8 +96,9 @@ def card(st: dict) -> str:
     m = n["mechanisms"]
     tiles = [
         (str(n["lessons"]), "lessons", f"{m.get('guard', 0)} guards · {m.get('reflex', 0) + m.get('skill', 0)} reflexes · {m.get('always', 0)} always"),
-        (f"{r['caught_pct']} %" if r.get("corrections") else "–", "of past mistakes caught",
-         f"a lesson fires first · {r['caught']} of {r['corrections']} replayed" if r.get("corrections") else "run `brain replay`"),
+        (f"{r['caught_pct']} %" if r.get("caught_pct") is not None else "–", "of unseen mistakes caught",
+         f"{r.get('unseen_caught') or 0} of {r.get('unseen') or 0} that taught no rule" if r.get("corrections")
+         else "run `brain replay`"),
         (str(r.get("would_ask")) if r.get("corrections") else "–", "risky actions flagged",
          "a guard would have asked first"),
     ]

@@ -99,7 +99,12 @@ def tokens_estimate(text: str) -> int:
 
 def short(text: str, n: int = 160) -> str:
     text = " ".join(text.split())
-    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+    if len(text) <= n:
+        return text
+    cut = text[: n - 1]
+    if text[n - 1] != " " and " " in cut[-24:]:  # end after a word, not inside one
+        cut = cut[: cut.rfind(" ")]
+    return cut.rstrip(" ,;:") + "…"
 
 
 def slugify(text: str) -> str:

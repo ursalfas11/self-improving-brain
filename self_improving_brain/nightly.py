@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 from .config import Vault
-from .util import day_label, days_since, load_json, now_iso, save_json
+from .util import day_label, days_since, load_json, now_iso, save_json, short
 
 LABEL = "dev.self-improving-brain.nightly"
 
@@ -84,6 +84,12 @@ def backup_state(root: Path) -> tuple[str, str]:
     return url, (f"{ahead} commits not pushed yet" if ahead not in ("", "0") else "")
 
 
+def identity(root: Path) -> list[str]:
+    """A fresh machine, container or CI box has no git name: the brain commits as `brain` there."""
+    return [] if git_in(root, "config", "user.email").stdout.strip() else \
+        ["-c", "user.name=brain", "-c", "user.email=brain@localhost"]
+
+
 def _commit(v: Vault, message: str) -> str:
     """Commit what the brain may commit. '' when that worked, else the problem."""
     if v.get("git_owned"):
@@ -91,9 +97,10 @@ def _commit(v: Vault, message: str) -> str:
     else:  # a repo the brain joined: notes and brain state only, never your other files
         git(v, "add", "-A", "--", "*.md", *[p for p in (".brain", ".gitignore") if (v.root / p).exists()])
     if git(v, "diff", "--cached", "--quiet").returncode != 0:
-        c = git(v, "commit", "-q", "-m", message)
+        c = git(v, *identity(v.root), "commit", "-q", "-m", message)
         if c.returncode != 0:
-            return "commit failed (secret scan?): " + (c.stdout + c.stderr).strip()[:200]
+            out = (c.stdout + c.stderr).strip()
+            return ("the secret scan stopped the commit: " if "secret" in out.lower() else "commit failed: ") + short(out, 160)
     return ""
 
 
@@ -187,8 +194,14 @@ def _run(v: Vault, quick: bool) -> dict:
     from . import curate, distill, extract, inbox, learn, llm, maplib, metrics
     from .lint import lint
     from .notes import Library
-    rep: dict = {"t": now_iso(), "steps": {}, "attention": []}
+    rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
     s = rep["steps"]
+    llm.PROBLEMS.clear()
+
+    def broken(msg: str) -> None:
+        """Something failed: `brain` lists it, and the next session tells you once."""
+        rep["attention"].append(msg)
+        rep["broken"].append(msg)
 
     def step(name: str, fn):
         """Run one step; its result lands in the report. One broken step must not stop the others,
@@ -197,7 +210,7 @@ def _run(v: Vault, quick: bool) -> dict:
             s[name] = fn()
         except Exception as e:  # noqa: BLE001
             s[name] = f"error: {type(e).__name__}: {e}"[:300]
-            rep["attention"].append(f"the nightly step {name} failed → `brain doctor`")
+            broken(f"the nightly step {name} failed → `brain doctor`")
             return None
         return s[name]
 
@@ -223,13 +236,20 @@ def _run(v: Vault, quick: bool) -> dict:
         findings = lint(v, Library(v.root))
         return {"must": sum(f.level == "MUST" for f in findings), "should": sum(f.level == "SHOULD" for f in findings)}
     step("lint", _lint)
+    if llm.PROBLEMS:  # a failed login looks like a quiet night unless it is said here
+        rep["llm_error"] = llm.PROBLEMS[0]
+        if not llm.PROBLEMS[0].startswith("today's learning budget"):
+            exe = Path(shlex.split(str(v.get("llm_cmd")))[0]).name if v.get("llm_cmd") else "LLM"
+            broken(f"the {exe} call failed, so nothing was learned ({short(llm.PROBLEMS[0], 80)}) → `brain doctor`")
     conflicts = [i for i in inbox.items(v) if i.get("conflict")]
     if conflicts:
-        rep["attention"].append(f"{len(conflicts)} facts could not be filed on their own → `brain inbox`")
+        n = len(conflicts)
+        rep["attention"].append(f"{n} fact{'s' * (n != 1)} could not be filed on {'their' if n != 1 else 'its'} own"
+                                " → `brain inbox`")
     if v.get("git_sync") and not quick:
         res = step("sync", lambda: sync(v, "brain: nightly"))
         if isinstance(res, str) and not res.startswith(("synced", "committed (no remote)", "no git repo")):
-            rep["attention"].append(f"backup: {res[:160]}")
+            broken(f"backup: {res[:160]}")
     rep["llm"] = llm.spent(v)
     rep["llm_cmd"] = bool(v.get("llm_cmd"))  # `brain` compares: set in your shell, missing at night
     save_json(v.path("state", "nightly.json"), rep)
@@ -252,7 +272,9 @@ def summary(rep: dict) -> str:
              "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
     t = str(rep.get("t", ""))
     when = t[11:16] if days_since(t[:10]) in (0, 1) else day_label(t)
-    return f"{when} · " + (", ".join(x for x in parts if x) or "nothing new")
+    paused = " · the day's budget was used up, the rest waits" if str(rep.get("llm_error", "")).startswith(
+        "today's learning budget") else ""
+    return f"{when} · " + (", ".join(x for x in parts if x) or "nothing new") + paused
 
 
 # --- scheduling -----------------------------------------------------------------------------
@@ -358,16 +380,18 @@ def schedule_remove(v: Vault | None = None) -> str:
             pass
     if platform.system() == "Windows":
         r = subprocess.run(["schtasks", "/Delete", "/F", "/TN", TASK], capture_output=True)
-        return f"removed Windows task {TASK}" if r.returncode == 0 else "nothing installed"
+        return f"removed the nightly task {TASK}" if r.returncode == 0 else "nightly schedule: none to remove"
     if platform.system() == "Darwin":
         p = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
         if p.exists():
             subprocess.run(["launchctl", "unload", str(p)], capture_output=True)
             p.unlink()
-            return f"removed {p}"
-        return "nothing installed"
+            return f"removed the nightly schedule ({p})"
+        return "nightly schedule: none to remove"
     if shutil.which("crontab"):
         cur = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
-        subprocess.run(["crontab", "-"], input="\n".join(l for l in cur.splitlines() if LABEL not in l) + "\n", text=True)
-        return "removed cron job"
-    return "nothing installed"
+        if LABEL in cur:  # your crontab is rewritten only when it holds the brain's line
+            subprocess.run(["crontab", "-"], input="\n".join(l for l in cur.splitlines() if LABEL not in l) + "\n",
+                           text=True)
+            return "removed the nightly cron job"
+    return "nightly schedule: none to remove"

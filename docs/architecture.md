@@ -269,7 +269,17 @@ question, files touched, the last commands and the repo. After compaction the se
 and asks for each one: which current lesson is about this mistake (its words match the correction, its
 command or check matches one of the last tool calls, or its rule is similar enough), and would it have fired
 before the correction, in that turn's prompt or at a tool call. Results: **caught**, **missed** (a lesson exists, its triggers did not fire; replay names the
-words that would have) and **uncovered**. Lessons still waiting for `brain trust` are not counted.
+words that would have) and **uncovered**. Lessons still waiting for `brain trust` are not counted. A correction
+from before a lesson's `since` date is one the lesson was learned from: it matches by design, so the percentage
+counts only the others ("unseen").
+
+## Install day
+
+`metrics.installed` keeps the day the brain started (`state/installed.json`, written by `brain setup`; for an older
+vault, the first day a hook showed something). Mistakes per 100 messages compare the last full week with up to
+four weeks before that day, and only after two full weeks with the brain; the week it came in counts for neither
+side. Without history from before, its own first two weeks are the baseline. The weekly trend stays silent until a
+full week with the brain is over.
 
 ## MCP server
 

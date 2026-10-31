@@ -75,6 +75,14 @@ def _csv(s):
     return [x.strip() for x in s.split(",") if x.strip()] if s is not None else None
 
 
+SCAN_TAG = "# self-improving-brain secret scan"
+
+
+def _usd(x: float) -> str:
+    """$0.10, and $0.005 where two decimals would show $0.00."""
+    return f"${x:.2f}" if round(x, 2) == round(x, 4) else f"${x:.3f}"
+
+
 def _home(p: Path) -> str:
     h = str(Path.home())
     return "~" + str(p)[len(h):] if str(p).startswith(h + os.sep) else str(p)
@@ -93,13 +101,16 @@ def c_status(a):
     lessons = cache.lessons(v)
     lib = cache.library(v)
     d = metrics.week_digest(v)
-    start = metrics.since_start(metrics.weekly_curve(v, 104))
+    start = metrics.since_start(metrics.weekly_curve(v, 104), installed=metrics.installed(v))
     rep = load_json(v.path("state", "nightly.json"), {})
     sessions = len({e.get("session") for e in events.all_events(v, "turns")})
     rows = []
-    if start:
+    if start and start["change"] is not None:
         rows.append(("Mistakes", f"{start['now']:.1f} per 100 messages · "
                      f"{'−' if start['change'] <= 0 else '+'}{abs(start['change'])} % since {day_label(start['since'])}"))
+    elif start:
+        rows.append(("Mistakes", f"{start['base']:.1f} per 100 messages before the brain · "
+                                 "the change shows after two weeks with it"))
     else:
         rows.append(("Mistakes", "measuring — the trend shows after a few weeks of sessions"))
     rows.append(("This week", metrics.learned_text(d)))
@@ -109,7 +120,7 @@ def c_status(a):
     if d["cost"]["calls"]:
         cost.append(f"${d['cost']['usd']:.2f} for the nights" if d["cost"]["usd"] else f"{d['cost']['calls']} LLM calls")
     rows.append(("Cost", " · ".join(cost) or "nothing measured yet"))
-    rows.append(("Last night", nightly.summary(rep) if rep.get("t") else "not run yet"))
+    rows.append(("Last run", nightly.summary(rep) if rep.get("t") else "not run yet"))
     print(f"\n  🧠  {c.b('self-improving-brain')}   {c.d(_home(v.root))}\n")
     for k, val in rows:
         print(f"  {c.d(f'{k:<12}')} {val}")
@@ -238,7 +249,7 @@ def c_doctor(a):
     if llm.available(v):
         exe = str(v.get("llm_cmd")).split()[0]
         s = llm.spent(v)
-        print(f"✓ learns with {exe} · today {s['calls']} calls, ${s['usd']:.3f} of ${float(v.get('llm_budget_usd')):.2f}")
+        print(f"✓ learns with {exe} · today {s['calls']} calls, {_usd(s['usd'])} of {_usd(float(v.get('llm_budget_usd')))}")
         if not shutil.which(exe):
             print(f"✗ {exe} is not on PATH")
             ok = False
@@ -252,6 +263,14 @@ def c_doctor(a):
         print(("✓" if not failed else "✗") + f" last nightly run {str(rep['t'])[:16]}"
               + (": " + "; ".join(f"{k} {str(rep['steps'][k])[7:120]}" for k in failed) if failed else ""))
         ok = ok and not failed
+        err, age = str(rep.get("llm_error") or ""), days_since(str(rep["t"])[:10]) or 0
+        if err.startswith("today's learning budget"):
+            print("! the day's learning budget was used up in the last run; the rest waits (llm_budget_usd)")
+        elif err:
+            print(f"✗ the last run's LLM call failed, so it learned nothing: {short(err, 200)}")
+            ok = False
+        if age > 2:
+            print(f"! the last run was {age} days ago: a missed night starts with your next session, or run `brain nightly`")
     else:
         print("· the nightly run has not run yet")
     url, problem = nightly.backup_state(v.root)
@@ -323,14 +342,56 @@ def c_uninstall(a):
         except (ValueError, OSError) as e:
             print(f"{c}: {e}")
     try:
-        print(nightly.schedule_remove(_vault(a)))
+        v = _vault(a)
     except NotAVault:
-        print(nightly.schedule_remove())
-    try:
-        print(f"Your notes stay where they are ({_home(_vault(a).root)}); delete the folder if you want them gone.")
-    except NotAVault:
-        pass
+        v = None
+    print(nightly.schedule_remove(v))
+    for line in ([_drop_scan(v.root)] if v else []) + _drop_user_files():
+        if line:
+            print(line)
+    if v:
+        print(f"Your notes stay where they are ({_home(v.root)}); delete the folder if you want them gone.")
+    shim = adapters.PKG_ROOT / "brain"
+    if not shim.is_file():
+        print("Last step, the program itself:  python3 -m pip uninstall self-improving-brain")
+    elif adapters.PKG_ROOT == Path(os.environ.get("BRAIN_HOME") or Path.home() / ".local/share/self-improving-brain"):
+        print(f"Last step, the program itself:  rm -rf {_home(adapters.PKG_ROOT)}")
+    else:
+        print(f"The program is the folder {_home(adapters.PKG_ROOT)}; delete it if you want it gone.")
     return 0
+
+
+def _drop_scan(root: Path) -> str:
+    """Take the secret scan out of the notes' pre-commit hook; the hook goes if it held only that."""
+    hook = root / ".git" / "hooks" / "pre-commit"
+    try:
+        lines = hook.read_text(encoding="utf-8").split("\n")
+    except OSError:
+        return ""
+    keep = [x for x in lines if SCAN_TAG not in x]
+    if len(keep) == len(lines):
+        return ""
+    if all(not x.strip() or x.startswith("#!") for x in keep):
+        hook.unlink()
+    else:
+        hook.write_text("\n".join(keep), encoding="utf-8")
+    return "removed the secret scan from your notes' git hook"
+
+
+def _drop_user_files() -> list[str]:
+    """The `brain` link, the cache and the settings outside the vault."""
+    from . import cache, config
+    out = []
+    link, shim = Path.home() / ".local" / "bin" / "brain", adapters.PKG_ROOT / "brain"
+    src = shim if shim.is_file() else adapters.console_script()
+    if link.is_symlink() and src and link.resolve() == Path(src).resolve():
+        link.unlink()
+        out.append(f"removed the brain command ({_home(link)})")
+    for d in (cache.base_dir(), config.user_config_path().parent):
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+            out.append(f"removed {_home(d)}")
+    return out
 
 
 # --- what agents use -------------------------------------------------------------------------------
@@ -566,12 +627,20 @@ def c_init(a):
         subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=False)
     if (root / ".git").exists():
         hook = root / ".git" / "hooks" / "pre-commit"
-        line = f"{adapters.brain_cmd()} --vault \"{root}\" scan --staged || exit 1  # self-improving-brain secret scan"
-        if not hook.exists():
+        argv = adapters.brain_argv()
+        need = argv[1] if len(argv) == 2 else argv[0]  # the clone's `brain`, the installed script, or Python
+        # once the brain is gone the line steps aside: a deleted tool must not block your commits
+        line = f'if [ -e "{need}" ]; then {adapters.brain_cmd()} --vault "{root}" scan --staged || exit 1; fi  {SCAN_TAG}'
+        text = hook.read_text(encoding="utf-8", errors="replace") if hook.exists() else ""
+        if not text:
             hook.parent.mkdir(parents=True, exist_ok=True)
             hook.write_text(f"#!/bin/sh\n{line}\n", encoding="utf-8")
             hook.chmod(0o755)
-        elif "self-improving-brain secret scan" not in hook.read_text(encoding="utf-8", errors="replace"):
+        elif SCAN_TAG in text:  # a line of an older version: the current one replaces it
+            new = "\n".join(line if SCAN_TAG in x else x for x in text.split("\n"))
+            if new != text:
+                hook.write_text(new, encoding="utf-8")
+        else:
             print(f"note: {hook} exists — add this line to it to block secrets on commit:\n  {line}")
     remember_vault(root)
     if not quiet:
@@ -1019,7 +1088,16 @@ def main(argv=None) -> int:
         for name, text in HIDDEN:
             print(f"  {name:<11} {text}")
         return 0
-    a = build_parser().parse_args(argv)
+    elif rest[0] in ("--version", "-V", "version"):
+        from . import __version__
+        print(f"self-improving-brain {__version__}")
+        return 0
+    parser = build_parser()
+    known = next(x for x in parser._actions if isinstance(x, argparse._SubParsersAction)).choices
+    if rest and not rest[0].startswith("-") and rest[0] not in known:  # argparse would list all 40 commands
+        print(f"brain: unknown command '{rest[0]}' · `brain --help` lists the ones you need")
+        return 2
+    a = parser.parse_args(argv)
     if not getattr(a, "f", None):
         print(HELP)
         return 2

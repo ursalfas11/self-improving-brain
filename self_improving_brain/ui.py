@@ -60,7 +60,7 @@ def state(v: Vault) -> dict:
         "vault": {"root": str(v.root), "name": v.root.name, "version": __version__, "notes": len(lib.notes),
                   "lessons": len(lessons), "inbox": len(inbox.items(v)), "learning": llm.available(v)},
         "digest": metrics.week_digest(v),
-        "since_start": metrics.since_start(metrics.weekly_curve(v, 104)),
+        "since_start": metrics.since_start(metrics.weekly_curve(v, 104), installed=metrics.installed(v)),
         "curve": curve,
         "efficiency": metrics.efficiency(v),
         "recall": metrics.recall_numbers(v),

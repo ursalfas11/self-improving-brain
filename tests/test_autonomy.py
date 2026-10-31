@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from test_brain import VaultCase, run_cli, write_claude  # noqa: E402
 
-from self_improving_brain import (curate, distill, events, extract, hooks, inbox, journal, learn, ledger, lint,  # noqa: E402
-                                  llm, metrics, nightly, trust)
+from self_improving_brain import (adapters, curate, distill, events, extract, hooks, inbox, journal, learn,  # noqa: E402
+                                  ledger, lint, llm, metrics, nightly, trust)
 from self_improving_brain.notes import Library  # noqa: E402
 from self_improving_brain.transcripts import parse  # noqa: E402
 from self_improving_brain.util import append_jsonl, read_jsonl, today  # noqa: E402
@@ -136,6 +136,21 @@ class TestAdopt(VaultCase):
         self.add(held(3, "s3"), held(4, "s4"))
         self.assertEqual(learn.adopt(self.v)["rules"], [])
         self.assertIn("already undone", run_cli("undo", journal.entries(self.v)[0]["id"]))
+
+    def test_an_undone_topic_stays_blocked_in_other_words(self):
+        flaky = dict(rule="Fix flaky tests at the root; never paper over them with retries.",
+                     quote="no, don't just add a retry, the test is flaky because of a race",
+                     suggest={"mechanism": "reflex", "words": ["flaky test", "is flaky", "retry", "race"]})
+        self.add(held(1, "s1", **flaky), held(2, "s2", **flaky))
+        self.assertEqual(len(learn.adopt(self.v)["rules"]), 1)
+        run_cli("undo", "1")
+        again = dict(rule="Find the race behind a flaky test instead of adding retries.",
+                     quote="never paper over a flaky test with retries, find the race",
+                     suggest={"mechanism": "reflex", "words": ["race condition", "flaky tests"]})
+        self.add(held(3, "s3", **again), held(4, "s4", **again))
+        self.assertEqual(learn.adopt(self.v)["rules"], [], "plural, other phrases: still the topic you undid")
+        self.add(held(5, "s5"), held(6, "s6"))
+        self.assertEqual(len(learn.adopt(self.v)["rules"]), 1, "another topic is learned as before")
 
     def test_old_drafts_expire(self):
         self.add(dict(held(1, "s1"), t="2025-01-01T10:00:00"))
@@ -367,6 +382,17 @@ class TestNumbers(VaultCase):
         self.assertEqual((s["base"], s["now"], s["change"], s["since"]), (7.0, 3.0, -57, "2026-07-20"))
         self.assertEqual(metrics.trend(curve), -37, "3 against 4.75 in the four weeks before")
 
+    def test_only_weeks_with_the_brain_count_for_it(self):
+        curve = [{"week": f"2026-W{w:02d}", "messages": 100, "corrections": c, "per100": float(c)}
+                 for w, c in ((30, 8), (31, 6), (32, 5), (33, 4), (34, 4), (35, 3))]
+        s = metrics.since_start(curve, installed="2026-08-12")  # a Wednesday in W33
+        self.assertEqual((s["base"], s["now"], s["change"], s["since"]), (6.3, 3.0, -53, "2026-08-12"),
+                         "W30-W32 before, W34-W35 after; the week it came in is neither")
+        s = metrics.since_start(curve, installed="2026-08-19")  # W34: one full week with the brain is not enough
+        self.assertEqual((s["base"], s["change"]), (5.8, None))
+        self.assertIsNone(metrics.trend(curve, installed="2026-08-26"), "your history's trend is not the brain's")
+        self.assertEqual(metrics.trend(curve, installed="2026-08-19"), -37)
+
     def test_weekly_line_once_per_week_and_only_with_news(self):
         self.assertEqual(hooks.weekly_line(self.v), "", "a quiet week stays quiet")
         (self.v.path("state", "digest.json")).unlink()
@@ -393,7 +419,7 @@ class TestNumbers(VaultCase):
 class TestCli(VaultCase):
     def test_status_is_the_front_door(self):
         out = run_cli()
-        for part in ("Mistakes", "This week", "Cost", "Last night", "brain review", "brain ui"):
+        for part in ("Mistakes", "This week", "Cost", "Last run", "brain review", "brain ui"):
             self.assertIn(part, out)
         self.assertIn("not scheduled", out)
         self.assertIn("No LLM CLI", out)
@@ -415,11 +441,39 @@ class TestCli(VaultCase):
             self.assertIn("usage", run_cli("search", "--help"))
 
     def test_uninstall_takes_everything_out_but_the_notes(self):
+        home, fresh = Path(os.environ["HOME"]), self.root.parent / "fresh"
+        run_cli("init", "--git", str(fresh))
+        os.environ["BRAIN_VAULT"] = str(fresh)
+        hook = fresh / ".git/hooks/pre-commit"
+        self.assertIn('if [ -e "', hook.read_text(), "the scan steps aside once the brain is gone")
         run_cli("install", "claude")
-        out = run_cli("uninstall")
-        self.assertIn("hooks removed", out)
+        run_cli("install", "claude")  # twice: the backup must still be the file before the brain
+        settings = home / ".claude/settings.json"
+        self.assertFalse(settings.with_name("settings.json.bak-self-improving-brain").exists())
+        with mock.patch.object(nightly, "schedule_remove", return_value="nightly schedule: none to remove"):
+            out = run_cli("uninstall")
+            again = run_cli("uninstall")
+        self.assertIn("removed the hooks", out)
+        self.assertIn("removed the secret scan", out)
+        self.assertFalse(hook.exists())
+        self.assertFalse(settings.exists(), "a settings file that held only the brain's hooks goes")
+        self.assertFalse((home / ".claude/CLAUDE.md").exists())
+        self.assertFalse([p for p in home.rglob("*.bak-self-improving-brain")])
+        self.assertNotIn("removed", again, "a second uninstall finds nothing")
         self.assertIn("notes stay", out)
-        self.assertTrue((self.root / "20-areas" / "working-style.md").exists())
+        self.assertTrue((fresh / "20-areas" / "working-style.md").exists())
+
+    def test_uninstall_keeps_what_was_yours(self):
+        home = Path(os.environ["HOME"])
+        (home / ".claude").mkdir(parents=True)
+        (home / ".claude/settings.json").write_text('{"model": "opus"}')
+        (home / ".claude/CLAUDE.md").write_text("# Mine\n\nAnswer briefly.\n")
+        run_cli("install", "claude")
+        with mock.patch.object(nightly, "schedule_remove", return_value="nightly schedule: none to remove"):
+            run_cli("uninstall")
+        self.assertEqual(json.loads((home / ".claude/settings.json").read_text()), {"model": "opus"})
+        self.assertEqual((home / ".claude/CLAUDE.md").read_text(), "# Mine\n\nAnswer briefly.\n")
+        self.assertFalse([p for p in home.rglob("*.bak-self-improving-brain")], "back to what it was: no backup left")
 
 
 class TestNightly(VaultCase):
@@ -453,6 +507,21 @@ class TestNightly(VaultCase):
         kinds = sorted(e["kind"] for e in journal.recent(self.v))
         self.assertEqual(kinds, ["fact", "fact", "rule"])
         self.assertIn("1 new rule", run_cli())
+
+    def test_a_failed_login_is_not_a_quiet_night(self):
+        self.v.cfg["llm_cmd"] = "claude -p --model haiku"
+        inbox.add(self.v, "fact", "The staging DB moved to eu-west-2.")
+        with mock.patch.object(llm, "_ask", side_effect=llm.NoLLM("llm_cmd failed (1): Invalid API key · Please run /login")):
+            rep = nightly.run(self.v)
+        self.assertIn("the claude call failed, so nothing was learned", " ".join(rep["attention"]))
+        self.assertIn("claude call failed", hooks.alarm_line(self.v), "the next session says it once")
+        self.assertEqual(hooks.alarm_line(self.v), "")
+        self.assertIn("claude call failed", run_cli())
+        self.assertIn("✗ the last run's LLM call failed", run_cli("doctor"))
+        with mock.patch.object(llm, "_ask", side_effect=llm.NoLLM("today's learning budget is used up (llm_budget_usd)")):
+            rep = nightly.run(self.v)
+        self.assertEqual((rep["broken"], hooks.alarm_line(self.v)), ([], ""), "a used-up budget is no failure")
+        self.assertIn("the day's budget was used up", nightly.summary(rep))
 
     def test_two_runs_never_overlap(self):
         lock = self.v.path("state", "nightly.lock")
@@ -730,3 +799,82 @@ class TestSafeguards(VaultCase):
                          ("10-projects/runbook.md", "20-areas/runbook.md"))
         self.assertIn("L-b", {l.id for l in lib.lessons()}, "the second note's rules are not lost")
         self.assertTrue(any("same name as 10-projects/runbook.md" in f.msg for f in lint.lint(self.v, lib)))
+
+
+class TestFirstWeek(VaultCase):
+    """What a new user ran into in the first week: each test is one of those moments."""
+
+    def test_a_note_shown_earlier_does_not_hide_the_next(self):
+        self.note("20-areas/acme-api.md", "---\nname: acme-api\ndescription: The ACME API: staging database region, "
+                  "deploys\n---\n# ACME API\n\n## Staging\nThe staging database runs in eu-west-2.\n\nPart of [[hub-brain]].\n")
+        self.note("20-areas/acme-db.md", "---\nname: acme-db\ndescription: The ACME database: region, backups, "
+                  "staging\n---\n# ACME database\n\n## Region\nThe staging database runs in eu-west-2.\n\nPart of [[hub-brain]].\n")
+        ask = "which region does the ACME staging database run in?"
+        first = hooks.prompt(self.v, {"session_id": "r1", "prompt": ask})["hookSpecificOutput"]["additionalContext"]
+        top = first.split("): ", 1)[1].split(" — ", 1)[0]  # the best hit comes first
+        st = events.session_state(self.v, "r2")
+        st["shown"] = [top]  # the session already saw it
+        events.save_session_state(self.v, "r2", st)
+        again = hooks.prompt(self.v, {"session_id": "r2", "prompt": ask})["hookSpecificOutput"]["additionalContext"]
+        other = ({"acme-api", "acme-db"} - {top}).pop()
+        self.assertIn(other, again, "the next note still comes")
+
+    def test_a_note_of_nothing_but_rules_is_not_pointed_at(self):
+        lib = Library(self.root)
+        self.assertTrue(hooks._rule_home(lib.notes["working-style"]))
+        out = hooks.prompt(self.v, {"session_id": "r2", "prompt": "how do I want agents to work with me, answer style"})
+        self.assertNotIn("working-style —", (out.get("hookSpecificOutput") or {}).get("additionalContext", ""))
+
+    def test_claude_gets_hooks_and_no_block_in_every_session(self):
+        md = Path(os.environ["HOME"]) / ".claude/CLAUDE.md"
+        md.parent.mkdir(parents=True)
+        md.write_text("# Mine\n\n" + adapters.BEGIN + "\nold block\n" + adapters.END + "\n")
+        adapters.install(self.v, "claude")
+        self.assertEqual(md.read_text(), "# Mine\n", "the block of an older version goes, yours stays")
+        block = adapters.block(self.v)
+        self.assertEqual(block.count(adapters.brain_cmd()), 1, "Codex and Gemini read the long command once")
+
+    def test_a_new_rule_id_is_short(self):
+        lid = learn.unique_lesson_id(Library(self.root), "Fix flaky tests at the root; never paper over them with retries.")
+        self.assertEqual(lid, "L-fix-flaky-tests")
+
+    def test_the_secret_scan_steps_aside_once_the_brain_is_gone(self):
+        fresh = self.root.parent / "fresh"
+        run_cli("init", "--git", str(fresh))
+        hook = fresh / ".git/hooks/pre-commit"
+        hook.write_text(hook.read_text().replace(str(adapters.PKG_ROOT / "brain"), str(fresh / "gone" / "brain")))
+        self.assertEqual(subprocess.run(["sh", str(hook)], cwd=fresh, capture_output=True).returncode, 0)
+
+    def test_a_machine_without_a_git_name_still_commits(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        subprocess.run(["git", "-C", str(self.root), "config", "user.useConfigOnly", "true"], check=True)
+        quiet = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull}
+        with mock.patch.dict(os.environ, quiet):
+            for k in ("EMAIL", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+                os.environ.pop(k, None)
+            self.assertEqual(nightly._commit(self.v, "brain: test"), "")
+            who = subprocess.run(["git", "-C", str(self.root), "log", "-1", "--format=%an"], capture_output=True, text=True)
+        self.assertEqual(who.stdout.strip(), "brain")
+
+    def test_a_fact_goes_above_the_hub_link(self):
+        p = self.note("20-areas/infra.md", "---\nname: infra\ndescription: Servers\n---\n# Infra\n\n"
+                      "- The staging DB runs in eu-west-2.\n\nPart of [[hub-brain]].\n")
+        distill._append(p, "", "- Backups run at 02:00.")
+        self.assertTrue(p.read_text().endswith("- Backups run at 02:00.\n\nPart of [[hub-brain]].\n"), p.read_text())
+
+    def test_undo_says_what_came_back(self):
+        self.note("20-areas/infra.md", "---\nname: infra\ndescription: Servers\n---\n# Infra\n\n"
+                  "- The staging DB runs in eu-central-1.\n\nPart of [[hub-brain]].\n")
+        self.v.cfg["llm_cmd"] = "x"
+        inbox.add(self.v, "fact", "The staging DB moved to eu-west-2 in October.")
+        answer = {"action": "update", "note": "infra", "old": "- The staging DB runs in eu-central-1.",
+                  "text": "- The staging DB runs in eu-west-2.", "reason": "moved"}
+        with mock.patch.object(llm, "ask_json", lambda v, p: answer):
+            distill.auto(self.v)
+        self.assertIn("infra says again: “- The staging DB runs in eu-central-1.”", run_cli("undo", "1"))
+
+    def test_an_unknown_command_is_one_line(self):
+        out = run_cli("foo")
+        self.assertEqual(out.strip(), "brain: unknown command 'foo' · `brain --help` lists the ones you need")
+        self.assertRegex(run_cli("--version"), r"^self-improving-brain \d+\.\d+")
+

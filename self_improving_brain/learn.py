@@ -262,11 +262,29 @@ def rejected_topics(v: Vault) -> list[dict]:
     return [t for f in ledger.files(v, "rejected") for t in read_jsonl(f)]
 
 
+# words every rule has: they say nothing about what the rule is about
+FILLER = {"never", "always", "every", "before", "after", "instead", "first", "sure", "make", "use", "dont"}
+
+
+def _stem(w: str) -> str:
+    """Crude on purpose: 'retries' and 'retry', 'tests' and 'test' are one word when a topic is compared."""
+    for suf, rep in (("ies", "y"), ("ing", ""), ("ed", ""), ("s", "")):
+        if w.endswith(suf) and len(w) - len(suf) >= 3:
+            return w[: -len(suf)] + rep
+    return w
+
+
+def topic_terms(text: str) -> set[str]:
+    return {_stem(w) for w in terms(text) if w not in FILLER}
+
+
 def _blocked(text: str, topics: list[dict]) -> bool:
-    t = set(terms(text))
+    """A topic you undid comes up again: two of its phrases (one, if it has one) are in the text, every word of
+    each. The judge names topics in short phrases ("flaky test", "retry"), so a phrase is compared word by word."""
+    have = topic_terms(text)
     for top in topics:
-        words = [w.lower() for w in top.get("words", [])]
-        if sum(1 for w in words if w in t) >= min(2, len(words) or 1):
+        phrases = [p for p in (topic_terms(str(x)) for x in top.get("words", [])) if p]
+        if phrases and sum(1 for p in phrases if p <= have) >= min(2, len(phrases)):
             return True
     return False
 
@@ -665,7 +683,8 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
 # --- lessons in notes ------------------------------------------------------------------------------
 
 def unique_lesson_id(lib: Library, rule: str, klass: str = "") -> str:
-    base = "L-" + (slugify(klass) + "-" if klass else "") + slugify(" ".join(terms(rule)[:4]))
+    """Three words of the rule: the id travels with every LESSON line, so it stays short. The class has its own field."""
+    base = "L-" + slugify(" ".join([w for w in terms(rule) if w not in FILLER][:3] or terms(rule)[:3]))
     existing = {l.id for l in lib.lessons(retired=True)}
     lid, i = base, 2
     while lid in existing:

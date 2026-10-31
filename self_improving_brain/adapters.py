@@ -89,16 +89,17 @@ def cli_name() -> str:
 
 
 def block(v: Vault) -> str:
-    b = brain_cmd()
+    """For agents without hooks (Codex, Gemini CLI, AGENTS.md). It sits in every session, so every word counts:
+    the long command is named once."""
     return f"""{BEGIN}
 ## Brain (self-improving-brain)
-You have a persistent memory at `{v.root}` that learns from this user's corrections.
-- **Start of a task:** run `{b} context` once (skip it if a SELF-IMPROVING-BRAIN line is already in your context).
-- **Before answering from memory** (project facts, decisions, "how did we…"): `{b} search "<question>"`, then `{b} read <note> [section]`.
-- **Worth keeping** (a decision, a pitfall, a preference, a fact that took effort): `{b} remember <fact|decision|pitfall|preference> "<one sentence>"`. Never store secrets: store the variable name and where the value lives.
+You have a persistent memory at `{v.root}` that learns from this user's corrections. Below, `brain` stands for `{brain_cmd()}`.
+- **Start of a task:** run `brain context` once (skip it if a SELF-IMPROVING-BRAIN line is already in your context).
+- **Before answering from memory** (project facts, decisions, "how did we…"): `brain search "<question>"`, then `brain read <note> [section]`.
+- **Worth keeping** (a decision, a pitfall, a preference, a fact that took effort): `brain remember <fact|decision|pitfall|preference> "<one sentence>"`. Never store secrets: store the variable name and where the value lives.
 - **LESSON lines** are rules learned from this user's corrections. Follow them; they outrank your defaults.
-- **Before an irreversible action** (force push, deleting data, deploys, migrations): `{b} check --command "<command>"`. If it names a GUARD, ask the user first.
-- **Continuing work** ("where were we", after a break or in another agent): `{b} resume`. Before you end a long task without hooks: `{b} handoff`.
+- **Before an irreversible action** (force push, deleting data, deploys, migrations): `brain check --command "<command>"`. If it names a GUARD, ask the user first.
+- **Continuing work** ("where were we", after a break or in another agent): `brain resume`. Before you end a long task: `brain handoff`.
 - Which rules reach you is the user's call: never run `brain trust`, `brain undo` or `brain approve` on your own.
 {END}
 """
@@ -112,9 +113,36 @@ def _write(path: Path, text: str) -> None:
 
 
 def _backup(path: Path) -> None:
+    """The file as it was before the brain's first edit. A file the brain already edited is not that."""
     bak = path.with_name(path.name + ".bak-self-improving-brain")
     if path.exists() and not bak.exists():
-        shutil.copy2(path, bak)
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if BEGIN not in text and HOOK_TAG not in text:
+            shutil.copy2(path, bak)
+
+
+def _tidy(path: Path) -> bool:
+    """After the brain's part is out: a file that held only that goes, and so does the backup once the file equals
+    it again. True when the file is gone."""
+    bak = path.with_name(path.name + ".bak-self-improving-brain")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if text.strip() in ("", "{}"):
+        path.unlink()
+        text = ""
+    try:
+        old = bak.read_text(encoding="utf-8")
+        try:
+            same = json.loads(old or "{}") == json.loads(text or "{}")
+        except ValueError:
+            same = old.split() == text.split()
+        if same:
+            bak.unlink()
+    except OSError:
+        pass
+    return not text
 
 
 def _put_block(path: Path, text: str) -> str:
@@ -132,18 +160,25 @@ def _put_block(path: Path, text: str) -> str:
     return f"updated {path}"
 
 
+def has_block(path: Path) -> bool:
+    try:
+        return BEGIN in path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
 def _drop_block(path: Path) -> str:
     if not path.exists():
-        return f"skip {path} (missing)"
+        return ""
     old = path.read_text(encoding="utf-8")
     if BEGIN not in old:
-        return f"skip {path} (no self-improving-brain block)"
+        return ""  # nothing of the brain's in it: nothing to say
     if END not in old:
         return f"skip {path} (self-improving-brain end marker missing — remove the block by hand)"
     pre, rest = old.split(BEGIN, 1)
     _, post = rest.split(END, 1)
     _write(path, (pre.rstrip() + "\n" + post.lstrip()).strip() + "\n")
-    return f"cleaned {path}"
+    return f"removed {path} (it held only the brain's part)" if _tidy(path) else f"took the brain's part out of {path}"
 
 
 def _ours(group) -> bool:
@@ -247,7 +282,10 @@ def install_claude(v: Vault) -> list[str]:
     for t in sorted((TEMPLATES / "commands").glob("*.md")):
         (cmd_dir / t.name).write_text(t.read_text(encoding="utf-8").replace("{{BRAIN}}", brain_cmd()), encoding="utf-8")
         out.append(f"command /{t.stem}")
-    out.append(_put_block(Path.home() / ".claude" / "CLAUDE.md", block(v)))
+    # the hooks say all of it, and only where it matters: a block in CLAUDE.md would sit in every session
+    gone = _drop_block(Path.home() / ".claude" / "CLAUDE.md")
+    if gone:
+        out.append(gone)
     return out
 
 
@@ -257,21 +295,27 @@ def uninstall_claude() -> list[str]:
     if p.exists():
         data = _load_settings(p)
         hooks = data.get("hooks", {})
+        removed = 0
         for event in list(hooks):
             if not isinstance(hooks[event], list):
                 continue
-            hooks[event] = [g for g in hooks[event] if not _ours(g)]
+            keep = [g for g in hooks[event] if not _ours(g)]
+            removed += len(hooks[event]) - len(keep)
+            hooks[event] = keep
             if not hooks[event]:
                 del hooks[event]
-        _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        out.append(f"hooks removed from {p}")
+        if removed:
+            if isinstance(hooks, dict) and not hooks:
+                data.pop("hooks", None)
+            _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            out.append(f"removed the hooks from {p}" + (" (and the file, it held only them)" if _tidy(p) else ""))
     for name in [t.name for t in (TEMPLATES / "commands").glob("*.md")] + list(OLD_COMMANDS):
         f = Path.home() / ".claude" / "commands" / name
         if _ours_command(f):
             f.unlink()
-            out.append(f"removed /{f.stem}")
+            out.append(f"removed the /{f.stem} command")
     out.append(_drop_block(Path.home() / ".claude" / "CLAUDE.md"))
-    return out
+    return [x for x in out if x]
 
 
 TARGETS = {
@@ -295,5 +339,5 @@ def uninstall(agent: str) -> list[str]:
     if agent == "claude":
         return uninstall_claude()
     if agent in TARGETS:
-        return [_drop_block(TARGETS[agent]())]
+        return [x for x in [_drop_block(TARGETS[agent]())] if x]
     raise ValueError(f"unknown agent {agent!r}")

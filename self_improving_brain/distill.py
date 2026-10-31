@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import subprocess
 
-from . import events, inbox, journal, llm
+from . import events, inbox, journal, llm, nightly
 from .config import Vault
 from .lint import lint_note
 from .notes import Library, atomic_write, dump_frontmatter, parse_frontmatter, set_field
@@ -104,6 +104,9 @@ Hubs: @HUBS@
 """
 
 
+FOOTER = re.compile(r"^\s*(Part of|Linked from) \[\[[^\]]+\]\]")
+
+
 def _append(path, section: str, text: str) -> None:
     raw = set_field(path.read_text(encoding="utf-8"), "updated", today())
     _, body = parse_frontmatter(raw)
@@ -126,6 +129,10 @@ def _append(path, section: str, text: str) -> None:
     while insert_at > 0 and insert_at == len(lines) and not lines[-1].strip():
         lines.pop()
         insert_at = len(lines)
+    if insert_at == len(lines) and insert_at and FOOTER.match(lines[-1]):  # "Part of [[hub]]." stays the last line
+        insert_at -= 1
+        while insert_at > 0 and not lines[insert_at - 1].strip():
+            insert_at -= 1
     block = text.rstrip().split("\n")
     prev = lines[insert_at - 1] if insert_at else ""
     bullet = block and block[0].lstrip().startswith(("- ", "* "))
@@ -252,7 +259,8 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             # only the files this item changed: an edit of yours in another note is not part of it
             touched = [rel] + ([entry["hub"]] if entry.get("hub") else [])
             _git(v, "add", "--", *touched)
-            _git(v, "commit", "-q", "-m", f"distill: {short(it['claim'], 60)}", "-m", f"Brain-Source: {it['id']}",
+            _git(v, *nightly.identity(v.root), "commit", "-q", "-m", f"distill: {short(it['claim'], 60)}",
+                 "-m", f"Brain-Source: {it['id']}",
                  "--", *touched)
         report.append(f"{it['id']}: {act} → {rel}")
     return report

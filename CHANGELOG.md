@@ -33,14 +33,15 @@ of a review queue.
 
 ### A veto, not a duty
 - Every change the brain makes on its own goes into `.brain/journal/<host>.jsonl`. `brain review` lists the
-  last two weeks, `brain undo <n>` takes one back, and an undone topic is never learned again.
+  last two weeks, `brain undo <n>` takes one back and says what came back, and an undone topic is never learned
+  again, also when it returns in other words ("retries" for "retry", "flaky tests" for "flaky test").
 - Once a week the first session shows one line: what was learned, the trend, what the brain costs you.
 - `brain ui`: Overview, Learned (with undo), Rules, Replay, Map.
 - An undone change keeps its number, so a second `brain undo 1` never hits the next one.
 
 ### Measures itself
-- `brain` shows mistakes per 100 messages against your first two weeks. Corrections the judge called noise
-  leave the curve.
+- `brain` shows mistakes per 100 messages against the weeks before you installed it, once two full weeks with the
+  brain are over; until then it shows only your baseline. Corrections the judge called noise leave the curve.
 - The brain's share of your agent's tokens: what the hooks injected against the session tokens in your
   transcripts (Claude Code and Codex).
 - What an IDE or Codex puts in front of your message (open files, your `AGENTS.md`) is not read as yours, and a
@@ -51,15 +52,26 @@ of a review queue.
 
 ### Quiet and small
 - `brain setup` asks nothing: vault, agents, the `brain` command, your past sessions as a baseline, learning,
-  the nightly run. `--github` adds a private backup.
+  the nightly run. `--github` adds a private backup. The installer runs it without a terminal too, so an agent can
+  install the brain for you; a second `brain setup` knows your history and starts learning once an LLM CLI is there.
+- **Nothing fails quietly.** A failed login, a broken step or a failed backup shows in `brain`, in `brain doctor`
+  and once at the next session start; a used-up budget shows in the last run's line. A machine without a git name
+  commits as `brain`.
 - `brain` alone shows how it is doing. Eight visible commands; the ones agents use are in `brain help all`.
-- `brain uninstall` takes it out of every agent and the schedule; your notes stay.
-- The session start is one line plus your `always` rules. The Stop hook is gone.
+- `brain uninstall` takes it out of every agent and the schedule, the secret scan out of your notes' git hook, and
+  removes the `brain` link, its cache and settings, files that held only the brain's part, and its backups; it names
+  the last step for the program itself. Your notes stay. A secret scan whose program is gone steps aside instead of
+  blocking your commits.
+- The session start is a few lines: where the memory is and your `always` rules. The Stop hook is gone. Claude
+  Code gets no block in `CLAUDE.md` any more (the hooks say it where it matters): about 450 tokens less in every
+  session. The block for Codex and Gemini names the long command once, and counts in the token share.
+- Recall skips a note the session has seen instead of showing nothing, and no longer points at a note that holds
+  only rules. New rule ids are three words (`L-fix-flaky-tests`). `brain --version`; an unknown command is one line.
 - One `/brain` command for Claude Code replaces `/brain-review`, `/brain-distill`, `/brain-ingest` and `/brain-ask`.
 
 ### Prove it
 - `brain replay` runs your past corrections against today's rules: caught, missed (with the words that
-  would have triggered), uncovered.
+  would have triggered), uncovered. Corrections a rule was learned from match it by design and are counted apart.
 - `brain report` draws a report card; `--public` keeps only numbers, `--badge` makes a README badge.
 - Brain-Bench (`bench/run.py`): eight tasks that tempt an agent into a known mistake, run with and
   without the brain, fully isolated. Without `--run` it only prints the plan and a cost ceiling.
