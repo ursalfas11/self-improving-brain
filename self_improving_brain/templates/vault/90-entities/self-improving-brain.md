@@ -12,10 +12,14 @@ Part of [[hub-brain]]. Conventions: [[note-conventions]].
 - `brain search "<question>"` - best sections, with dates.
 - `brain read <note> [section]` - outline with token counts, or one section.
 - `brain remember <type> "<sentence>"` - into the inbox, never straight into a note.
-- `brain review` / `brain approve` - lesson drafts from your corrections.
-- `brain stats` - is it getting smarter? Corrections per 100 messages, recall precision, lesson health.
+- `brain check --command "<cmd>"` - would this trip a guard?
+
+## Commands for you
+- `brain` - how it is doing: mistakes since the start, what it learned this week, what it costs.
+- `brain review` / `brain undo <n>` - what it changed on its own lately, and taking one change back.
 
 ## The nightly loop
-`brain schedule install` runs `brain nightly` on this machine: learn from transcripts, refresh
-the recall model, tune the recall threshold, flag weak lessons, rebuild INDEX.md, lint, git sync.
-It never approves lessons or deletes knowledge on its own.
+Every night `brain nightly` reads the day's sessions: corrections you gave twice (or with *always* or
+*never*) become rules, decisions and facts are filed into their notes, quiet rules retire. Then it
+refreshes the recall model, rebuilds INDEX.md, lints and syncs. Every change it makes is in the journal
+and can be undone; it never turns tool output into a rule and never deletes a note you edited.

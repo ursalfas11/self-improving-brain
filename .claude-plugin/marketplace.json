@@ -1,0 +1,35 @@
+{
+  "name": "self-improving-brain",
+  "owner": {
+    "name": "ursalfas11",
+    "url": "https://github.com/ursalfas11"
+  },
+  "metadata": {
+    "description": "self-improving-brain: a local memory that turns your corrections into rules, on its own"
+  },
+  "plugins": [
+    {
+      "name": "self-improving-brain",
+      "source": "./",
+      "version": "0.2.0",
+      "description": "Install once, then forget it: every night it turns your corrections into rules and your decisions into notes, on its own. Rules fire at the right moment, guards ask before irreversible actions, every change can be undone, and it shows whether your agent's mistakes go down. Local Markdown, zero dependencies.",
+      "author": {
+        "name": "ursalfas11",
+        "url": "https://github.com/ursalfas11"
+      },
+      "homepage": "https://github.com/ursalfas11/self-improving-brain",
+      "license": "MIT",
+      "keywords": [
+        "memory",
+        "rules",
+        "self-improving",
+        "autonomous",
+        "obsidian",
+        "hooks",
+        "guardrails",
+        "learning"
+      ],
+      "category": "productivity"
+    }
+  ]
+}

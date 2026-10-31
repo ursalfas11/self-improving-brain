@@ -1,0 +1,2251 @@
+{
+ "vault": {
+  "root": "~/brain",
+  "name": "brain",
+  "version": "0.2.0",
+  "notes": 11,
+  "lessons": 23,
+  "inbox": 2,
+  "learning": true
+ },
+ "digest": {
+  "rules": 2,
+  "sharpened": 2,
+  "retired": 1,
+  "facts": 3,
+  "trend": -24,
+  "share": 0.012,
+  "cost": {
+   "calls": 41,
+   "usd": 0.19,
+   "tokens": 152000
+  }
+ },
+ "since_start": {
+  "now": 3.8,
+  "base": 9.5,
+  "change": -60,
+  "since": "2026-08-03"
+ },
+ "curve": [
+  {
+   "week": "2026-W32",
+   "messages": 212,
+   "corrections": 21,
+   "per100": 9.8
+  },
+  {
+   "week": "2026-W33",
+   "messages": 260,
+   "corrections": 24,
+   "per100": 9.1
+  },
+  {
+   "week": "2026-W34",
+   "messages": 198,
+   "corrections": 17,
+   "per100": 8.7
+  },
+  {
+   "week": "2026-W35",
+   "messages": 301,
+   "corrections": 27,
+   "per100": 8.9
+  },
+  {
+   "week": "2026-W36",
+   "messages": 280,
+   "corrections": 21,
+   "per100": 7.6
+  },
+  {
+   "week": "2026-W37",
+   "messages": 244,
+   "corrections": 17,
+   "per100": 7.0
+  },
+  {
+   "week": "2026-W38",
+   "messages": 330,
+   "corrections": 20,
+   "per100": 6.1
+  },
+  {
+   "week": "2026-W39",
+   "messages": 290,
+   "corrections": 17,
+   "per100": 5.8
+  },
+  {
+   "week": "2026-W40",
+   "messages": 270,
+   "corrections": 14,
+   "per100": 5.2
+  },
+  {
+   "week": "2026-W41",
+   "messages": 310,
+   "corrections": 15,
+   "per100": 4.9
+  },
+  {
+   "week": "2026-W42",
+   "messages": 296,
+   "corrections": 12,
+   "per100": 4.1
+  },
+  {
+   "week": "2026-W43",
+   "messages": 284,
+   "corrections": 11,
+   "per100": 3.8
+  }
+ ],
+ "efficiency": {
+  "weeks": 4,
+  "injected": 61200,
+  "calls": 2950,
+  "session_tokens": 5100000,
+  "share": 0.012
+ },
+ "recall": {
+  "prompts": 412,
+  "injections": 233,
+  "hits": 131,
+  "finds": 38,
+  "precision": 0.56,
+  "fire_rate": 0.41
+ },
+ "nightly": {
+  "t": "2026-10-30T03:17:12",
+  "summary": "03:17 · 1 new rule, 2 facts filed, backed up",
+  "attention": []
+ },
+ "lessons": [
+  {
+   "id": "L-result-first",
+   "note": "working-style",
+   "rule": "Lead with the result in a few lines; details only when asked - but never leave out a part of what was asked.",
+   "mechanism": "always",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-08-03",
+   "silent": null,
+   "health": {
+    "id": "L-result-first",
+    "note": "working-style",
+    "mechanism": "always",
+    "shown": 15,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-verify-before-done",
+   "note": "working-style",
+   "rule": "Before saying something works or is done, run it or test it and show the output; if you could not verify, say so plainly.",
+   "mechanism": "always",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-08-03",
+   "silent": null,
+   "health": {
+    "id": "L-verify-before-done",
+    "note": "working-style",
+    "mechanism": "always",
+    "shown": 25,
+    "last": "2026-10-29",
+    "ignored": 1,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-answer-language",
+   "note": "working-style",
+   "rule": "Answer in the language of the question; keep code, commit messages and identifiers in English.",
+   "mechanism": "always",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-10-23",
+   "silent": null,
+   "health": {
+    "id": "L-answer-language",
+    "note": "working-style",
+    "mechanism": "always",
+    "shown": 9,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-ask-before-force-push",
+   "note": "working-style",
+   "rule": "Force-pushing rewrites shared history - show what will be overwritten and get an explicit OK first.",
+   "mechanism": "guard",
+   "tools": [],
+   "commands": "git push.*(--force|-f\\b)",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-09-08",
+   "silent": null,
+   "health": {
+    "id": "L-ask-before-force-push",
+    "note": "working-style",
+    "mechanism": "guard",
+    "shown": 5,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-git-no-verify",
+   "note": "git-workflow",
+   "rule": "Never skip hooks with --no-verify or -n - if a hook fails, fix what it found or ask the user.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "git\\s+(commit|push|merge|rebase)\\b.*(--no-verify|\\s-n\\b)",
+   "paths": "",
+   "words": [
+    "no-verify",
+    "hook",
+    "pre-commit"
+   ],
+   "check": "",
+   "since": "2026-08-24",
+   "silent": null,
+   "health": {
+    "id": "L-git-no-verify",
+    "note": "git-workflow",
+    "mechanism": "reflex",
+    "shown": 25,
+    "last": "2026-10-29",
+    "ignored": 2,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "widen triggers"
+   }
+  },
+  {
+   "id": "L-git-branch-first",
+   "note": "git-workflow",
+   "rule": "Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.",
+   "mechanism": "guard",
+   "tools": [],
+   "commands": "git\\s+push\\s+(\\S+\\s+)?(HEAD:)?(main|master)(\\s|$)",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-08-06",
+   "silent": null,
+   "health": {
+    "id": "L-git-branch-first",
+    "note": "git-workflow",
+    "mechanism": "guard",
+    "shown": 3,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-git-no-rewrite-pushed",
+   "note": "git-workflow",
+   "rule": "Do not amend, rebase or squash commits that are already pushed without asking - it rewrites history other people have.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "git\\s+(commit\\s+.*--amend|rebase\\b)",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-09-18",
+   "silent": null,
+   "health": {
+    "id": "L-git-no-rewrite-pushed",
+    "note": "git-workflow",
+    "mechanism": "reflex",
+    "shown": 17,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "broken 3× despite the rule → brain promote L-git-no-rewrite-pushed --to guard"
+   }
+  },
+  {
+   "id": "L-git-stage-by-name",
+   "note": "git-workflow",
+   "rule": "Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "git\\s+add\\s+(-A|--all|\\.)(\\s|$)|git\\s+commit\\s+.*-a\\b",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-10-20",
+   "silent": null,
+   "health": {
+    "id": "L-git-stage-by-name",
+    "note": "git-workflow",
+    "mechanism": "reflex",
+    "shown": 16,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-rm-rf",
+   "note": "safety",
+   "rule": "Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.",
+   "mechanism": "guard",
+   "tools": [],
+   "commands": "\\brm\\s+(-[a-zA-Z]*[rR][a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*[rR]|--recursive)|\\bfind\\b.*\\s-delete\\b",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-08-11",
+   "silent": "written by an agent (Write, 2026-10-29T14:02)",
+   "health": {
+    "id": "L-safety-rm-rf",
+    "note": "safety",
+    "mechanism": "guard",
+    "shown": 16,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-git-discard",
+   "note": "safety",
+   "rule": "git reset --hard, git clean -f and git checkout/restore of a whole tree throw away uncommitted work - show `git status` and ask first.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "git\\s+(reset\\s+--hard|clean\\s+-[a-zA-Z]*f|checkout\\s+(--\\s+)?\\.(\\s|$)|restore\\s+(--\\S+\\s+)*\\.(\\s|$)|stash\\s+(drop|clear))",
+   "paths": "",
+   "words": [
+    "reset --hard",
+    "git clean",
+    "discard"
+   ],
+   "check": "",
+   "since": "2026-08-27",
+   "silent": null,
+   "health": {
+    "id": "L-safety-git-discard",
+    "note": "safety",
+    "mechanism": "reflex",
+    "shown": 10,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-drop-data",
+   "note": "safety",
+   "rule": "Dropping or truncating tables, deleting rows without WHERE, flushing caches or databases destroys data - name the target and get an OK first.",
+   "mechanism": "guard",
+   "tools": [],
+   "commands": "(?i)\\b(drop\\s+(table|database|schema|collection)|truncate\\s+(table\\s+)?\\w+|delete\\s+from\\s+\\w+\\s*(;|\"|'|$)|flushall|flushdb|dropDatabase\\(\\))",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-09-15",
+   "silent": null,
+   "health": {
+    "id": "L-safety-drop-data",
+    "note": "safety",
+    "mechanism": "guard",
+    "shown": 40,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-destroy-infra",
+   "note": "safety",
+   "rule": "Destroying or deleting cloud and cluster resources is irreversible - show the plan or the exact resources and ask before running it.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "\\b(terraform\\s+(destroy|apply\\s+.*-auto-approve)|pulumi\\s+destroy|kubectl\\s+delete|helm\\s+(uninstall|delete)|aws\\s+\\S+\\s+(delete|terminate|remove)-\\S+|gcloud\\s+.*\\bdelete\\b|az\\s+.*\\bdelete\\b|docker\\s+(system|volume)\\s+prune)",
+   "paths": "",
+   "words": [
+    "terraform destroy",
+    "kubectl delete",
+    "cluster"
+   ],
+   "check": "",
+   "since": "2026-10-02",
+   "silent": null,
+   "health": {
+    "id": "L-safety-destroy-infra",
+    "note": "safety",
+    "mechanism": "reflex",
+    "shown": 38,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 2,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-publish",
+   "note": "safety",
+   "rule": "Publishing a package, pushing a release tag or deploying to production is outward-facing - confirm version and target with the user first.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "\\b(npm|pnpm|yarn)\\s+publish\\b|\\btwine\\s+upload\\b|\\bcargo\\s+publish\\b|\\bgh\\s+release\\s+create\\b|\\bgit\\s+push\\b.*--tags|\\b(vercel|netlify)\\b.*--prod|\\bfly\\s+deploy\\b",
+   "paths": "",
+   "words": [
+    "publish",
+    "release",
+    "deploy"
+   ],
+   "check": "",
+   "since": "2026-10-13",
+   "silent": null,
+   "health": {
+    "id": "L-safety-publish",
+    "note": "safety",
+    "mechanism": "reflex",
+    "shown": 32,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-safety-chmod-sudo",
+   "note": "safety",
+   "rule": "Do not run sudo or open permissions wide (chmod -R 777, chown -R on system paths) without asking - fix the actual permission problem instead.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "^\\s*sudo\\s|\\bchmod\\s+(-R\\s+)?0?777\\b|\\bchown\\s+-R\\s+\\S+\\s+/(usr|etc|var|opt|Library)\\b",
+   "paths": "",
+   "words": [
+    "sudo",
+    "chmod 777",
+    "chown"
+   ],
+   "check": "",
+   "since": "2026-10-15",
+   "silent": null,
+   "health": {
+    "id": "L-safety-chmod-sudo",
+    "note": "safety",
+    "mechanism": "reflex",
+    "shown": 15,
+    "last": "2026-10-29",
+    "ignored": 1,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-secrets-no-hardcoded-keys",
+   "note": "secrets",
+   "rule": "Never write API keys, tokens or private keys into source files - read them from the environment or the project's secret store.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [
+    "api key",
+    "token",
+    "secret"
+   ],
+   "check": "AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\\bgh[pousr]_[A-Za-z0-9]{36}\\b|\\bsk-[A-Za-z0-9_-]{20,}|\\bxox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}",
+   "since": "2026-09-29",
+   "silent": null,
+   "health": {
+    "id": "L-secrets-no-hardcoded-keys",
+    "note": "secrets",
+    "mechanism": "reflex",
+    "shown": 5,
+    "last": "2026-10-29",
+    "ignored": 2,
+    "missed": 1,
+    "violations": 0,
+    "check": true,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-secrets-no-print-env",
+   "note": "secrets",
+   "rule": "Do not print secret files or the whole environment into the session (cat .env, printenv, env) - check for a variable's presence instead, e.g. `test -n \"$NAME\"`.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "\\b(cat|less|more|head|tail|bat)\\s+\\S*\\.env(\\.(local|dev|development|prod|production|staging|test))?(\\s|$|[\"'|;&])|^\\s*(printenv|env)\\s*$|\\bcat\\s+\\S*(id_rsa|id_ed25519|\\.pem|credentials)\\b",
+   "paths": "",
+   "words": [
+    ".env",
+    "printenv",
+    "environment"
+   ],
+   "check": "",
+   "since": "2026-09-10",
+   "silent": null,
+   "health": {
+    "id": "L-secrets-no-print-env",
+    "note": "secrets",
+    "mechanism": "reflex",
+    "shown": 18,
+    "last": "2026-10-29",
+    "ignored": 2,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-secrets-no-commit-env",
+   "note": "secrets",
+   "rule": "Never stage .env files, key files or credentials - add them to .gitignore and commit an .env.example without values.",
+   "mechanism": "guard",
+   "tools": [],
+   "commands": "git\\s+add\\s+.*(\\.env(\\s|$|\\.(?!example))|\\.pem\\b|id_rsa|credentials\\.json|\\.p12\\b)",
+   "paths": "",
+   "words": [],
+   "check": "",
+   "since": "2026-08-19",
+   "silent": null,
+   "health": {
+    "id": "L-secrets-no-commit-env",
+    "note": "secrets",
+    "mechanism": "guard",
+    "shown": 32,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 2,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-secrets-ask-dont-guess",
+   "note": "secrets",
+   "rule": "When a credential is missing, name the variable and where it goes and let the user set it - never ask them to paste the secret into the chat.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [
+    "api key",
+    "token",
+    "password",
+    "secret",
+    "credentials",
+    "env var"
+   ],
+   "check": "",
+   "since": "2026-10-06",
+   "silent": null,
+   "health": {
+    "id": "L-secrets-ask-dont-guess",
+    "note": "secrets",
+    "mechanism": "reflex",
+    "shown": 27,
+    "last": "2026-10-29",
+    "ignored": 2,
+    "missed": 1,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-testing-no-retry-flaky",
+   "note": "testing",
+   "rule": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "(^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_",
+   "words": [
+    "flaky",
+    "retry",
+    "sleep",
+    "race"
+   ],
+   "check": "@retry\\b|pytest\\.mark\\.flaky|@flaky\\b|jest\\.retryTimes|retries:\\s*[1-9]|\\.retry\\(\\d",
+   "since": "2026-08-13",
+   "silent": null,
+   "health": {
+    "id": "L-testing-no-retry-flaky",
+    "note": "testing",
+    "mechanism": "reflex",
+    "shown": 27,
+    "last": "2026-10-29",
+    "ignored": 1,
+    "missed": 0,
+    "violations": 0,
+    "check": true,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-testing-no-skip-to-green",
+   "note": "testing",
+   "rule": "Never skip, delete or comment out a failing test to get CI green - find out why it fails, or ask the user before disabling it.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "(^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_",
+   "words": [
+    "failing test",
+    "ci red",
+    "tests fail",
+    "make ci green",
+    "broken test"
+   ],
+   "check": "@pytest\\.mark\\.skip|@unittest\\.skip|\\b(it|test|describe)\\.skip\\(|\\bx(it|describe|test)\\(|\\bt\\.Skip\\(|@Disabled\\b|@Ignore\\b",
+   "since": "2026-09-02",
+   "silent": null,
+   "health": {
+    "id": "L-testing-no-skip-to-green",
+    "note": "testing",
+    "mechanism": "reflex",
+    "shown": 19,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": true,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-testing-no-focused-tests",
+   "note": "testing",
+   "rule": "Do not leave focused tests (.only, fit, fdescribe) behind - they silently turn off the rest of the suite.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "(^|/)(tests?|spec|__tests__)/|\\.test\\.|\\.spec\\.",
+   "words": [],
+   "check": "\\b(it|test|describe)\\.only\\(|\\bf(it|describe)\\(",
+   "since": "2026-10-09",
+   "silent": null,
+   "health": {
+    "id": "L-testing-no-focused-tests",
+    "note": "testing",
+    "mechanism": "reflex",
+    "shown": 2,
+    "last": "2026-10-29",
+    "ignored": 1,
+    "missed": 1,
+    "violations": 3,
+    "check": true,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-testing-dont-weaken-asserts",
+   "note": "testing",
+   "rule": "When a test fails, do not loosen the assertion or update the snapshot until you know the new behaviour is right - say which one changed and why.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "(jest|vitest).*(-u\\b|--updateSnapshot)|pytest.*--snapshot-update",
+   "paths": "",
+   "words": [
+    "assertion",
+    "snapshot",
+    "expected",
+    "update snapshot",
+    "test fails"
+   ],
+   "check": "",
+   "since": "2026-09-23",
+   "silent": null,
+   "health": {
+    "id": "L-testing-dont-weaken-asserts",
+    "note": "testing",
+    "mechanism": "reflex",
+    "shown": 21,
+    "last": "2026-10-29",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  },
+  {
+   "id": "L-db-migrate-copy-first",
+   "note": "acme-api",
+   "rule": "Run database migrations against a copy of the database first, and show the result before the real run.",
+   "mechanism": "reflex",
+   "tools": [],
+   "commands": "",
+   "paths": "",
+   "words": [
+    "migration",
+    "migrate",
+    "database"
+   ],
+   "check": "",
+   "since": "2026-10-30",
+   "silent": null,
+   "health": {
+    "id": "L-db-migrate-copy-first",
+    "note": "acme-api",
+    "mechanism": "reflex",
+    "shown": 0,
+    "last": "",
+    "ignored": 0,
+    "missed": 0,
+    "violations": 0,
+    "check": false,
+    "verdict": "ok"
+   }
+  }
+ ],
+ "learned": [
+  {
+   "id": "j-7c1e0a42",
+   "t": "2026-10-30T03:17:08",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Run database migrations against a copy of the database first, and show the result before the real run.",
+   "why": "you said it in 2 sessions: “not on the real db first, take a copy”",
+   "lesson": "L-db-migrate-copy-first",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-3f9b2d10",
+   "t": "2026-10-30T03:17:09",
+   "kind": "fact",
+   "what": "updated",
+   "text": "acme-api › The staging database moved to eu-west-2 in October.",
+   "why": "newer than “The staging database runs in eu-central-1.”",
+   "lesson": "",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-a2c4e6f8",
+   "t": "2026-10-30T03:17:11",
+   "kind": "fact",
+   "what": "fact",
+   "text": "payments › Stripe retries a webhook for up to three days, so every handler must be idempotent.",
+   "why": "found out in a session on 2026-10-29",
+   "lesson": "",
+   "note": "payments"
+  },
+  {
+   "id": "j-5d7e9f01",
+   "t": "2026-10-29T03:16:40",
+   "kind": "sharpen",
+   "what": "sharper",
+   "text": "Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.",
+   "why": "was: Fix flaky tests at the root (timing, shared state, order); never paper over them with re…",
+   "lesson": "L-testing-no-retry-flaky",
+   "note": "testing"
+  },
+  {
+   "id": "j-8b0c2d34",
+   "t": "2026-10-28T03:15:02",
+   "kind": "mechanism",
+   "what": "reflex → guard",
+   "text": "Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.",
+   "why": "it came back after it was sharpened: “why is this on main again”",
+   "lesson": "L-git-branch-first",
+   "note": "git-workflow"
+  },
+  {
+   "id": "j-1a3b5c7d",
+   "t": "2026-10-27T03:15:44",
+   "kind": "fact",
+   "what": "new note",
+   "text": "payments › Payments use Stripe webhooks, not polling.",
+   "why": "decided in a session on 2026-10-26",
+   "lesson": "",
+   "note": "payments"
+  },
+  {
+   "id": "j-9e8d7c6b",
+   "t": "2026-10-26T03:14:20",
+   "kind": "retire",
+   "what": "retired",
+   "text": "Deploy with scripts/deploy.sh, not by hand.",
+   "why": "not needed in 60 days",
+   "lesson": "L-old-deploy-script",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-4c5d6e7f",
+   "t": "2026-10-23T03:16:05",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Answer in the language of the question; keep code, commit messages and identifiers in English.",
+   "why": "you said it explicitly: “always answer in the language I write in”",
+   "lesson": "L-answer-language",
+   "note": "working-style"
+  },
+  {
+   "id": "j-0f1e2d3c",
+   "t": "2026-10-21T03:15:30",
+   "kind": "fact",
+   "what": "fact",
+   "text": "acme-api › The API deploys with ArgoCD from main; nobody runs kubectl apply by hand.",
+   "why": "decided in a session on 2026-10-20",
+   "lesson": "",
+   "note": "acme-api"
+  },
+  {
+   "id": "j-6a7b8c9d",
+   "t": "2026-10-20T03:14:58",
+   "kind": "rule",
+   "what": "new rule",
+   "text": "Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.",
+   "why": "you said it in 3 sessions: “don't git add everything”",
+   "lesson": "L-git-stage-by-name",
+   "note": "git-workflow"
+  }
+ ],
+ "silent": [
+  {
+   "id": "L-safety-rm-rf",
+   "rule": "Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.",
+   "note": "safety",
+   "why": "written by an agent (Write, 2026-10-29T14:02)"
+  }
+ ],
+ "replay": {
+  "t": "2026-10-30T16:40:00",
+  "days": 30,
+  "sessions": 127,
+  "lessons": 23,
+  "silent_lessons": 1,
+  "corrections": 64,
+  "caught": 31,
+  "missed": 9,
+  "uncovered": 24,
+  "would_ask": 7,
+  "caught_pct": 48,
+  "drafted": 0,
+  "per_lesson": [
+   {
+    "id": "L-testing-no-retry-flaky",
+    "caught": 6,
+    "shown": 6,
+    "ask": 0,
+    "missed": 2,
+    "widen": [
+     "race",
+     "ordering"
+    ]
+   },
+   {
+    "id": "L-verify-before-done",
+    "caught": 5,
+    "shown": 5,
+    "ask": 0,
+    "missed": 1,
+    "widen": [
+     "works",
+     "ran"
+    ]
+   },
+   {
+    "id": "L-git-stage-by-name",
+    "caught": 5,
+    "shown": 5,
+    "ask": 0,
+    "missed": 2,
+    "widen": [
+     "build files",
+     "stage"
+    ]
+   },
+   {
+    "id": "L-git-branch-first",
+    "caught": 4,
+    "shown": 0,
+    "ask": 4,
+    "missed": 0
+   },
+   {
+    "id": "L-testing-no-skip-to-green",
+    "caught": 4,
+    "shown": 4,
+    "ask": 0,
+    "missed": 2,
+    "widen": [
+     "xfail",
+     "skip"
+    ]
+   },
+   {
+    "id": "L-result-first",
+    "caught": 4,
+    "shown": 4,
+    "ask": 0,
+    "missed": 1,
+    "widen": [
+     "too long"
+    ]
+   },
+   {
+    "id": "L-secrets-no-commit-env",
+    "caught": 3,
+    "shown": 0,
+    "ask": 3,
+    "missed": 0
+   },
+   {
+    "id": "L-git-no-rewrite-pushed",
+    "caught": 0,
+    "shown": 0,
+    "ask": 0,
+    "missed": 1,
+    "widen": [
+     "amend",
+     "pushed"
+    ]
+   }
+  ],
+  "rows": [
+   {
+    "session": "s000",
+    "agent": "claude",
+    "ts": "2026-10-01T09:00:00Z",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s001",
+    "agent": "claude",
+    "ts": "2026-10-01T10:07:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s002",
+    "agent": "claude",
+    "ts": "2026-10-01T11:14:00Z",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s003",
+    "agent": "claude",
+    "ts": "2026-10-02T12:21:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s004",
+    "agent": "claude",
+    "ts": "2026-10-02T13:28:00Z",
+    "quote": "stop reformatting files you didn't change",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s005",
+    "agent": "claude",
+    "ts": "2026-10-03T14:35:00Z",
+    "quote": "that endpoint is deprecated, use v2",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s006",
+    "agent": "claude",
+    "ts": "2026-10-03T15:42:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s007",
+    "agent": "codex",
+    "ts": "2026-10-04T16:49:00Z",
+    "quote": "don't add a dependency for this",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s008",
+    "agent": "claude",
+    "ts": "2026-10-04T17:56:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s009",
+    "agent": "codex",
+    "ts": "2026-10-05T09:03:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s010",
+    "agent": "claude",
+    "ts": "2026-10-05T10:10:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s011",
+    "agent": "claude",
+    "ts": "2026-10-05T11:17:00Z",
+    "quote": "why did you push to main",
+    "context": "[Bash] git push origin main",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s012",
+    "agent": "claude",
+    "ts": "2026-10-06T12:24:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s013",
+    "agent": "codex",
+    "ts": "2026-10-06T13:31:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s014",
+    "agent": "claude",
+    "ts": "2026-10-07T14:38:00Z",
+    "quote": "I told you to run the tests before saying it works",
+    "context": "[Bash] git commit -m 'fix login'",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s015",
+    "agent": "claude",
+    "ts": "2026-10-07T15:45:00Z",
+    "quote": "never push straight to main",
+    "context": "[Bash] git push origin HEAD:main",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s016",
+    "agent": "claude",
+    "ts": "2026-10-08T16:52:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s017",
+    "agent": "codex",
+    "ts": "2026-10-08T17:59:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s018",
+    "agent": "codex",
+    "ts": "2026-10-09T09:06:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s019",
+    "agent": "claude",
+    "ts": "2026-10-09T10:13:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.85,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s020",
+    "agent": "claude",
+    "ts": "2026-10-10T11:20:00Z",
+    "quote": "never push straight to main",
+    "context": "[Bash] git push origin HEAD:main",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s021",
+    "agent": "claude",
+    "ts": "2026-10-10T12:27:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s022",
+    "agent": "claude",
+    "ts": "2026-10-10T13:34:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s023",
+    "agent": "claude",
+    "ts": "2026-10-11T14:41:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s024",
+    "agent": "codex",
+    "ts": "2026-10-11T15:48:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s025",
+    "agent": "codex",
+    "ts": "2026-10-12T16:55:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s026",
+    "agent": "claude",
+    "ts": "2026-10-12T17:02:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s027",
+    "agent": "claude",
+    "ts": "2026-10-13T09:09:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s028",
+    "agent": "claude",
+    "ts": "2026-10-13T10:16:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s029",
+    "agent": "codex",
+    "ts": "2026-10-14T11:23:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s030",
+    "agent": "claude",
+    "ts": "2026-10-14T12:30:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s031",
+    "agent": "claude",
+    "ts": "2026-10-15T13:37:00Z",
+    "quote": "keep the error messages in English",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s032",
+    "agent": "claude",
+    "ts": "2026-10-15T14:44:00Z",
+    "quote": "never commit the .env",
+    "context": "[Bash] git add .env",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s033",
+    "agent": "codex",
+    "ts": "2026-10-15T15:51:00Z",
+    "quote": "stop reformatting files you didn't change",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s034",
+    "agent": "claude",
+    "ts": "2026-10-16T16:58:00Z",
+    "quote": "the migration has to be reversible",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s035",
+    "agent": "codex",
+    "ts": "2026-10-16T17:05:00Z",
+    "quote": "why did you amend a pushed commit",
+    "context": "[Bash] git commit --amend --no-edit",
+    "status": "missed",
+    "score": 0.85,
+    "lessons": [
+     "L-git-no-rewrite-pushed"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s036",
+    "agent": "claude",
+    "ts": "2026-10-17T09:12:00Z",
+    "quote": "don't git add everything, there are build files in there",
+    "context": "[Bash] git add -A",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s037",
+    "agent": "claude",
+    "ts": "2026-10-17T10:19:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s038",
+    "agent": "codex",
+    "ts": "2026-10-18T11:26:00Z",
+    "quote": "never commit the .env",
+    "context": "[Bash] git add .env",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s039",
+    "agent": "claude",
+    "ts": "2026-10-18T12:33:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.85,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s040",
+    "agent": "claude",
+    "ts": "2026-10-19T13:40:00Z",
+    "quote": "that endpoint is deprecated, use v2",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s041",
+    "agent": "claude",
+    "ts": "2026-10-19T14:47:00Z",
+    "quote": "too long, just tell me if it worked",
+    "context": "",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s042",
+    "agent": "codex",
+    "ts": "2026-10-20T15:54:00Z",
+    "quote": "don't add a dependency for this",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s043",
+    "agent": "claude",
+    "ts": "2026-10-20T16:01:00Z",
+    "quote": "stage the files by name",
+    "context": "[Bash] git add .",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-git-stage-by-name"
+    ],
+    "fired": [
+     {
+      "id": "L-git-stage-by-name",
+      "how": "tool"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s044",
+    "agent": "claude",
+    "ts": "2026-10-20T17:08:00Z",
+    "quote": "keep the error messages in English",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s045",
+    "agent": "claude",
+    "ts": "2026-10-21T09:15:00Z",
+    "quote": "don't mark it xfail, fix it",
+    "context": "[Edit] tests/test_cart.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s046",
+    "agent": "claude",
+    "ts": "2026-10-21T10:22:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s047",
+    "agent": "claude",
+    "ts": "2026-10-22T11:29:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s048",
+    "agent": "codex",
+    "ts": "2026-10-22T12:36:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s049",
+    "agent": "codex",
+    "ts": "2026-10-23T13:43:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "missed",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s050",
+    "agent": "codex",
+    "ts": "2026-10-23T14:50:00Z",
+    "quote": "start with the answer",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s051",
+    "agent": "claude",
+    "ts": "2026-10-24T15:57:00Z",
+    "quote": "no, don't touch the public API, people script against it",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s052",
+    "agent": "claude",
+    "ts": "2026-10-24T16:04:00Z",
+    "quote": "you staged the .env file again",
+    "context": "[Bash] git add .env config.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-secrets-no-commit-env"
+    ],
+    "fired": [
+     {
+      "id": "L-secrets-no-commit-env",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s053",
+    "agent": "codex",
+    "ts": "2026-10-25T17:11:00Z",
+    "quote": "why did you push to main",
+    "context": "[Bash] git push origin main",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-git-branch-first"
+    ],
+    "fired": [
+     {
+      "id": "L-git-branch-first",
+      "how": "ask"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s054",
+    "agent": "codex",
+    "ts": "2026-10-25T09:18:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "missed",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s055",
+    "agent": "claude",
+    "ts": "2026-10-25T10:25:00Z",
+    "quote": "start with the answer",
+    "context": "",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-result-first"
+    ],
+    "fired": [
+     {
+      "id": "L-result-first",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s056",
+    "agent": "claude",
+    "ts": "2026-10-26T11:32:00Z",
+    "quote": "use the existing helper, don't write a new one",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s057",
+    "agent": "codex",
+    "ts": "2026-10-26T12:39:00Z",
+    "quote": "why did you add a retry to the test, fix the race instead",
+    "context": "[Edit] tests/test_api.py",
+    "status": "caught",
+    "score": 0.85,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s058",
+    "agent": "claude",
+    "ts": "2026-10-27T13:46:00Z",
+    "quote": "no sleep() in tests, fix the ordering",
+    "context": "[Edit] tests/test_worker.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-retry-flaky"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-retry-flaky",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s059",
+    "agent": "codex",
+    "ts": "2026-10-27T14:53:00Z",
+    "quote": "you changed the wrong config file",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s060",
+    "agent": "claude",
+    "ts": "2026-10-28T15:00:00Z",
+    "quote": "you can't just skip the failing test",
+    "context": "[Edit] tests/test_pricing.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-testing-no-skip-to-green"
+    ],
+    "fired": [
+     {
+      "id": "L-testing-no-skip-to-green",
+      "how": "words"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s061",
+    "agent": "codex",
+    "ts": "2026-10-28T16:07:00Z",
+    "quote": "you said it works but you never ran it",
+    "context": "[Edit] src/auth.py",
+    "status": "caught",
+    "score": 0.6,
+    "lessons": [
+     "L-verify-before-done"
+    ],
+    "fired": [
+     {
+      "id": "L-verify-before-done",
+      "how": "always"
+     }
+    ],
+    "before_lesson": false
+   },
+   {
+    "session": "s062",
+    "agent": "claude",
+    "ts": "2026-10-29T17:14:00Z",
+    "quote": "why did you bump the major version of react",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.85,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   },
+   {
+    "session": "s063",
+    "agent": "claude",
+    "ts": "2026-10-29T09:21:00Z",
+    "quote": "stop reformatting files you didn't change",
+    "context": "",
+    "status": "uncovered",
+    "score": 0.6,
+    "lessons": [],
+    "fired": [],
+    "before_lesson": false
+   }
+  ]
+ },
+ "checks": {
+  "2026-W38": {
+   "checked": 372,
+   "violations": 14
+  },
+  "2026-W39": {
+   "checked": 351,
+   "violations": 11
+  },
+  "2026-W40": {
+   "checked": 536,
+   "violations": 9
+  },
+  "2026-W41": {
+   "checked": 441,
+   "violations": 6
+  },
+  "2026-W42": {
+   "checked": 528,
+   "violations": 4
+  },
+  "2026-W43": {
+   "checked": 361,
+   "violations": 3
+  }
+ },
+ "handoffs": [
+  {
+   "session": "8f2c1a9e-77aa",
+   "agent": "claude",
+   "repo": "acme-api",
+   "cwd": "/Users/me/src/acme-api",
+   "t": "2026-10-30T15:58:11"
+  },
+  {
+   "session": "rollout-2026-10-29",
+   "agent": "codex",
+   "repo": "web",
+   "cwd": "/Users/me/src/web",
+   "t": "2026-10-29T18:20:40"
+  }
+ ],
+ "graph": {
+  "nodes": [
+   {
+    "id": "hub-brain",
+    "rel": "00-hubs/hub-brain.md",
+    "folder": "00-hubs",
+    "type": "hub",
+    "description": "Entry point - how this brain works, where things go, and the notes about working with agents.",
+    "lessons": 0,
+    "hub": true
+   },
+   {
+    "id": "hub-projects",
+    "rel": "00-hubs/hub-projects.md",
+    "folder": "00-hubs",
+    "type": "hub",
+    "description": "Entry point for running projects - one line per project with its current state.",
+    "lessons": 0,
+    "hub": true
+   },
+   {
+    "id": "note-conventions",
+    "rel": "20-areas/note-conventions.md",
+    "folder": "20-areas",
+    "type": "howto",
+    "description": "How to write notes in this vault - one truth per fact, frontmatter fields, hubs, links, lessons.",
+    "lessons": 0,
+    "hub": false
+   },
+   {
+    "id": "working-style",
+    "rel": "20-areas/working-style.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "How I want agents to work with me - answer style, verification, what needs my OK. Lessons without a better home land here.",
+    "lessons": 4,
+    "hub": false
+   },
+   {
+    "id": "git-workflow",
+    "rel": "20-areas/git-workflow.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "How I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.",
+    "lessons": 4,
+    "hub": false
+   },
+   {
+    "id": "safety",
+    "rel": "20-areas/safety.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "What needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.",
+    "lessons": 6,
+    "hub": false
+   },
+   {
+    "id": "secrets",
+    "rel": "20-areas/secrets.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "Keys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.",
+    "lessons": 4,
+    "hub": false
+   },
+   {
+    "id": "testing",
+    "rel": "20-areas/testing.md",
+    "folder": "20-areas",
+    "type": "preference",
+    "description": "Honest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.",
+    "lessons": 4,
+    "hub": false
+   },
+   {
+    "id": "self-improving-brain",
+    "rel": "90-entities/self-improving-brain.md",
+    "folder": "90-entities",
+    "type": "fact",
+    "description": "The tool behind this vault - CLI commands, hooks and the nightly loop at a glance.",
+    "lessons": 0,
+    "hub": false
+   },
+   {
+    "id": "acme-api",
+    "rel": "10-projects/acme-api.md",
+    "folder": "10-projects",
+    "type": "project",
+    "description": "The public API - where it runs, how it deploys, what bit us before.",
+    "lessons": 1,
+    "hub": false
+   },
+   {
+    "id": "payments",
+    "rel": "10-projects/payments.md",
+    "folder": "10-projects",
+    "type": "decision",
+    "description": "Payments run on Stripe webhooks, not polling - and why every handler must be idempotent.",
+    "lessons": 0,
+    "hub": false
+   }
+  ],
+  "links": [
+   [
+    "hub-brain",
+    "hub-projects"
+   ],
+   [
+    "hub-brain",
+    "working-style"
+   ],
+   [
+    "hub-brain",
+    "note-conventions"
+   ],
+   [
+    "hub-brain",
+    "self-improving-brain"
+   ],
+   [
+    "hub-projects",
+    "hub-brain"
+   ],
+   [
+    "note-conventions",
+    "hub-brain"
+   ],
+   [
+    "working-style",
+    "hub-brain"
+   ],
+   [
+    "git-workflow",
+    "hub-brain"
+   ],
+   [
+    "safety",
+    "hub-brain"
+   ],
+   [
+    "secrets",
+    "hub-brain"
+   ],
+   [
+    "testing",
+    "hub-brain"
+   ],
+   [
+    "self-improving-brain",
+    "hub-brain"
+   ],
+   [
+    "self-improving-brain",
+    "note-conventions"
+   ],
+   [
+    "hub-projects",
+    "acme-api"
+   ],
+   [
+    "hub-projects",
+    "payments"
+   ],
+   [
+    "acme-api",
+    "hub-projects"
+   ],
+   [
+    "payments",
+    "hub-projects"
+   ],
+   [
+    "acme-api",
+    "payments"
+   ],
+   [
+    "payments",
+    "acme-api"
+   ],
+   [
+    "hub-brain",
+    "git-workflow"
+   ],
+   [
+    "hub-brain",
+    "safety"
+   ],
+   [
+    "hub-brain",
+    "secrets"
+   ],
+   [
+    "hub-brain",
+    "testing"
+   ]
+  ]
+ },
+ "notes": {
+  "git-workflow": {
+   "name": "git-workflow",
+   "rel": "20-areas/git-workflow.md",
+   "description": "How I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.",
+   "type": "preference",
+   "body": "\n# Git workflow\n\nHow I want git handled - branches and pull requests, named staging, nothing rewritten once it is pushed.\n\n## Lessons\n\n> [!lesson]- L-git-no-verify\n> rule: Never skip hooks with --no-verify or -n - if a hook fails, fix what it found or ask the user.\n> mechanism: reflex\n> commands: git\\s+(commit|push|merge|rebase)\\b.*(--no-verify|\\s-n\\b)\n> words: no-verify, hook, pre-commit\n> since: 2026-08-24\n\n> [!lesson]- L-git-branch-first\n> rule: Do not commit or push straight to main or master - create a branch and open a pull request unless the user said otherwise.\n> mechanism: guard\n> commands: git\\s+push\\s+(\\S+\\s+)?(HEAD:)?(main|master)(\\s|$)\n> since: 2026-08-06\n\n> [!lesson]- L-git-no-rewrite-pushed\n> rule: Do not amend, rebase or squash commits that are already pushed without asking - it rewrites history other people have.\n> mechanism: reflex\n> commands: git\\s+(commit\\s+.*--amend|rebase\\b)\n> since: 2026-09-18\n\n> [!lesson]- L-git-stage-by-name\n> rule: Stage files by name and look at the diff before committing - `git add -A` / `git add .` sweeps in build output, local config and secrets.\n> mechanism: reflex\n> commands: git\\s+add\\s+(-A|--all|\\.)(\\s|$)|git\\s+commit\\s+.*-a\\b\n> since: 2026-10-20\n\nPart of [[hub-brain]].\n"
+  },
+  "safety": {
+   "name": "safety",
+   "rel": "20-areas/safety.md",
+   "description": "What needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.",
+   "type": "preference",
+   "body": "\n# Safety\n\nWhat needs my OK first - deleting, resetting, dropping data, destroying infrastructure, publishing.\n\n## Lessons\n\n> [!lesson]- L-safety-rm-rf\n> rule: Recursive deletes cannot be undone - list what would be removed and get an explicit OK before running them.\n> mechanism: guard\n> commands: \\brm\\s+(-[a-zA-Z]*[rR][a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*[rR]|--recursive)|\\bfind\\b.*\\s-delete\\b\n> since: 2026-08-11\n\n> [!lesson]- L-safety-git-discard\n> rule: git reset --hard, git clean -f and git checkout/restore of a whole tree throw away uncommitted work - show `git status` and ask first.\n> mechanism: reflex\n> commands: git\\s+(reset\\s+--hard|clean\\s+-[a-zA-Z]*f|checkout\\s+(--\\s+)?\\.(\\s|$)|restore\\s+(--\\S+\\s+)*\\.(\\s|$)|stash\\s+(drop|clear))\n> words: reset --hard, git clean, discard\n> since: 2026-08-27\n\n> [!lesson]- L-safety-drop-data\n> rule: Dropping or truncating tables, deleting rows without WHERE, flushing caches or databases destroys data - name the target and get an OK first.\n> mechanism: guard\n> commands: (?i)\\b(drop\\s+(table|database|schema|collection)|truncate\\s+(table\\s+)?\\w+|delete\\s+from\\s+\\w+\\s*(;|\"|'|$)|flushall|flushdb|dropDatabase\\(\\))\n> since: 2026-09-15\n\n> [!lesson]- L-safety-destroy-infra\n> rule: Destroying or deleting cloud and cluster resources is irreversible - show the plan or the exact resources and ask before running it.\n> mechanism: reflex\n> commands: \\b(terraform\\s+(destroy|apply\\s+.*-auto-approve)|pulumi\\s+destroy|kubectl\\s+delete|helm\\s+(uninstall|delete)|aws\\s+\\S+\\s+(delete|terminate|remove)-\\S+|gcloud\\s+.*\\bdelete\\b|az\\s+.*\\bdelete\\b|docker\\s+(system|volume)\\s+prune)\n> words: terraform destroy, kubectl delete, cluster\n> since: 2026-10-02\n\n> [!lesson]- L-safety-publish\n> rule: Publishing a package, pushing a release tag or deploying to production is outward-facing - confirm version and target with the user first.\n> mechanism: reflex\n> commands: \\b(npm|pnpm|yarn)\\s+publish\\b|\\btwine\\s+upload\\b|\\bcargo\\s+publish\\b|\\bgh\\s+release\\s+create\\b|\\bgit\\s+push\\b.*--tags|\\b(vercel|netlify)\\b.*--prod|\\bfly\\s+deploy\\b\n> words: publish, release, deploy\n> since: 2026-10-13\n\n> [!lesson]- L-safety-chmod-sudo\n> rule: Do not run sudo or open permissions wide (chmod -R 777, chown -R on system paths) without asking - fix the actual permission problem instead.\n> mechanism: reflex\n> commands: ^\\s*sudo\\s|\\bchmod\\s+(-R\\s+)?0?777\\b|\\bchown\\s+-R\\s+\\S+\\s+/(usr|etc|var|opt|Library)\\b\n> words: sudo, chmod 777, chown\n> since: 2026-10-15\n\nPart of [[hub-brain]].\n"
+  },
+  "secrets": {
+   "name": "secrets",
+   "rel": "20-areas/secrets.md",
+   "description": "Keys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.",
+   "type": "preference",
+   "body": "\n# Secrets\n\nKeys stay out of code, logs, commits and the chat; missing credentials are named, never guessed.\n\n## Lessons\n\n> [!lesson]- L-secrets-no-hardcoded-keys\n> rule: Never write API keys, tokens or private keys into source files - read them from the environment or the project's secret store.\n> mechanism: reflex\n> words: api key, token, secret\n> since: 2026-09-29\n\n> [!lesson]- L-secrets-no-print-env\n> rule: Do not print secret files or the whole environment into the session (cat .env, printenv, env) - check for a variable's presence instead, e.g. `test -n \"$NAME\"`.\n> mechanism: reflex\n> commands: \\b(cat|less|more|head|tail|bat)\\s+\\S*\\.env(\\.(local|dev|development|prod|production|staging|test))?(\\s|$|[\"'|;&])|^\\s*(printenv|env)\\s*$|\\bcat\\s+\\S*(id_rsa|id_ed25519|\\.pem|credentials)\\b\n> words: .env, printenv, environment\n> since: 2026-09-10\n\n> [!lesson]- L-secrets-no-commit-env\n> rule: Never stage .env files, key files or credentials - add them to .gitignore and commit an .env.example without values.\n> mechanism: guard\n> commands: git\\s+add\\s+.*(\\.env(\\s|$|\\.(?!example))|\\.pem\\b|id_rsa|credentials\\.json|\\.p12\\b)\n> since: 2026-08-19\n\n> [!lesson]- L-secrets-ask-dont-guess\n> rule: When a credential is missing, name the variable and where it goes and let the user set it - never ask them to paste the secret into the chat.\n> mechanism: reflex\n> words: api key, token, password, secret, credentials, env var\n> since: 2026-10-06\n\nPart of [[hub-brain]].\n"
+  },
+  "testing": {
+   "name": "testing",
+   "rel": "20-areas/testing.md",
+   "description": "Honest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.",
+   "type": "preference",
+   "body": "\n# Testing\n\nHonest tests - flaky tests fixed at the root, a failing test is never skipped or weakened to get green.\n\n## Lessons\n\n> [!lesson]- L-testing-no-retry-flaky\n> rule: Fix flaky tests at the root (race, ordering, shared state); never add retries or sleeps.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_\n> words: flaky, retry, sleep, race\n> since: 2026-08-13\n\n> [!lesson]- L-testing-no-skip-to-green\n> rule: Never skip, delete or comment out a failing test to get CI green - find out why it fails, or ask the user before disabling it.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|_test\\.|\\.test\\.|\\.spec\\.|test_\n> words: failing test, ci red, tests fail, make ci green, broken test\n> since: 2026-09-02\n\n> [!lesson]- L-testing-no-focused-tests\n> rule: Do not leave focused tests (.only, fit, fdescribe) behind - they silently turn off the rest of the suite.\n> mechanism: reflex\n> paths: (^|/)(tests?|spec|__tests__)/|\\.test\\.|\\.spec\\.\n> since: 2026-10-09\n\n> [!lesson]- L-testing-dont-weaken-asserts\n> rule: When a test fails, do not loosen the assertion or update the snapshot until you know the new behaviour is right - say which one changed and why.\n> mechanism: reflex\n> commands: (jest|vitest).*(-u\\b|--updateSnapshot)|pytest.*--snapshot-update\n> words: assertion, snapshot, expected, update snapshot, test fails\n> since: 2026-09-23\n\nPart of [[hub-brain]].\n"
+  },
+  "acme-api": {
+   "name": "acme-api",
+   "rel": "10-projects/acme-api.md",
+   "description": "The public API - where it runs, how it deploys, what bit us before.",
+   "type": "project",
+   "body": "\n# Acme api\n\nThe public API - where it runs, how it deploys, what bit us before.\n\n## Runs\n\n- The API deploys with ArgoCD from main; nobody runs kubectl apply by hand.\n- The staging database moved to eu-west-2 in October.\n\n## Pitfalls\n\n- Migrations once locked the orders table for 4 minutes: run them on a copy first.\n\n## Lessons\n\n> [!lesson]- L-db-migrate-copy-first\n> rule: Run database migrations against a copy of the database first, and show the result before the real run.\n> mechanism: reflex\n> words: migration, migrate, database\n> since: 2026-10-30\n\nPart of [[hub-projects]]. See [[payments]].\n"
+  },
+  "payments": {
+   "name": "payments",
+   "rel": "10-projects/payments.md",
+   "description": "Payments run on Stripe webhooks, not polling - and why every handler must be idempotent.",
+   "type": "decision",
+   "body": "\n# Payments\n\nPayments run on Stripe webhooks, not polling - and why every handler must be idempotent.\n\nPayments use Stripe webhooks, not polling.\n\n- Stripe retries a webhook for up to three days, so every handler must be idempotent.\n\nPart of [[hub-projects]]. Runs in [[acme-api]].\n"
+  }
+ },
+ "demo": true
+}

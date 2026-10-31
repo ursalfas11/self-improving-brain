@@ -25,15 +25,23 @@ DEFAULTS = {
     "graph_seeds": 3,
     # lessons with mechanism "always" are capped to keep session start cheap
     "always_max": 8,
-    # optional local LLM command for autonomous learning/distilling. Prompt arrives on stdin,
-    # answer is read from stdout. Examples:
-    #   "claude -p --model haiku"     "codex exec -"     "ollama run llama3.1"
-    # Empty = no LLM: your agent does the thinking the next time you review.
+    # the LLM CLI the nightly run thinks with (`brain setup` picks claude, codex or ollama). Prompt on stdin,
+    # answer on stdout, your existing login. Empty = the brain still measures, but learns nothing new.
     "llm_cmd": "",
     "llm_timeout": 240,
-    # Stop hook: when a session contains an unsaved correction or lasting preference, ask the agent
-    # once to store it (`brain remember`) before finishing. Never loops, never fires without a signal.
-    "capture_on_stop": True,
+    # what learning may spend per day and machine; Claude Code reports dollars, other CLIs count calls only
+    "llm_budget_usd": 0.10,
+    "llm_max_calls": 40,
+    # the nightly run: at most this many new rules per night, active rules overall, and a reflex rule that has
+    # not fired for this many days retires (guards never retire for being quiet: they wait for rare moments)
+    "learn_max_new": 5,
+    "lessons_max": 60,
+    "retire_after_days": 60,
+    # knowledge from your sessions: how many new sessions to read per night, how many claims to file
+    "extract_max_sessions": 8,
+    "distill_max": 15,
+    # one line at the first session of each week: what the brain learned and what it cost
+    "digest": True,
     # git sync at the end of nightly runs (only if the vault is a git repo with a remote)
     "git_sync": True,
     # set by `brain init` when it created the repo: then sync commits everything in the vault. In a repo
@@ -41,6 +49,10 @@ DEFAULTS = {
     "git_owned": False,
     # never push to a repo anyone can read (checked before every push); set true only on purpose
     "allow_public_remote": False,
+    # which lessons may reach the agent: agent (default) | strict | off — see trust.py
+    "trust_mode": "agent",
+    # an agent running `brain approve/trust/promote/undo/...` gets a permission prompt first
+    "guard_brain_commands": True,
     # notes of type project that were not updated for this many days are flagged
     "stale_days": 45,
     # transcript sources to learn from (globs, ~ expanded)

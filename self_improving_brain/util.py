@@ -39,6 +39,15 @@ def iso_week(date_str: str) -> str:
     return f"{y}-W{w:02d}"
 
 
+def day_label(iso: str) -> str:
+    """'Oct 30' for an ISO date or timestamp."""
+    try:
+        d = _dt.date.fromisoformat(str(iso)[:10])
+    except ValueError:
+        return "?"
+    return f"{d:%b} {d.day}"
+
+
 def days_since(date_str: str) -> int | None:
     try:
         d = _dt.date.fromisoformat(str(date_str)[:10])
@@ -48,9 +57,21 @@ def days_since(date_str: str) -> int | None:
 
 
 def host() -> str:
-    """Per-machine id. Each machine writes its own event file -> no merge conflicts."""
-    name = os.environ.get("BRAIN_HOST") or socket.gethostname().split(".")[0] or "host"
-    return re.sub(r"[^A-Za-z0-9_-]", "-", name).lower()
+    """Per-machine id. Each machine writes its own files -> no merge conflicts. Fixed on first use, because a
+    laptop's hostname can change with the network, and its files must not."""
+    name = os.environ.get("BRAIN_HOST", "")
+    if not name:
+        p = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "self-improving-brain" / "host"
+        try:
+            name = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            name = socket.gethostname().split(".")[0] or "host"
+            try:
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(name + "\n", encoding="utf-8")
+            except OSError:
+                pass
+    return re.sub(r"[^A-Za-z0-9_-]", "-", name).lower() or "host"
 
 
 def fold(s: str) -> str:
@@ -78,7 +99,12 @@ def tokens_estimate(text: str) -> int:
 
 def short(text: str, n: int = 160) -> str:
     text = " ".join(text.split())
-    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+    if len(text) <= n:
+        return text
+    cut = text[: n - 1]
+    if text[n - 1] != " " and " " in cut[-24:]:  # end after a word, not inside one
+        cut = cut[: cut.rfind(" ")]
+    return cut.rstrip(" ,;:") + "…"
 
 
 def slugify(text: str) -> str:

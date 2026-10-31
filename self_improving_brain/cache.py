@@ -14,7 +14,7 @@ from pathlib import Path
 from .config import Vault
 from .notes import Library, iter_note_paths
 
-VERSION = 3
+VERSION = 4
 
 
 @functools.lru_cache(maxsize=1)
@@ -43,10 +43,13 @@ def fingerprint(root: Path) -> str:
     return h.hexdigest()
 
 
+def base_dir() -> Path:
+    return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "self-improving-brain"
+
+
 def _cache_dir(v: Vault) -> Path:
     """Outside the vault on purpose: a vault cloned from elsewhere can never ship a poisoned cache."""
-    base = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "self-improving-brain"
-    return base / hashlib.sha1(str(v.root).encode()).hexdigest()[:16]
+    return base_dir() / hashlib.sha1(str(v.root).encode()).hexdigest()[:16]
 
 
 def _path(v: Vault, name: str) -> Path:
@@ -85,7 +88,7 @@ def library(v: Vault, fp: str | None = None) -> Library:
 
 
 def lessons(v: Vault):
-    """Lessons only — the hot path for every tool call."""
+    """Every lesson in the vault — the hot path for every tool call."""
     fp = fingerprint(v.root)
     ls = _load(v, "lessons", fp)
     if ls is None:

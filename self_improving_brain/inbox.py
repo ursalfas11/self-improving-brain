@@ -5,11 +5,13 @@ An item is distilled into the wiki later (by your agent or by the nightly run).
 """
 from __future__ import annotations
 
+from . import ledger
 from .config import Vault
 from .secrets import scan
-from .util import digest, now_iso, read_jsonl, terms, write_jsonl, append_jsonl
+from .util import append_jsonl, digest, now_iso, read_jsonl, terms
 
 TYPES = ("fact", "decision", "status", "pitfall", "preference", "todo", "lesson")
+RANK = {"open": 0, "done": 1, "skipped": 1, "dropped": 1}  # a closed item stays closed on every machine
 
 
 class Rejected(ValueError):
@@ -17,11 +19,16 @@ class Rejected(ValueError):
 
 
 def path(v: Vault):
-    return v.path("inbox.jsonl")
+    """This machine's inbox (one file per machine, see ledger.py)."""
+    return ledger.own(v, "inbox")
 
 
-def items(v: Vault, include_done: bool = False) -> list[dict]:
-    out = read_jsonl(path(v))
+def items(v: Vault, include_done: bool = False, mine: bool = False) -> list[dict]:
+    """Every machine's items; `mine`: only those this machine filed (the nightly run files only its own)."""
+    out = ledger.load(v, "inbox", RANK)
+    if mine:
+        ids = {i.get("id") for i in read_jsonl(path(v))}
+        out = [i for i in out if i.get("id") in ids]
     return out if include_done else [i for i in out if i.get("status", "open") == "open"]
 
 
@@ -54,7 +61,7 @@ def add(v: Vault, typ: str, claim: str, *, source: str = "cli", quote: str = "",
 
 
 def close(v: Vault, item_id: str, status: str = "done", result: str = "") -> bool:
-    all_items = read_jsonl(path(v))
+    all_items = items(v, include_done=True)
     ok = False
     for it in all_items:
         if it["id"] == item_id and it.get("status", "open") == "open":
@@ -64,5 +71,5 @@ def close(v: Vault, item_id: str, status: str = "done", result: str = "") -> boo
                 it["result"] = result
             ok = True
     if ok:
-        write_jsonl(path(v), all_items)
+        ledger.save(v, "inbox", all_items, RANK)
     return ok
