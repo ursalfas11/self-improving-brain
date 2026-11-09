@@ -36,7 +36,7 @@ and <b>measures whether your agent actually makes fewer mistakes</b>, week after
   <img src="docs/assets/demo.svg" alt="Demo: on Tuesday the user corrects the agent; that night brain learn turns it into a lesson; on Friday the lesson fires before the agent repeats the mistake" width="92%">
 </p>
 
-## 🤯 The problem
+## The problem
 
 You told your agent *"no, don't paper over flaky tests with retries"* last Tuesday. Today it adds a retry again.
 
@@ -46,7 +46,7 @@ Agent mistakes rarely come from missing facts. They come from a rule the agent *
 <tr>
 <td width="33%" valign="top">
 
-### 🧠 Learns from you
+###  Learns from you
 `brain learn` turns every *"no, why did you…"* and every rejected tool call in your transcripts into a lesson draft. You OK it in one line.
 
 </td>
@@ -58,7 +58,7 @@ Prompt words, a tool, a shell command or a path trigger it. A `guard` makes the 
 </td>
 <td width="33%" valign="top">
 
-### 📉 Proves it works
+###  Proves it works
 `brain stats` shows mistakes per 100 messages week by week, and whether each lesson fired.
 
 </td>
@@ -66,26 +66,26 @@ Prompt words, a tool, a shell command or a path trigger it. A `guard` makes the 
 <tr>
 <td valign="top">
 
-### 🏠 Laptop only
+###  Laptop only
 No server, no API key, no vector DB, zero dependencies. Python 3.9+ is all it needs.
 
 </td>
 <td valign="top">
 
-### 📝 Plain Markdown
+###  Plain Markdown
 An ordinary Obsidian vault with `[[links]]`. Diffable, and yours.
 
 </td>
 <td valign="top">
 
-### 🔒 Never behind your back
+###  Never behind your back
 Nothing becomes a lesson without your OK. Secrets are blocked on save, on write and at commit.
 
 </td>
 </tr>
 </table>
 
-## 🚀 Quickstart
+## Quickstart
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ursalfas11/self-improving-brain/main/install.sh | sh
@@ -119,7 +119,7 @@ LESSONS (apply in every session):
 ```
 </details>
 
-## 🔁 How it gets smarter
+##  How it gets smarter
 
 <p align="center">
   <img src="docs/assets/loop.svg" alt="The learning loop: you work, it learns, you approve, the right rule fires at the right moment, it measures" width="92%">
@@ -138,13 +138,13 @@ The model itself never learns. What improves is **what your agent is told, and w
 
 | Signal | What the brain does |
 |---|---|
-| Recall offered a note, and the agent opened it | ✅ hit: the note gains weight |
+| Recall offered a note, and the agent opened it |  hit: the note gains weight |
 | Recall offered a note, and the agent ignored it | the note loses weight; if precision drops, the **recall threshold rises by itself** |
 | The agent opened a note recall *didn't* offer | the prompt's words get attached to that note, so it is found next time |
-| You corrected the agent or rejected a tool call | 📝 lesson draft, refined by your own LLM CLI if you configured one |
-| A lesson was shown and the mistake came back anyway | 🔧 flagged: *sharpen the rule or make it a guard* |
-| The mistake came back and the lesson wasn't shown | 🎯 flagged: *widen its triggers* |
-| A lesson never fired in 30 days | 💤 flagged: *dormant* |
+| You corrected the agent or rejected a tool call | lesson draft, refined by your own LLM CLI if you configured one |
+| A lesson was shown and the mistake came back anyway |  flagged: *sharpen the rule or make it a guard* |
+| The mistake came back and the lesson wasn't shown |  flagged: *widen its triggers* |
+| A lesson never fired in 30 days |  flagged: *dormant* |
 | A clear correction ("why did you…", "I told you…") or a lasting preference wasn't saved | 💾 at the end of that answer, the agent is asked **once** to store it with `brain remember`; weaker signals wait quietly for your review |
 
 </details>
@@ -169,7 +169,7 @@ Recall combines **BM25 over sections**, **learned terms** and **graph spreading*
 The details are in [docs/architecture.md](docs/architecture.md).
 </details>
 
-## 🎯 Lessons
+##  Lessons
 
 A lesson is a callout **in the note that owns the topic**, so there is no separate rules file that drifts.
 
@@ -190,7 +190,7 @@ A lesson is a callout **in the note that owns the topic**, so there is no separa
 
 **Triggers:** `words` (two hits, or one exact phrase) · `tools` (a name suffix: `deploy` matches any `mcp__*__deploy`) · `commands` (a regex on the shell command) · `paths` (a regex on file paths).
 
-## 🤝 Works with every agent
+## Works with every agent
 
 | Agent | Integration | You get |
 |---|---|---|
@@ -200,7 +200,7 @@ A lesson is a callout **in the note that owns the topic**, so there is no separa
 | <img src="https://img.shields.io/badge/-Cursor%20·%20Grok%20·%20Aider%20·%20Zed%20·%20Cline-555555" alt="Others"> | `brain install agents` → the project's `AGENTS.md` | context, search, remember, lessons |
 | anything with a shell | `brain install print` | paste the block wherever your agent reads instructions |
 
-## 🌙 Autonomous, on your laptop
+##  Autonomous, on your laptop
 
 Every night (launchd, cron or Task Scheduler), the brain runs one pass and backs itself up to your **private** repo:
 
@@ -256,7 +256,7 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 
 </details>
 
-## 🆚 Compared to the usual
+##  Compared to the usual
 
 | | `CLAUDE.md` / `AGENTS.md` by hand | typical memory servers | **self-improving-brain** |
 |---|:-:|:-:|:-:|
@@ -269,7 +269,7 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 | Runs on | – | a server / cloud | **your laptop** |
 | Format | one big file | a database | **Markdown + links** |
 
-## ❓ FAQ
+##  FAQ
 
 <details>
 <summary><b>Does the model itself learn?</b></summary>
@@ -307,7 +307,7 @@ Yes: `brain init ~/notes --force`. It adds `.brain/`, a generated `INDEX.md` and
 `brain setup` offers to create a **private** GitHub repo for your brain (with the `gh` CLI), or shows you the one git command to use any other private remote. The nightly run commits, pulls and pushes, and it refuses to push to a repo that turned out to be public. On a new machine: clone your brain repo, then `brain setup --vault <that folder>`. Every machine writes its own event file, so there are no merge conflicts, and every laptop learns from all the others.
 </details>
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [ ] native hooks for Codex CLI and Gemini CLI
 - [ ] transcript parsers for Cursor, Aider, Grok CLI
