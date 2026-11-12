@@ -60,6 +60,16 @@ def add(v: Vault, typ: str, claim: str, *, source: str = "cli", quote: str = "",
     return rec
 
 
+def reopen(v: Vault, item: dict) -> dict:
+    """A closed item comes back as a new one (a closed record stays closed on every machine, see RANK)."""
+    rec = {"id": "i-" + digest(item.get("type", "fact"), item.get("claim", ""), now_iso()), "t": now_iso(),
+           "type": item.get("type", "fact"), "claim": item.get("claim", ""), "quote": item.get("quote", ""),
+           "source": item.get("source", "cli"), "note": item.get("note", ""), "session": item.get("session", ""),
+           "status": "open", "reopened": item.get("id", "")}
+    append_jsonl(path(v), rec)
+    return rec
+
+
 def close(v: Vault, item_id: str, status: str = "done", result: str = "") -> bool:
     all_items = items(v, include_done=True)
     ok = False

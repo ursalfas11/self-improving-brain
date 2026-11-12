@@ -114,8 +114,11 @@ your `PATH` and XDG folders (cron's own `PATH` lacks `~/.local/bin`, where `clau
 hangs (a password prompt, a dead remote) gives up after five minutes.
 
 `distill` replaces outdated text only when it is one line found exactly once, and never inside a lesson, the
-frontmatter or code. A new note never takes a name in use. An item the LLM stumbles on gets a second night, then
-waits in `brain inbox`; it never blocks the items behind it. A bad answer is about that item; an LLM that is
+frontmatter or code. A new note never takes a name in use. No item waits for you: a claim whose answer could not
+be used (an unknown note, a target line that is not there, a rule it would touch, a rollback by lint) is tried
+again the next night with the reason in the prompt, and dropped after three nights, journaled as `drop`
+(`brain undo` puts it back in the inbox). An answer the LLM garbled is not counted against the claim; the item
+only moves behind the others, so a broken CLI can neither empty the inbox nor block it. A bad answer is about that item; an LLM that is
 gone or out of budget stops the step. Text an IDE or Codex puts in front of your message (open files, your
 `AGENTS.md`) is not read as something you said, and only a refusal at the start of a tool result counts as one.
 
@@ -138,6 +141,28 @@ The judge only sorts. What changes the vault is decided by fixed rules in `learn
   command, not on every shell call. A broad tool alone (Bash, Edit, Read …) never makes a guard.
 - One group that fails (a disk error, a note that no longer parses) is logged and skipped; the others go on.
 - Drafts that never came back expire after 120 days.
+- A correction the judge marked as the **opposite of an existing lesson** is settled by date and wording
+  (`learn._contradiction`), never put to the user. Drafts older than the lesson's `since` are closed: the lesson
+  replaced them. Newer drafts replace the lesson when one of them is explicit; the old lesson is retired and the
+  change is journaled as `replace`. Everything else waits and expires.
+
+## Self-care
+
+`care.run` is the nightly step after `curate`. It fixes what `lint` reports as upkeep, so the report is not a
+to-do list for the user:
+
+| Finding | Fix | LLM |
+|---|---|---|
+| no description | the first sentence of the body | no |
+| orphan | `Part of [[hub]].` and a line in that hub; the hub is the best match, never a guess | no |
+| reflex or skill rule without a trigger | the rule's own words as `words:` | no |
+| rule longer than 240 characters | one shorter sentence; code spans and numbers must survive | yes |
+| near-duplicate notes | verdict `different` is remembered, `same` merges both bodies into the kept note and turns the other into a pointer | yes |
+
+A fix is rolled back when it would lose a number, link, code span or rule, add a secret, or raise a new MUST
+finding. Each one is a `care` or `merge` line in the journal; an undone fix is vetoed for good. A finding that
+fails twice rests for 30 days. Notes with uncommitted changes, rules waiting for `brain trust`, stale projects
+and two notes with one name are not touched.
 
 `curate` keeps the set small: a `reflex` or `skill` lesson that has not fired for `retire_after_days` (60) retires,
 `always` lessons over `always_max` (8) are demoted to `reflex`, and over `lessons_max` (60) the least recently

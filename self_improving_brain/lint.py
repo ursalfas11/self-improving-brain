@@ -72,15 +72,19 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
                 re.compile(l.check)
             except re.error as e:
                 out.append(Finding("MUST", l.note, f"{l.id}: check is not a valid regex ({e})"))
-    out.extend(duplicates(lib))
+    from . import care
+    out.extend(duplicates(lib, distinct=care.distinct(v)))  # pairs the night judged different are not listed again
     from . import freshness, github_refs
     for n, f in freshness.findings(v, lib):  # from the cache of the last nightly check: no network here
         out.append(Finding("SHOULD", n.rel, "behind GitHub: " + github_refs.finding(f)))
     return sorted(out, key=lambda f: (f.level != "MUST", f.note))
 
 
-def duplicates(lib: Library, threshold: float = 0.7) -> list[Finding]:
-    sig = {k: set(terms(n.title + " " + n.description)) for k, n in lib.notes.items() if not n.is_hub}
+def duplicate_pairs(lib: Library, threshold: float = 0.7) -> list[tuple[str, str, float]]:
+    """(a, b, overlap) for notes whose title and description say nearly the same. A note that was merged into
+    another one (it only points there now) is not compared."""
+    sig = {k: set(terms(n.title + " " + n.description)) for k, n in lib.notes.items()
+           if not n.is_hub and not n.description.startswith("Merged into ")}
     out = []
     for a, b in combinations(sorted(sig), 2):
         sa, sb = sig[a], sig[b]
@@ -88,5 +92,11 @@ def duplicates(lib: Library, threshold: float = 0.7) -> list[Finding]:
             continue
         j = len(sa & sb) / len(sa | sb)
         if j >= threshold:
-            out.append(Finding("SHOULD", lib.notes[a].rel, f"looks like a duplicate of [[{b}]] ({j:.0%} overlap) — merge into one truth"))
+            out.append((a, b, j))
     return out
+
+
+def duplicates(lib: Library, threshold: float = 0.7, distinct=frozenset()) -> list[Finding]:
+    return [Finding("SHOULD", lib.notes[a].rel, f"looks like a duplicate of [[{b}]] ({j:.0%} overlap) — the nightly "
+                    "run reads both and merges them if they say the same")
+            for a, b, j in duplicate_pairs(lib, threshold) if tuple(sorted((a, b))) not in distinct]

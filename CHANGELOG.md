@@ -22,9 +22,16 @@ of a review queue.
   one open becomes a correction in the inbox, is fixed by the same writer as every fact and shows up in
   `brain review`. `brain lint` names such lines from the cache, without a call. Only owner, repository and number
   leave your machine; `brain config github_check false` turns it off.
-- **Never against a rule you have.** The judge names the existing rule a correction would contradict. Such a
-  draft is not adopted on its own, however often it came back: an old draft may be what the rule replaced.
-  `brain drafts` shows it, and you approve or reject it.
+- **A contradiction is settled, not asked.** The judge names the existing rule a correction would contradict.
+  What you said before the rule existed is what the rule replaced, and is closed. What you said plainly after it
+  (*from now on*, *remember*) replaces the rule: the old one retires, and `brain undo` brings it back. Anything
+  said in passing waits and expires like every correction that never came back.
+- **Tidies up.** What `brain lint` lists as upkeep is fixed at night (or now, with `brain care`): a note without
+  a description gets its first sentence, a note that links to nothing is linked to the hub it fits, a reflex rule
+  without a trigger gets the rule's own words, a rule longer than 240 characters is shortened, and two notes that
+  look alike are read by the LLM and merged when they say the same, or remembered as different. Every fix is
+  checked (no number, link, code or rule lost, no secret, no new MUST finding), journaled, and not repeated once
+  you undid it. A note with uncommitted changes is left alone. `care_max` (3) caps the fixes that need the LLM.
 - **Cleans up.** A rule that has not fired for 60 days retires; at most eight `always` rules and 60 rules in all.
 - **Hard budget:** `llm_budget_usd` 0.10 and `llm_max_calls` 40 a day, booked per call. When it is used up, the
   rest waits for the next night.
@@ -35,8 +42,10 @@ of a review queue.
   the nightly run pulls before it learns: two laptops no longer stop each other's sync, and a rule is learned
   once. The machine name is fixed on first use. Vaults from 0.1 are moved over on first use.
 - **Safe while you sleep.** A fact replaces one line found exactly once, never inside a rule, the frontmatter or
-  code; a new note never takes a name you use. An item the LLM stumbles on waits for you without blocking the
-  rest, and one broken group no longer stops the night. The schedule finds `claude` (cron's `PATH` lacked
+  code; a new note never takes a name you use. No item waits for you: a claim that could not be filed is tried
+  again the next night with the reason in the prompt and dropped after three nights (`brain undo` puts it back);
+  an answer the LLM garbled only moves the item to the back of the queue, so a broken CLI can not empty the
+  inbox. One broken group no longer stops the night. The schedule finds `claude` (cron's `PATH` lacked
   `~/.local/bin`), and a hanging git gives up after five minutes.
 
 ### A veto, not a duty

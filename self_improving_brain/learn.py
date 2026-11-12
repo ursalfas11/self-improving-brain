@@ -656,10 +656,7 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
         return lib, active, always_n
     against = next((active[str(d["conflicts"])] for d in g if str(d.get("conflicts") or "") in active), None)
     if against is not None:
-        # The opposite of a rule you have. An old draft may be what the rule replaced, or you changed your mind:
-        # which of the two holds is yours to say (`brain drafts`), never the night's.
-        out.setdefault("conflicts", []).append({"draft": best["id"], "rule": rule, "against": against.id})
-        return lib, active, always_n
+        return _contradiction(v, g, best, against, lib, active, always_n, out, cap)
     ex = active.get(str(best.get("existing") or "")) or _similar_lesson(rule, active)
     if ex is not None:
         j = _relapse(v, ex, g, best, always_n)
@@ -684,6 +681,44 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
     out["rules"].append(lesson.id)
     lib = Library(v.root)
     active = {l.id: l for l in trust.effective(v, lib.lessons(), record_seen=False)}
+    for d in g:
+        d["status"], d["lesson"] = "approved", lesson.id
+    return lib, active, always_n
+
+
+def _day(d: dict) -> str:
+    return str(d.get("ts") or d.get("t") or "")[:10]
+
+
+def _contradiction(v: Vault, g: list[dict], best: dict, against: Lesson, lib, active, always_n, out, cap):
+    """The opposite of a rule you have, settled by fixed rules instead of a question to you:
+
+      said before the rule existed   it is what the rule replaced: the drafts are closed
+      newer, and you said it plainly your word replaces the rule ("from now on", "remember", a clear preference)
+      newer, said in passing         it waits, and expires like every correction that never came back
+
+    The replaced rule is retired, not deleted, and `brain undo` brings it back."""
+    newer = [d for d in g if _day(d) > (against.since or "")]
+    if not newer:
+        for d in g:
+            d["status"], d["why"] = "expired", f"older than the rule {against.id} it contradicts"
+        out["superseded"] = out.get("superseded", 0) + 1
+        return lib, active, always_n
+    rule = str(best.get("rule") or "")
+    explicit = any(d.get("explicit") or (d.get("kind") == "preference" and _score(d) >= 0.8) for d in newer)
+    if not explicit or _suspicious(rule) or len(out["rules"]) >= cap:
+        out["waiting"] += 1
+        return lib, active, always_n
+    lesson = _new_lesson(v, lib, newer, best, always_n - (against.mechanism == "always"))
+    set_lesson_field(v, against.id, "retired", f"{today()} · replaced by {lesson.id}", by="replaced")
+    journal.log(v, "replace", lesson=lesson.id, note=lesson.note, rule=lesson.rule, mechanism=lesson.mechanism,
+                replaced=against.id, before=against.rule, drafts=[d["id"] for d in g],
+                why="you said the opposite after the rule existed" + (f": “{_evidence(newer)}”" if _evidence(newer) else ""))
+    out["rules"].append(lesson.id)
+    out.setdefault("replaced", []).append(against.id)
+    lib = Library(v.root)
+    active = {l.id: l for l in trust.effective(v, lib.lessons(), record_seen=False)}
+    always_n = sum(1 for l in active.values() if l.mechanism == "always")
     for d in g:
         d["status"], d["lesson"] = "approved", lesson.id
     return lib, active, always_n
