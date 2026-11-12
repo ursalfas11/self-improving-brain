@@ -80,7 +80,7 @@ Decisions, facts about your projects and pitfalls from your sessions land in the
 <td valign="top">
 
 ### 🧹 Cleans up after itself
-A rule that keeps getting broken gets sharper, then stricter. A rule that never fired in 60 days retires. At most eight rules are always on.
+A rule that keeps getting broken gets sharper, then stricter. A rule that never fired in 60 days retires. At most eight rules are always on. Notes too: a missing description, an orphan or a near-duplicate is fixed at night, checked, and undoable.
 
 </td>
 </tr>
@@ -212,6 +212,8 @@ The model itself never learns. What improves is **what your agent is told, and w
 | A rule was shown and the mistake came back anyway | 🔧 the rule is sharpened; when it comes back again, the rule becomes `always`, or a `guard` if you had stopped a tool call |
 | The agent wrote what a rule's `check:` forbids | 🚨 flagged on the spot, counted per week |
 | A rule never fired in 60 days | 💤 retired; `brain undo` brings it back |
+| You said the opposite of a rule, plainly, after the rule existed | 🔁 your newer word replaces the rule; the old one retires |
+| A note has no description, links to nothing, or says what another note says | 🧹 fixed at night: described, linked to its hub, merged into one; `brain undo` takes it back |
 | Recall offered a note, and the agent opened it | ✅ hit: the note gains weight |
 | Recall offered a note, and the agent ignored it | the note loses weight; if precision drops, the **recall threshold rises by itself** |
 | The agent opened a note recall *didn't* offer | the prompt's words get attached to that note, so it is found next time |
@@ -317,7 +319,7 @@ A rule is a callout **in the note that owns the topic**, so there is no separate
 At 03:17 (launchd, cron or Task Scheduler; a night the laptop slept through runs at your next session), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
-pull → read sessions → weigh corrections* → adopt rules → check GitHub → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
+pull → read sessions → weigh corrections* → adopt rules → check GitHub → extract knowledge* → file it* → clean up → tidy up* → replay → tune recall → INDEX.md → lint → git sync
 ```
 
 **Check GitHub:** notes fall behind the moment someone merges. The brain collects the pull requests and issues your notes mention (`acme/api#12`, `api#12` for a repository it knows, or the link), asks GitHub for their state in one batched call through your `gh` login, and files a correction for every line that still calls a merged or closed one open. The correction goes the way every fact goes, so it shows in `brain review` and can be undone. Short names come from the clones on your machine (`brain config repo_roots '["~/code"]'`) or from `brain config github_repos '{"api": "acme/api"}'`. What leaves your machine: owner, repository and number of those references, to GitHub, with your own login. Off: `brain config github_check false`.

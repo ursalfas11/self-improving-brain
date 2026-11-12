@@ -35,6 +35,8 @@ DEFAULTS = {
     # the nightly run: at most this many new rules per night, active rules overall, and a reflex rule that has
     # not fired for this many days retires (guards never retire for being quiet: they wait for rare moments)
     "learn_max_new": 5,
+    # upkeep the night fixes on its own (care.py): at most this many fixes that need the LLM per night
+    "care_max": 3,
     "lessons_max": 60,
     "retire_after_days": 60,
     # knowledge from your sessions: how many new sessions to read per night, how many claims to file

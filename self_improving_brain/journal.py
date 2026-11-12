@@ -9,6 +9,10 @@ needs to be undone (append-only and one file per machine, so syncing the vault n
   retire     a lesson that never fired, or one too  undo: active again
              many
   fact       knowledge written into a note          undo: the added text leaves the note again
+  drop       a claim that could not be filed        undo: it is in the inbox again
+  replace    your newer word replaced a rule        undo: the old rule holds again
+  care       upkeep fixed in a note or a rule       undo: as it was, and it is not fixed again
+  merge      two notes that said the same           undo: both notes as they were
 
 `brain review` lists the last two weeks, `brain undo <n>` takes one back. You have a veto, not a duty.
 """
@@ -80,6 +84,14 @@ def describe(e: dict) -> tuple[str, str, str]:
     if k == "fact":
         verb = {"new": "new note", "update": "updated", "append": "fact"}.get(e.get("action"), "fact")
         return verb, f"{e.get('note', '')} › {e.get('claim', '')}", e.get("why", "")
+    if k == "drop":
+        return "dropped", e.get("claim", ""), e.get("why", "")
+    if k == "replace":
+        return "replaced", e.get("rule", ""), f"was {e.get('replaced')}: {short(e.get('before', ''), 90)}"
+    if k == "care":
+        return "tidied", f"{e.get('lesson') or e.get('note', '')} › {e.get('what', '')}", e.get("why", "")
+    if k == "merge":
+        return "merged", f"{e.get('other', '')} into {e.get('note', '')}", e.get("why", "")
     return k or "?", "", ""
 
 
@@ -151,6 +163,23 @@ def undo(v: Vault, ref: str) -> str:
             else:
                 atomic_write(p, _drop_block(cur, added))
                 msg = f"took “{short(added, 80)}” out of {e.get('note') or e['path']}"
+    elif kind == "drop":
+        from . import inbox
+        inbox.reopen(v, {"id": e.get("item", ""), "type": e.get("type", "fact"), "claim": e.get("claim", ""),
+                         "quote": e.get("quote", ""), "source": e.get("source", "")})
+        msg = f"“{short(e.get('claim', ''), 80)}” is in the inbox again"
+    elif kind == "replace":
+        new = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)
+        if new is not None and not new.retired:
+            learn.set_lesson_field(v, lid, "retired", f"{today()} · undone by you", by="undo")
+        learn.set_lesson_field(v, e["replaced"], "retired", "", by="undo")
+        words = (new.words if new and len(new.words) >= 2
+                 else [w for w in terms(e.get("rule", "")) if w not in learn.FILLER][:4])
+        learn.block(v, words, f"undone: {short(e.get('rule', ''), 120)}")
+        msg = f"{e['replaced']} holds again; {lid} is retired and the topic is not learned again"
+    elif kind in ("care", "merge"):
+        from . import care
+        msg = care.undo(v, e)
     else:
         raise ValueError(f"{e['id']} ({kind}) cannot be undone")
     append_jsonl(path(v), {"id": "j-" + digest("undo", e["id"], now_iso())[:8], "t": now_iso(), "kind": "undo",

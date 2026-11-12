@@ -7,6 +7,10 @@ Two ways, same rules:
                              secret-scanned and linted, a failing patch is rolled back, every applied one is
                              journaled and can be undone with `brain undo`.
   * `brain distill`          prints a work packet for your agent instead, for setups without an LLM CLI.
+
+No item waits for you. A claim that could not be filed is tried again the next night with the reason in the
+prompt; after TRIES_MAX nights it is dropped, which is one line in the journal (`brain undo` puts it back).
+An answer the LLM garbled is not the claim's fault: the item only moves to the back of the queue.
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ from .util import short, slugify, today
 # what a fact may never touch: the frontmatter, code, and the rules (a fact from the agent's words must not
 # rewrite one), and text that would turn into a rule
 LESSON_LIKE = re.compile(r"\[!lesson\]", re.I)
+TRIES_MAX = 3
 
 
 def _protected(text: str) -> list[tuple[int, int]]:
@@ -71,7 +76,8 @@ def packet(v: Vault) -> str:
     lib = Library(v.root)
     out = [f"{len(items)} inbox items. For each: put the claim into the ONE note that owns the topic"
            " (update a stale statement instead of adding a second one), link it to its hub, then run"
-           " `brain inbox done <id>`. Contradiction with existing text? Ask the user first.", ""]
+           " `brain inbox done <id>`. The claim is newer than the wiki: when it contradicts existing text,"
+           " replace that text.", ""]
     for it in items:
         out.append(f"[{it['id']}] {it['type']}: {it['claim']}")
         if it.get("quote"):
@@ -93,7 +99,7 @@ Return JSON: {"action": "append"|"update"|"new"|"skip",
  "hub": "<for new: best hub note name from the list, or empty>",
  "reason": "<one short sentence>"}
 skip = already covered, or not worth keeping.
-
+@HINT@
 Claim (@TYPE@): @CLAIM@
 Quote: @QUOTE@
 
@@ -163,15 +169,20 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     report = []
     lib = Library(v.root)
     hubs = ", ".join(n.name for n in lib.notes.values() if n.is_hub) or "(none)"
-    # an item that could not be filed waits for you; it must not block the ones behind it
-    for it in [i for i in inbox.items(v, mine=True) if not i.get("conflict")][:limit]:
+    # an item that failed before must not block the ones behind it: fresh ones first
+    queue = sorted(inbox.items(v, mine=True), key=lambda i: int(i.get("tries") or 0) + int(i.get("stumbles") or 0))
+    for it in queue[:limit]:
         cands = candidates(lib, it["claim"])
         about = lib.find(str(it["note"])) if it.get("note") else None
         ctext = "\n\n".join(([_about(about, it.get("quote", ""))] if about else [])
                             + [f"### {h.note.name} ({h.note.rel})\n{h.note.description}\n"
                                f"{(h.section.body if h.section else '')[:1500]}"
                                for h in cands if about is None or h.note.name != about.name]) or "(none)"
-        prompt = (DECIDE.replace("@TYPE@", it["type"]).replace("@CLAIM@", it["claim"])
+        hint = str(it.get("hint") or it.get("conflict") or "")
+        prompt = (DECIDE.replace("@HINT@", f"\nAn earlier attempt to file this claim failed: {hint}. Decide so that "
+                                           "this cannot happen again; when it cannot be filed safely, skip it.\n"
+                                 if hint else "")
+                  .replace("@TYPE@", it["type"]).replace("@CLAIM@", it["claim"])
                   .replace("@QUOTE@", it.get("quote", "")).replace("@HUBS@", hubs).replace("@CANDS@", ctext))
         try:
             d = llm.ask_json(v, prompt)
@@ -179,11 +190,11 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             report.append(f"stopped: {e}")
             break  # budget used up or the CLI is gone: the rest waits for the next night
         except ValueError as e:
-            _flag_conflict(v, it["id"], f"llm error: {e}", soft=True)
+            _stumbled(v, it["id"])
             report.append(f"{it['id']}: llm error {e}")
             continue
         if not isinstance(d, dict):
-            _flag_conflict(v, it["id"], "llm error: expected a JSON object", soft=True)
+            _stumbled(v, it["id"])
             report.append(f"{it['id']}: llm error: expected a JSON object")
             continue
         act = str(d.get("action", "")).lower()
@@ -192,20 +203,19 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             report.append(f"{it['id']}: skip — {d.get('reason', '')}")
             continue
         if act not in ("append", "update", "new"):
-            _flag_conflict(v, it["id"], d.get("reason", "unclear"))
-            report.append(f"{it['id']}: left for you — {d.get('reason', '')}")
+            report.append(f"{it['id']}: {_failed(v, it, str(d.get('reason') or 'no usable decision'))}")
             continue
         text = str(d.get("text", "")).strip()
         if not text or scan(text) or LESSON_LIKE.search(text):
-            _flag_conflict(v, it["id"], "the text was empty, looked like a secret, or like a rule")
-            report.append(f"{it['id']}: refused (empty, secret-like or rule-like text)")
+            report.append(f"{it['id']}: refused (empty, secret-like or rule-like text), "
+                          + _failed(v, it, "the text was empty, looked like a secret, or like a rule"))
             continue
         entry: dict = {"action": act, "claim": it["claim"], "text": text, "why": d.get("reason", "")}
         if act in ("append", "update"):
             target = lib.find(str(d.get("note", "")))
             if target is None:
-                _flag_conflict(v, it["id"], f"note {d.get('note')!r} not found")
-                report.append(f"{it['id']}: note {d.get('note')!r} not found, left in inbox")
+                report.append(f"{it['id']}: " + _failed(v, it, f"note {d.get('note')!r} does not exist; use a name "
+                                                                 "from the candidate notes, or action new"))
                 continue
             must_before = {f.msg for f in lint_note(target, lib) if f.level == "MUST"}
             path, before, hub_before = target.path, target.path.read_text(encoding="utf-8"), None
@@ -213,12 +223,13 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             if act == "update":
                 at = before.find(old) if old else -1
                 if at < 0 or before.count(old) != 1 or "\n" in old or "\n" in text:
-                    _flag_conflict(v, it["id"], "the outdated text to replace was not one line found exactly once")
-                    report.append(f"{it['id']}: update target not found, left for you")
+                    report.append(f"{it['id']}: update target not found, " + _failed(
+                        v, it, "the outdated text to replace was not one line found exactly once in the note; "
+                               "copy it exactly, or append instead"))
                     continue
                 if any(a < at + len(old) and at < b for a, b in _protected(before)):
-                    _flag_conflict(v, it["id"], "the text to replace is part of a rule, the frontmatter or code")
-                    report.append(f"{it['id']}: would change a rule, left for you")
+                    report.append(f"{it['id']}: would change a rule, " + _failed(
+                        v, it, "the text to replace is part of a rule, the frontmatter or code, which a fact never changes"))
                     continue
                 atomic_write(path, set_field(before.replace(old, text, 1), "updated", today()))
                 entry["old"] = old
@@ -234,8 +245,7 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             folder.mkdir(parents=True, exist_ok=True)
             path, before, hub_before, must_before = folder / f"{name}.md", None, None, set()
             if path.exists():
-                _flag_conflict(v, it["id"], f"{path.name} exists")
-                report.append(f"{it['id']}: {path.name} exists, left in inbox")
+                report.append(f"{it['id']}: {path.name} exists, " + _failed(v, it, f"{path.name} exists"))
                 continue
             hub_note = lib.find(str(d.get("hub") or "")) if d.get("hub") else None
             hub_line = f"\n\nPart of [[{hub_note.name}]]." if hub_note else ""
@@ -258,8 +268,7 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
             else:
                 path.write_text(before, encoding="utf-8")
             lib = Library(v.root)
-            _flag_conflict(v, it["id"], f"rolled back: {bad[0].msg}")
-            report.append(f"{it['id']}: rolled back ({bad[0].msg})")
+            report.append(f"{it['id']}: rolled back ({bad[0].msg}), " + _failed(v, it, f"rolled back: {bad[0].msg}"))
             continue
         rel = path.relative_to(v.root).as_posix()
         inbox.close(v, it["id"], "done", f"{act} {rel}")
@@ -278,13 +287,33 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     return report
 
 
-def _flag_conflict(v: Vault, item_id: str, reason: str, soft: bool = False) -> None:
-    """Leave an item for you. `soft` (the LLM stumbled): once more next night, then leave it."""
-    from . import ledger
+def _change(v: Vault, item_id: str, fn) -> None:
     items = inbox.items(v, include_done=True)
     for it in items:
         if it["id"] == item_id:
-            it["tries"] = int(it.get("tries") or 0) + 1
-            if not soft or it["tries"] >= 2:
-                it["conflict"] = reason
+            fn(it)
+    from . import ledger
     ledger.save(v, "inbox", items, inbox.RANK)
+
+
+def _stumbled(v: Vault, item_id: str) -> None:
+    """The LLM garbled its answer: not the claim's fault, so it never counts towards dropping it. The item only
+    moves behind the others, and a broken CLI can not empty the inbox."""
+    _change(v, item_id, lambda it: it.update(stumbles=int(it.get("stumbles") or 0) + 1))
+
+
+def _failed(v: Vault, it: dict, reason: str) -> str:
+    """The answer could not be used for this claim. The next night tries again and is told why; after TRIES_MAX
+    nights the claim is dropped and journaled. Returns what happened, for the report."""
+    tries = int(it.get("tries") or 0) + 1
+
+    def note(rec: dict) -> None:
+        rec.update(tries=tries, hint=short(reason, 200))
+        rec.pop("conflict", None)  # until 0.2 such an item waited for you
+    _change(v, it["id"], note)
+    if tries < TRIES_MAX:
+        return f"tried again next night ({tries}/{TRIES_MAX})"
+    inbox.close(v, it["id"], "dropped", short(reason, 200))
+    journal.log(v, "drop", item=it["id"], type=it.get("type", "fact"), claim=it["claim"], quote=it.get("quote", ""),
+                source=it.get("source", ""), why=f"could not be filed in {TRIES_MAX} nights: {short(reason, 160)}")
+    return f"dropped after {TRIES_MAX} nights — `brain undo` puts it back"

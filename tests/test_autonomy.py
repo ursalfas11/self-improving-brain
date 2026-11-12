@@ -119,24 +119,35 @@ class TestAdopt(VaultCase):
         kinds = [e["kind"] for e in journal.recent(self.v)]
         self.assertEqual(kinds[:3], ["mechanism", "sharpen", "rule"])
 
-    def test_the_opposite_of_a_rule_you_have_is_never_adopted_on_its_own(self):
+    def test_the_opposite_of_a_rule_is_settled_without_you(self):
         self.add(held(1, "s1"), held(2, "s2"))
         lid = learn.adopt(self.v)["rules"][0]
         ask = "Ask before every push, also to a branch."
-        self.add(held(3, "s3", rule=ask, quote="from now on ask me first", explicit=True, conflicts=lid),
-                 held(4, "s4", rule=ask, quote="ask me first", conflicts=lid))
+        later = {"t": "2099-01-02T10:00:00", "ts": "2099-01-02T10:00:00"}
+        # said before the rule existed: it is what the rule replaced
+        self.add(held(3, "s3", rule=ask, quote="from now on ask me first", explicit=True, conflicts=lid))
         out = learn.adopt(self.v)
-        self.assertEqual((out["rules"], out["sharpened"]), ([], []))
-        self.assertEqual([(c["rule"], c["against"]) for c in out["conflicts"]], [(ask, lid)])
+        self.assertEqual((out["rules"], out.get("superseded")), ([], 1))
+        self.assertEqual([d["status"] for d in learn.all_drafts(self.v) if d["id"] == "d-3"], ["expired"])
+        # newer, but said in passing: it waits and nothing changes
+        self.add(held(4, "s4", rule=ask, quote="ask me first", conflicts=lid, **later))
+        out = learn.adopt(self.v)
+        self.assertEqual((out["rules"], out["waiting"]), ([], 1))
         self.assertNotIn(ask, self.rules())
-        self.assertEqual([d["status"] for d in read_jsonl(learn.drafts_path(self.v)) if d["id"] in ("d-3", "d-4")],
-                         ["held", "held"], "it waits for you")
-        self.assertIn(f"contradicts the rule {lid}", run_cli("drafts"))
         with mock.patch.object(llm, "available", return_value=False):
             rep = nightly.run(self.v, quick=True)
-        self.assertTrue(any("contradicts a rule you have" in a for a in rep["attention"]), rep["attention"])
-        self.add(held(5, "s5", rule=ask, quote="ask me first"))  # judged again later, without the conflict
-        self.assertEqual(len(learn.adopt(self.v).get("conflicts") or []), 1, "one verdict against a living rule holds it")
+        self.assertFalse([a for a in rep["attention"] if "contradict" in a or "drafts" in a], "nothing is put to you")
+        # newer and said plainly: your word replaces the rule
+        self.add(held(5, "s5", rule=ask, quote="from now on ask me first", explicit=True, conflicts=lid, **later))
+        out = learn.adopt(self.v)
+        self.assertEqual((len(out["rules"]), out["replaced"]), (1, [lid]))
+        self.assertIn(ask, self.rules())
+        self.assertNotIn("Never push to main; open a pull request.", self.rules())
+        e = journal.recent(self.v)[0]
+        self.assertEqual((e["kind"], e["replaced"]), ("replace", lid))
+        self.assertIn(f"{lid} holds again", journal.undo(self.v, e["id"]))
+        self.assertIn("Never push to main; open a pull request.", self.rules())
+        self.assertNotIn(ask, self.rules())
 
     def test_old_evidence_for_an_existing_rule_changes_nothing(self):
         self.add(held(1, "s1"), held(2, "s2"))
@@ -706,20 +717,38 @@ class TestSafeguards(VaultCase):
         self.assertIn("payments-2.md", out[0])
         self.assertIn("Old", (self.root / "10-projects/payments.md").read_text())
 
-    def test_items_left_for_you_do_not_block_the_queue(self):
+    def test_no_item_waits_for_you(self):
         self.v.cfg["llm_cmd"] = "x"
         for claim in ("The staging DB moved to eu-west-2.", "Deploys run on Fridays only.", "Invoices go out monthly."):
             inbox.add(self.v, "fact", claim)
-        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
-            distill.auto(self.v, limit=1)
-        first = inbox.items(self.v)[0]
-        self.assertEqual((first.get("tries"), first.get("conflict")), (1, None), "one stumble: tried again next night")
-        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
-            distill.auto(self.v, limit=1)
-        self.assertTrue(inbox.items(self.v)[0].get("conflict"), "twice: left for you")
-        with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
-            distill.auto(self.v, limit=1)
-        self.assertEqual(inbox.items(self.v)[1].get("tries"), 1, "the next item gets its turn")
+        ids = [i["id"] for i in inbox.items(self.v)]
+        for _ in range(4):  # a CLI that garbles every answer never empties the inbox, and never blocks the queue
+            with mock.patch.object(llm, "ask_json", side_effect=ValueError("llm answer contained no JSON")):
+                distill.auto(self.v, limit=1)
+        by = {i["id"]: i for i in inbox.items(self.v)}
+        self.assertEqual(len(by), 3)
+        self.assertEqual(sorted(i.get("stumbles", 0) for i in by.values()), [1, 1, 2], "each one got its turn")
+        self.assertFalse(any(i.get("tries") or i.get("conflict") for i in by.values()))
+        # an answer that cannot be used for this claim: told why the next night, dropped after three
+        seen = []
+
+        def nowhere(v, prompt):
+            seen.append(prompt)
+            return {"action": "append", "note": "no-such-note", "text": "- Deploys run on Fridays only."}
+        for night in range(distill.TRIES_MAX):
+            with mock.patch.object(llm, "ask_json", nowhere):
+                out = distill.auto(self.v, limit=3)
+            if night == 0:
+                self.assertTrue(all("tried again next night (1/3)" in line for line in out), out)
+        self.assertNotIn("An earlier attempt", seen[0])
+        self.assertIn("An earlier attempt to file this claim failed: note 'no-such-note' does not exist", seen[-1])
+        self.assertEqual(inbox.items(self.v), [], "nothing is left for you")
+        drops = [e for e in journal.recent(self.v) if e["kind"] == "drop"]
+        self.assertEqual(sorted(e["item"] for e in drops), sorted(ids))
+        self.assertIn("in the inbox again", journal.undo(self.v, drops[0]["id"]))
+        back = inbox.items(self.v)
+        self.assertEqual([(i["claim"], i.get("tries")) for i in back], [(drops[0]["claim"], None)])
+        self.assertNotIn("⚠", run_cli("inbox"))
 
     def test_a_record_written_meanwhile_is_kept(self):
         inbox.add(self.v, "fact", "First claim about the staging DB.")

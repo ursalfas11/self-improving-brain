@@ -718,7 +718,8 @@ def c_inbox(a):
     if not items:
         print("inbox empty")
     for it in items:
-        flag = f"  ⚠ {it['conflict']}" if it.get("conflict") else ""
+        why = it.get("hint") or it.get("conflict")  # nothing waits for you: retried at night, then dropped
+        flag = f"  (try {int(it.get('tries') or 0) + 1}/{distill.TRIES_MAX}: {why})" if why else ""
         print(f"[{it['id']}] {it['type']}: {it['claim']}{flag}")
     return 0
 
@@ -771,8 +772,8 @@ def c_drafts(a):
         if d.get("rule"):
             print(f"   rule:      {d['rule']}")
         if d.get("conflicts"):
-            print(f"   contradicts the rule {d['conflicts']}: not adopted on its own. "
-                  f"`brain approve {d['id']}` or `brain reject {d['id']}`")
+            print(f"   contradicts the rule {d['conflicts']}: replaces it if you said so plainly after the rule "
+                  "existed, otherwise it expires")
     return 0
 
 
@@ -925,6 +926,19 @@ def c_lint(a):
     must = sum(f.level == "MUST" for f in fs)
     print(f"{must} MUST · {len(fs) - must} SHOULD")
     return 1 if must else 0
+
+
+def c_care(a):
+    """Fix now what the nightly run fixes: upkeep findings of `brain lint`."""
+    v = _vault(a)
+    from . import care
+    rep = care.run(v, llm.available(v))
+    for line in rep["fixed"]:
+        print(f"✓ {line}")
+    rest = f" · {rep['resting']} resting after two failed tries" if rep["resting"] else ""
+    print(f"{len(rep['fixed'])} fixed · {rep['distinct']} look-alikes judged different{rest} — `brain review` lists them, "
+          "`brain undo <n>` takes one back")
+    return 0
 
 
 def c_github(a):
@@ -1089,6 +1103,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-o", "--out"); s.set_defaults(f=c_report)
     s = add("stats", "every number behind `brain`", True); s.set_defaults(f=c_stats)
     s = add("lint", "check the vault", True); s.set_defaults(f=c_lint)
+    s = add("care", "fix upkeep now instead of at night (descriptions, orphans, triggers, duplicates)", True)
+    s.set_defaults(f=c_care)
     s = add("github", "do the notes still say what GitHub says? (the nightly run asks this, too)", True)
     s.set_defaults(f=c_github)
     s = add("index", "regenerate INDEX.md", True); s.set_defaults(f=c_index)

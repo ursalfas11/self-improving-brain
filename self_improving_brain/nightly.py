@@ -193,7 +193,7 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 def _run(v: Vault, quick: bool) -> dict:
     # imported here, so the hooks that only ask `overdue()` stay fast
-    from . import curate, distill, extract, freshness, inbox, learn, llm, maplib, metrics
+    from . import care, curate, distill, extract, freshness, learn, llm, maplib, metrics
     from .lint import lint
     from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
@@ -229,6 +229,7 @@ def _run(v: Vault, quick: bool) -> dict:
         step("extract", lambda: extract.run(v))
         step("distill", lambda: distill.auto(v, limit=int(v.get("distill_max"))))
     step("curate", lambda: curate.run(v))
+    step("care", lambda: care.run(v, think))
     if not quick:
         from . import replay
         step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
@@ -245,16 +246,9 @@ def _run(v: Vault, quick: bool) -> dict:
         if not llm.PROBLEMS[0].startswith("today's learning budget"):
             exe = Path(shlex.split(str(v.get("llm_cmd")))[0]).name if v.get("llm_cmd") else "LLM"
             broken(f"the {exe} call failed, so nothing was learned ({short(llm.PROBLEMS[0], 80)}) → `brain doctor`")
-    against = (s.get("adopt") or {}).get("conflicts") if isinstance(s.get("adopt"), dict) else None
-    if against:
-        n = len(against)
-        rep["attention"].append(f"{n} correction{'s' * (n != 1)} contradict{'s' * (n == 1)} a rule you have, so "
-                                f"{'it was' if n == 1 else 'they were'} not adopted → `brain drafts`")
-    conflicts = [i for i in inbox.items(v) if i.get("conflict")]
-    if conflicts:
-        n = len(conflicts)
-        rep["attention"].append(f"{n} fact{'s' * (n != 1)} could not be filed on {'their' if n != 1 else 'its'} own"
-                                " → `brain inbox`")
+    # Nothing here waits for you: a correction against a rule you have is settled by date and wording
+    # (learn._contradiction), a claim that could not be filed is retried and then dropped (distill._failed),
+    # and upkeep is fixed by care.run. All of it is in `brain review`, with undo.
     if v.get("git_sync") and not quick:
         res = step("sync", lambda: sync(v, "brain: nightly"))
         if isinstance(res, str) and not res.startswith(("synced", "committed (no remote)", "no git repo")):
@@ -270,6 +264,7 @@ def summary(rep: dict) -> str:
     s = rep.get("steps") or {}
     ad = s.get("adopt") if isinstance(s.get("adopt"), dict) else {}
     cu = s.get("curate") if isinstance(s.get("curate"), dict) else {}
+    ca = s.get("care") if isinstance(s.get("care"), dict) else {}
     filed = sum(1 for line in s.get("distill") or [] if isinstance(line, str) and ": " in line
                 and line.split(": ", 1)[1].startswith(("append", "update", "new")))
     rules = len(ad.get("rules") or [])
@@ -278,6 +273,7 @@ def summary(rep: dict) -> str:
              if ad.get("sharpened") or ad.get("escalated") else "",
              f"{filed} fact{'s' * (filed != 1)} filed" if filed else "",
              f"{len(cu.get('retired') or [])} retired" if cu.get("retired") else "",
+             f"{len(ca.get('fixed') or [])} tidied" if ca.get("fixed") else "",
              "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
     t = str(rep.get("t", ""))
     when = t[11:16] if days_since(t[:10]) in (0, 1) else day_label(t)
