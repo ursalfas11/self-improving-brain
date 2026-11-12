@@ -5,6 +5,8 @@
   judge      the LLM sorts them: lasting rule, one-off steering, fact to remember, or noise   (budgeted)
   adopt      policy, no LLM: what you said twice or as "always/never" becomes a rule; a rule that comes
              back gets sharpened, then escalated
+  github     the pull requests and issues your notes mention: a line that calls a merged one open
+             becomes a claim, so it is corrected the same night (no LLM, one batched `gh` call)
   extract    the LLM reads what is new in your sessions for decisions, facts, pitfalls       (budgeted)
   distill    files them into the notes; a newer statement replaces an outdated one           (budgeted)
   curate     quiet rules retire, the rule set stays within its caps
@@ -191,7 +193,7 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 def _run(v: Vault, quick: bool) -> dict:
     # imported here, so the hooks that only ask `overdue()` stay fast
-    from . import curate, distill, extract, inbox, learn, llm, maplib, metrics
+    from . import curate, distill, extract, freshness, inbox, learn, llm, maplib, metrics
     from .lint import lint
     from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
@@ -221,6 +223,8 @@ def _run(v: Vault, quick: bool) -> dict:
     if think:
         step("judge", lambda: learn.judge(v))
     step("adopt", lambda: learn.adopt(v))
+    if not quick:  # before distill, so a line that fell behind GitHub is corrected in the same night
+        step("github", lambda: freshness.run(v))
     if think:
         step("extract", lambda: extract.run(v))
         step("distill", lambda: distill.auto(v, limit=int(v.get("distill_max"))))
@@ -241,6 +245,11 @@ def _run(v: Vault, quick: bool) -> dict:
         if not llm.PROBLEMS[0].startswith("today's learning budget"):
             exe = Path(shlex.split(str(v.get("llm_cmd")))[0]).name if v.get("llm_cmd") else "LLM"
             broken(f"the {exe} call failed, so nothing was learned ({short(llm.PROBLEMS[0], 80)}) → `brain doctor`")
+    against = (s.get("adopt") or {}).get("conflicts") if isinstance(s.get("adopt"), dict) else None
+    if against:
+        n = len(against)
+        rep["attention"].append(f"{n} correction{'s' * (n != 1)} contradict{'s' * (n == 1)} a rule you have, so "
+                                f"{'it was' if n == 1 else 'they were'} not adopted → `brain drafts`")
     conflicts = [i for i in inbox.items(v) if i.get("conflict")]
     if conflicts:
         n = len(conflicts)

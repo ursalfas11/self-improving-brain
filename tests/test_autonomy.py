@@ -119,6 +119,25 @@ class TestAdopt(VaultCase):
         kinds = [e["kind"] for e in journal.recent(self.v)]
         self.assertEqual(kinds[:3], ["mechanism", "sharpen", "rule"])
 
+    def test_the_opposite_of_a_rule_you_have_is_never_adopted_on_its_own(self):
+        self.add(held(1, "s1"), held(2, "s2"))
+        lid = learn.adopt(self.v)["rules"][0]
+        ask = "Ask before every push, also to a branch."
+        self.add(held(3, "s3", rule=ask, quote="from now on ask me first", explicit=True, conflicts=lid),
+                 held(4, "s4", rule=ask, quote="ask me first", conflicts=lid))
+        out = learn.adopt(self.v)
+        self.assertEqual((out["rules"], out["sharpened"]), ([], []))
+        self.assertEqual([(c["rule"], c["against"]) for c in out["conflicts"]], [(ask, lid)])
+        self.assertNotIn(ask, self.rules())
+        self.assertEqual([d["status"] for d in read_jsonl(learn.drafts_path(self.v)) if d["id"] in ("d-3", "d-4")],
+                         ["held", "held"], "it waits for you")
+        self.assertIn(f"contradicts the rule {lid}", run_cli("drafts"))
+        with mock.patch.object(llm, "available", return_value=False):
+            rep = nightly.run(self.v, quick=True)
+        self.assertTrue(any("contradicts a rule you have" in a for a in rep["attention"]), rep["attention"])
+        self.add(held(5, "s5", rule=ask, quote="ask me first"))  # judged again later, without the conflict
+        self.assertEqual(len(learn.adopt(self.v).get("conflicts") or []), 1, "one verdict against a living rule holds it")
+
     def test_old_evidence_for_an_existing_rule_changes_nothing(self):
         self.add(held(1, "s1"), held(2, "s2"))
         lid = learn.adopt(self.v)["rules"][0]

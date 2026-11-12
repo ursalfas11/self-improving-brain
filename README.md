@@ -74,7 +74,7 @@ Every change goes into a journal. `brain review` lists the last two weeks, `brai
 <td valign="top">
 
 ### 🧠 Knows more every week
-Decisions, facts about your projects and pitfalls from your sessions land in the note that owns them. A newer statement replaces the outdated one: one truth per fact.
+Decisions, facts about your projects and pitfalls from your sessions land in the note that owns them. A newer statement replaces the outdated one: one truth per fact. A note that still calls a merged pull request open is corrected from GitHub.
 
 </td>
 <td valign="top">
@@ -317,8 +317,10 @@ A rule is a callout **in the note that owns the topic**, so there is no separate
 At 03:17 (launchd, cron or Task Scheduler; a night the laptop slept through runs at your next session), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
-pull → read sessions → weigh corrections* → adopt rules → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
+pull → read sessions → weigh corrections* → adopt rules → check GitHub → extract knowledge* → file it* → clean up → replay → tune recall → INDEX.md → lint → git sync
 ```
+
+**Check GitHub:** notes fall behind the moment someone merges. The brain collects the pull requests and issues your notes mention (`acme/api#12`, `api#12` for a repository it knows, or the link), asks GitHub for their state in one batched call through your `gh` login, and files a correction for every line that still calls a merged or closed one open. The correction goes the way every fact goes, so it shows in `brain review` and can be undone. Short names come from the clones on your machine (`brain config repo_roots '["~/code"]'`) or from `brain config github_repos '{"api": "acme/api"}'`. What leaves your machine: owner, repository and number of those references, to GitHub, with your own login. Off: `brain config github_check false`.
 
 \*These steps use the LLM CLI that setup found, under a hard daily budget: `llm_budget_usd` 0.10 and `llm_max_calls` 40. When the budget is used up, the rest waits for the next night. The brain never holds an API key. Another CLI: `brain config llm_cmd "codex exec -"` or `"ollama run llama3.1"`.
 

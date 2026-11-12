@@ -73,6 +73,9 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
             except re.error as e:
                 out.append(Finding("MUST", l.note, f"{l.id}: check is not a valid regex ({e})"))
     out.extend(duplicates(lib))
+    from . import freshness, github_refs
+    for n, f in freshness.findings(v, lib):  # from the cache of the last nightly check: no network here
+        out.append(Finding("SHOULD", n.rel, "behind GitHub: " + github_refs.finding(f)))
     return sorted(out, key=lambda f: (f.level != "MUST", f.note))
 
 

@@ -17,6 +17,14 @@ of a review queue.
 - **Knowledge, too.** Decisions, facts, pitfalls and preferences from your sessions (your words and the agent's
   answers, never tool output) are filed into the note that owns them; a newer statement replaces the outdated
   one.
+- **Never behind GitHub.** Every night the brain asks GitHub (one batched call through your `gh` login, cached)
+  for the state of the pull requests and issues your notes mention. A line that still calls a merged or closed
+  one open becomes a correction in the inbox, is fixed by the same writer as every fact and shows up in
+  `brain review`. `brain lint` names such lines from the cache, without a call. Only owner, repository and number
+  leave your machine; `brain config github_check false` turns it off.
+- **Never against a rule you have.** The judge names the existing rule a correction would contradict. Such a
+  draft is not adopted on its own, however often it came back: an old draft may be what the rule replaced.
+  `brain drafts` shows it, and you approve or reject it.
 - **Cleans up.** A rule that has not fired for 60 days retires; at most eight `always` rules and 60 rules in all.
 - **Hard budget:** `llm_budget_usd` 0.10 and `llm_max_calls` 40 a day, booked per call. When it is used up, the
   rest waits for the next night.

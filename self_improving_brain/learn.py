@@ -400,12 +400,14 @@ For EACH group decide:
 - class: a short kebab-case mistake class, e.g. "unverified-claim", "scope-creep", "skipped-tests".
 - existing: the id of an existing rule below that covers the same thing, else "". If the user corrected it although
   that rule existed, "rule" is a sharper version of it.
+- conflicts: the id of an existing rule below that this would contradict (the user's words ask for the opposite,
+  e.g. "ask first" against "do it without asking"), else "". Then "existing" stays "".
 
 Existing rules:
 @RULES@
 
 Return a JSON list: [{"group": 1, "verdict": "...", "explicit": false, "rule": "...", "mechanism": "...",
-"words": [], "tools": [], "commands": "", "class": "", "existing": ""}]
+"words": [], "tools": [], "commands": "", "class": "", "existing": "", "conflicts": ""}]
 
 Groups:
 @GROUPS@
@@ -481,6 +483,7 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
             d["status"] = "held"
             d["rule"] = short(str(r.get("rule") or ""), 220)
             d["existing"] = str(r.get("existing") or "")
+            d["conflicts"] = str(r.get("conflicts") or "")
             d["suggest"] = {k: r.get(k) for k in ("mechanism", "words", "tools", "commands", "class")}
         save_drafts(v, fresh)
         total += len(todo)
@@ -650,6 +653,12 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
                 pass
         for d in g:
             d["status"] = "approved"
+        return lib, active, always_n
+    against = next((active[str(d["conflicts"])] for d in g if str(d.get("conflicts") or "") in active), None)
+    if against is not None:
+        # The opposite of a rule you have. An old draft may be what the rule replaced, or you changed your mind:
+        # which of the two holds is yours to say (`brain drafts`), never the night's.
+        out.setdefault("conflicts", []).append({"draft": best["id"], "rule": rule, "against": against.id})
         return lib, active, always_n
     ex = active.get(str(best.get("existing") or "")) or _similar_lesson(rule, active)
     if ex is not None:
