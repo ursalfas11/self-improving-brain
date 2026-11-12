@@ -148,6 +148,15 @@ def _git(v: Vault, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(v.root), *args], capture_output=True, text=True)
 
 
+def _about(n, quote: str) -> str:
+    """The note a claim names (a check found something in it), with the lines around the quoted one."""
+    lines = n.body.split("\n")
+    at = next((i for i, l in enumerate(lines) if quote and quote.strip() in l), None)
+    part = lines[max(0, at - 8): at + 9] if at is not None else lines[:40]
+    return (f"### {n.name} ({n.rel}) — the claim is about this note\n{n.description}\n"
+            + "\n".join(part)[:2500])
+
+
 def auto(v: Vault, limit: int = 20) -> list[str]:
     if not llm.available(v):
         raise llm.NoLLM("distill --auto needs llm_cmd (see `brain config`)")
@@ -157,8 +166,11 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     # an item that could not be filed waits for you; it must not block the ones behind it
     for it in [i for i in inbox.items(v, mine=True) if not i.get("conflict")][:limit]:
         cands = candidates(lib, it["claim"])
-        ctext = "\n\n".join(f"### {h.note.name} ({h.note.rel})\n{h.note.description}\n"
-                            f"{(h.section.body if h.section else '')[:1500]}" for h in cands) or "(none)"
+        about = lib.find(str(it["note"])) if it.get("note") else None
+        ctext = "\n\n".join(([_about(about, it.get("quote", ""))] if about else [])
+                            + [f"### {h.note.name} ({h.note.rel})\n{h.note.description}\n"
+                               f"{(h.section.body if h.section else '')[:1500]}"
+                               for h in cands if about is None or h.note.name != about.name]) or "(none)"
         prompt = (DECIDE.replace("@TYPE@", it["type"]).replace("@CLAIM@", it["claim"])
                   .replace("@QUOTE@", it.get("quote", "")).replace("@HUBS@", hubs).replace("@CANDS@", ctext))
         try:

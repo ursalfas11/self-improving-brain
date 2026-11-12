@@ -13,7 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import adapters, distill, events, handoff, hooks, inbox, journal, learn, llm, maplib, metrics, nightly, replay, trust
+from . import (adapters, distill, events, freshness, github_refs, handoff, hooks, inbox, journal, learn, llm, maplib,
+               metrics, nightly, replay, trust)
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -696,7 +697,7 @@ def c_config(a):
         print(f"unknown key {a.key!r}")
         return 1
     val = a.value
-    if isinstance(DEFAULTS[a.key], (int, float, bool, list)):
+    if isinstance(DEFAULTS[a.key], (int, float, bool, list, dict)):
         try:
             val = json.loads(a.value)
         except json.JSONDecodeError:
@@ -769,6 +770,9 @@ def c_drafts(a):
         print(f"   user said: {short(d.get('quote', ''), 200)}")
         if d.get("rule"):
             print(f"   rule:      {d['rule']}")
+        if d.get("conflicts"):
+            print(f"   contradicts the rule {d['conflicts']}: not adopted on its own. "
+                  f"`brain approve {d['id']}` or `brain reject {d['id']}`")
     return 0
 
 
@@ -923,6 +927,24 @@ def c_lint(a):
     return 1 if must else 0
 
 
+def c_github(a):
+    """Check now what the nightly run checks: do the notes still say what GitHub says?"""
+    v = _vault(a)
+    rep = freshness.run(v)
+    if isinstance(rep, str):
+        print({"off": "the GitHub check is off (`brain config github_check true`)",
+               "no gh CLI": "the GitHub check needs the `gh` CLI, logged in (https://cli.github.com)"}.get(rep, rep))
+        return 1
+    found = freshness.findings(v, Library(v.root))
+    for n, f in found:
+        print(f"{n.rel}:{f['line_no']}  {github_refs.finding(f)}")
+    for e in rep.get("errors") or []:
+        print(f"! {e}")
+    print(f"{rep['refs']} references in your notes · {rep['asked']} asked · {len(found)} behind GitHub"
+          + (f" · {rep['filed']} filed for tonight's correction (`brain inbox`)" if rep["filed"] else ""))
+    return 0
+
+
 def c_index(a):
     v = _vault(a)
     print("INDEX.md updated" if maplib.write(v) else "INDEX.md unchanged")
@@ -1067,6 +1089,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-o", "--out"); s.set_defaults(f=c_report)
     s = add("stats", "every number behind `brain`", True); s.set_defaults(f=c_stats)
     s = add("lint", "check the vault", True); s.set_defaults(f=c_lint)
+    s = add("github", "do the notes still say what GitHub says? (the nightly run asks this, too)", True)
+    s.set_defaults(f=c_github)
     s = add("index", "regenerate INDEX.md", True); s.set_defaults(f=c_index)
     s = add("scan", "secret scan (stdin, files, or --staged)", True); s.add_argument("files", nargs="*")
     s.add_argument("--staged", action="store_true"); s.set_defaults(f=c_scan)

@@ -55,6 +55,12 @@ DEFAULTS = {
     "guard_brain_commands": True,
     # notes of type project that were not updated for this many days are flagged
     "stale_days": 45,
+    # notes that fall behind GitHub: every night the pull requests and issues your notes mention are checked
+    # through your `gh` login; a line that still calls a merged one open is corrected like any other fact
+    "github_check": True,
+    # short names used in notes ("api#12") -> "owner/repo". Clones below repo_roots are found on their own.
+    "github_repos": {},
+    "repo_roots": [],
     # transcript sources to learn from (globs, ~ expanded)
     "transcripts": [
         "~/.claude/projects/**/*.jsonl",
@@ -65,7 +71,7 @@ DEFAULTS = {
 
 # Settings about this machine, not about the vault: they live in ~/.config/self-improving-brain/config.json
 # and never travel to your other laptops with the vault's git sync (a CLI installed here may be missing there).
-LOCAL_KEYS = ("llm_cmd", "llm_timeout")
+LOCAL_KEYS = ("llm_cmd", "llm_timeout", "repo_roots")
 
 
 def _load_dict(path: Path) -> dict:
