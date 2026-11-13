@@ -7,8 +7,9 @@
 <h3>The self-improving memory &amp; second brain for AI coding agents</h3>
 
 <p>
-Install it once, then forget it. Every night it turns your corrections into rules<br>
-and your decisions into notes, on its own. Your agent makes <b>fewer mistakes every week</b>, and the brain shows you the numbers.
+<b>Every other brain shows you a UI you will never need.</b><br>
+This one you install once and never touch again. Every night it turns your corrections into rules<br>
+and your decisions into notes, and tidies up after itself. Your agent makes <b>fewer mistakes every week</b>.
 </p>
 
 <p>
@@ -36,6 +37,24 @@ and your decisions into notes, on its own. Your agent makes <b>fewer mistakes ev
 <p align="center">
   <img src="docs/assets/demo.svg" alt="Demo: on Tuesday the user corrects the agent; that night the brain turns it into a rule on its own; on Friday the rule fires before the agent repeats the mistake" width="92%">
 </p>
+
+## 🛋️ Install it. Never touch it again.
+
+Every other brain shows you a UI you will never need: a dashboard to browse, a graph to admire, a queue of memories to approve, tags to keep tidy. That is a second job. You wanted an agent that stops repeating its mistakes.
+
+This brain has no job for you.
+
+| What a brain usually hands you | What happens here |
+|---|---|
+| A queue of memories to approve | Rules are adopted at night, by fixed rules. You have a veto (`brain undo`), not a duty |
+| Duplicates, orphans and half-filled notes to clean up | Fixed at night: merged, linked, described. Checked, journaled, undoable |
+| Two memories that contradict each other | The newer one wins: a newer fact replaces the outdated line, your newer explicit word replaces the rule. Nobody asks you |
+| Notes that fall behind your repos | Checked against GitHub every night and corrected |
+| A dashboard to find out whether it works | One line a week in your terminal, with the numbers |
+
+Yes, there is a page (`brain ui`). It is for the day you are curious. Nothing waits for you there.
+
+The only thing it will ever ask of you: a rule that an agent wrote into your notes, not you, stays silent until you say `brain trust`. That is a lock, not a chore.
 
 ## 🤯 The problem
 
@@ -268,6 +287,8 @@ Nothing leaves your machine, and no LLM is involved.
 
 ## 🖥️ See it
 
+You will not need this page. It exists because watching the curve go down is nice.
+
 ```bash
 brain ui          # your brain in the browser: progress, what it learned (with undo), rules, replay, the map
 brain ui --demo   # the same with example data
@@ -377,6 +398,7 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 | Can stop an irreversible action | ✗ | ✗ | ✅ |
 | Every change it makes can be undone | – | varies | ✅ |
 | Shows whether your agent's mistakes go down | ✗ | ✗ | ✅ |
+| What it needs from you after the install | everything | a UI to tend | **nothing** |
 | A planted rule stays silent until you trust it | ✗ | ✗ | ✅ |
 | Context cost per session | grows forever | tool schemas | **a few lines** (hooks) |
 | Runs on | – | a server / cloud | **your laptop** |
