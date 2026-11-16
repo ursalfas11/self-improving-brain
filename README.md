@@ -32,12 +32,6 @@ Your agent makes <b>fewer mistakes every week</b>.
 
 </div>
 
-<br>
-
-<p align="center">
-  <img src="docs/assets/demo.svg" alt="Demo: on Tuesday the user corrects the agent; that night the brain turns it into a rule on its own; on Friday the rule fires before the agent repeats the mistake" width="92%">
-</p>
-
 ## 🛋️ Install it. Never touch it again.
 
 A dashboard to browse, a graph to admire, a queue of memories to approve, tags to keep tidy: that is a second job. You wanted an agent that stops repeating its mistakes.

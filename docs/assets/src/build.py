@@ -173,35 +173,6 @@ def terminal(name: str, title: str, label: str, rows: list[dict], W: int = 960, 
     return svg(W, H, label, style, "\n".join(body))
 
 
-def demo() -> str:
-    you = dict(kind="typed", prefix="you   › ", pcolor=TEAL)
-    cmd = dict(kind="typed", prefix="$ ", pcolor=GOLD, color=GOLD)
-    rows = [
-        dict(kind="head", text="── Tuesday ───────────────────────────────────────────────────", pause=0.3),
-        dict(you, body="the checkout test is flaky, fix it", pause=0.5),
-        dict(kind="out", text="agent › Added a retry around the test. Done ✓", color=PALE, pause=0.7),
-        dict(you, body="no — never paper over a flaky test with retries. find the race", pause=0.9),
-        dict(kind="gap", pause=0),
-        dict(kind="head", text="── that night, on your laptop ─────────────────────────────────", pause=0.7),
-        dict(kind="out", text="brain › 03:17 · 14 sessions read · you said “never” → that is a rule", color=DIM, pause=0.6),
-        dict(kind="out", text="  + L-fix-flaky-tests-root (reflex) → note testing", color=TEAL, pause=0.4),
-        dict(kind="out", text="  + 2 facts filed · 1 quiet rule retired · $0.03", color=DIM, pause=0.5),
-        dict(kind="gap", pause=0),
-        dict(kind="head", text="── Friday ────────────────────────────────────────────────────", pause=0.7),
-        dict(you, body="the login test is flaky again, can you add a retry?", pause=0.5),
-        dict(kind="flash", text="brain › LESSON L-fix-flaky-tests-root: Fix flaky tests at the root; never add retries.", pause=0.6),
-        dict(kind="out", text="agent › Before any retry, let me find the race… shared session fixture. Fixed at the root.", color=PALE, pause=1.1),
-        dict(kind="gap", pause=0),
-        dict(cmd, body="brain", pause=0.7),
-        dict(kind="out", text="Mistakes per 100 messages   (example)", color=DIM, pause=0.4),
-        dict(kind="bar", text="  first two weeks  12.4", width=372, color=PINK, pause=0.3),
-        dict(kind="bar", text="  this week         5.3", width=159, color=TEAL, pause=0.5),
-    ]
-    return terminal("demo", "your agent · one week", "Demo: on Tuesday the user corrects the agent; that night the brain "
-                    "turns it into a rule on its own; on Friday the rule fires before the agent repeats the mistake",
-                    rows, progress=[("Tuesday", 0), ("night", 5), ("Friday", 10)])
-
-
 def setup_demo() -> str:
     rows = [
         dict(kind="typed", prefix="$ ", pcolor=GOLD, color=GOLD,
@@ -470,6 +441,6 @@ def stats() -> str:
 
 
 if __name__ == "__main__":
-    for name, fn in (("banner", banner), ("demo", demo), ("setup", setup_demo), ("loop", loop), ("stats", stats)):
+    for name, fn in (("banner", banner), ("setup", setup_demo), ("loop", loop), ("stats", stats)):
         (OUT / f"{name}.svg").write_text(fn(), encoding="utf-8")
         print(f"wrote docs/assets/{name}.svg  ({len((OUT / f'{name}.svg').read_bytes()) // 1024} KB)")
