@@ -260,9 +260,35 @@ def prompt(v: Vault, payload: dict) -> dict:
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
-# which rules reach the agent is the user's call: an agent running these commands gets a permission prompt
-BRAIN_APPROVAL = re.compile(r"(?:\bbrain(?:\.py|\.exe)?|self_improving_brain)[\\\"']*\s+(?:--vault\s+\S+\s+)?"
-                            r"(approve|trust|promote|undo|lesson|config)\b")
+# Which rules reach the agent is decided by evidence, not by a prompt: nobody is asked. `brain lesson`, `approve`,
+# `promote` and `undo` run freely, because what they write needs the user's own words like any lesson an agent
+# wrote (trust.py). Left are `brain trust <id>` and the settings that switch the protection off: allowed if the
+# user named them in this session, refused otherwise (trust.command_denied).
+BRAIN_APPROVAL = trust.GUARDED
+SHELL_WRITE = re.compile(r"(?:>>?|\btee(?:\s+-a)?)\s*[\"']?([~/.\w$][^\s\"';|&<>()]*)"
+                         r"|\bsed\s+-i(?:\s*''|\s*\"\")?\s+(?:-e\s+)?(?:'[^']*'|\"[^\"]*\"|\S+)\s+[\"']?([~/.\w$][^\s\"';|&<>()]*)"
+                         r"|(?:open|Path)\(\s*[rf]?[\"']([^\"']+)[\"']\s*(?:,\s*[\"'][wa]|\)\s*\.write_text)"
+                         r"|\b(?:cp|mv)\s[^\n;|&]*\s[\"']?([~/.\w$][^\s\"';|&<>()]*)[\"']?\s*(?:$|[;&|\n])")
+
+
+def own_state(v: Vault, cmd: str, cwd: str = "") -> str:
+    """A shell command that writes into the brain's own memory (trust ledger, journal) or into a session
+    transcript, from which the brain reads what the user said. Returns that path, or ''."""
+    if not any(k in cmd for k in (".brain", "trust/", "journal/", ".claude/projects", ".codex/sessions")):
+        return ""
+    logs = []
+    for g in v.get("transcripts") or []:
+        try:  # resolved like the target below: /var is /private/var on a Mac
+            logs.append(Path(os.path.expanduser(str(g).split("*")[0])).resolve())
+        except OSError:
+            pass
+    for m in SHELL_WRITE.finditer(cmd):
+        raw = next(g for g in m.groups() if g)
+        p = Path(os.path.expanduser(raw))
+        p = p if p.is_absolute() else Path(cwd or ".") / p
+        if _in(str(p), v.meta) or (p.suffix == ".jsonl" and any(_in(str(p), root) for root in logs if str(root) not in ("", "."))):
+            return str(p)
+    return ""
 
 
 def _paths_in(tool_input: dict) -> list[str]:
@@ -335,10 +361,24 @@ def pre_tool(v: Vault, payload: dict) -> dict:
                 "permissionDecisionReason": "self-improving-brain: refusing to write a secret into the vault ("
                 + ", ".join(k for k, _ in found) + "). Store the variable name and where the value lives instead."})
     cmd = command_head(str(ti.get("command") or "")) if tool == "Bash" else ""
-    if cmd and v.get("guard_brain_commands") and BRAIN_APPROVAL.search(cmd):
-        return _out("PreToolUse", decision={
-            "permissionDecision": "ask",
-            "permissionDecisionReason": "self-improving-brain: approving or trusting a rule needs the user's own OK."})
+    if cmd and v.get("guard_brain_commands"):
+        full = str(ti.get("command") or "")
+        refused = trust.command_denied(full, payload.get("transcript_path")) if BRAIN_APPROVAL.search(full) else ""
+        if refused:  # never a prompt: the user approves nothing, the brain decides on evidence
+            return _out("PreToolUse", decision={
+                "permissionDecision": "deny",
+                "permissionDecisionReason": f"self-improving-brain: `brain {refused}` trusts a rule past the evidence or "
+                "changes the brain's own protection. An agent does that only when the user named it in this session (the "
+                "lesson's id, the setting's name). Do not work around it and do not ask the user to approve: a rule "
+                "counts on its own once the user's own words back it. If the user wants exactly this, they run it "
+                "themselves."})
+        target = own_state(v, full, str(payload.get("cwd") or ""))
+        if target:
+            return _out("PreToolUse", decision={
+                "permissionDecision": "deny",
+                "permissionDecisionReason": f"self-improving-brain: {target} is the brain's own memory or a session "
+                "transcript it reads the user's words from. Not a target for a shell command; change it through the "
+                "brain CLI."})
     candidates = [l for l in trust.effective(v, cache.lessons(v))
                   if l.tools or (cmd and (l.commands or l.paths or l.check)) or (paths and (l.paths or l.check))]
     if not candidates:
@@ -395,8 +435,9 @@ def post_tool(v: Vault, payload: dict) -> dict:
             n = cache.library(v).find(m.group(1))
             if n:
                 events.log(v, "read", session=session, note=n.name, via="cli")
-        # a lesson that changed while a shell command ran was written by the agent, whatever path the command used
-        trust.mark_pending(v, cache.lessons(v), session, "Bash")
+        # a lesson that changed while a shell command ran was written by the agent, whatever path the command used:
+        # it counts at once if the user's own words in this session back it, and waits for the night otherwise
+        lines += trust.in_hook(v, trust.mark_pending(v, cache.lessons(v), session, "Bash"), payload.get("transcript_path"))
         lines += _rule_checks(v, session, tool, command_head(full), [], "")
         return _out("PostToolUse", "\n".join(lines)) if lines else {}
     in_vault = [p for p in paths if p.endswith(".md") and _in(p, v.root)]
@@ -415,9 +456,7 @@ def post_tool(v: Vault, payload: dict) -> dict:
         lib = Library(v.root)
         edited = [n for n in (lib.find(Path(p).stem) for p in in_vault) if n]
         silent = trust.mark_pending(v, [l for n in edited for l in n.lessons], session, tool)
-        if silent:
-            lines.append(f"BRAIN: you wrote the lesson(s) {', '.join(silent)}. They stay silent until the user checks them "
-                         "with `brain trust` — tell the user.")
+        lines += trust.in_hook(v, silent, payload.get("transcript_path"))
     lines += _rule_checks(v, session, tool, "", paths, written_text(ti))
     found = [str(f) for n in edited for f in lint_note(n, lib, int(v.get("stale_days")))[:5]]
     if found:

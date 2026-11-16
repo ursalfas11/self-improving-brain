@@ -19,11 +19,12 @@ can change them with confidence.
    session, and `always` lessons are capped at 8. The CLI returns sections, not files. The nightly LLM
    has a hard daily budget, and the brain measures its own share of the agent's tokens.
 6. **Fail open.** A hook that crashes outputs nothing. The agent is never blocked by a broken brain.
-   It blocks on purpose only for secrets, writes into `.brain/`, and guards, which ask you rather than refuse.
+   It blocks on purpose only for secrets, writes into `.brain/` or a session log, trust past the evidence, and
+   guards, which ask you rather than refuse.
 7. **Only your words become rules.** The nightly run learns from what the user typed, never from tool
    output, never from what an agent reports over MCP, and never adopts text with a link or a secret. A lesson
-   that appeared during a tool call stays silent until you trust it, and the commands that change rules,
-   trust or config need your OK when an agent runs them.
+   that appeared or changed during a tool call needs evidence in your own words from that session; without
+   it the night takes it back. Nobody is asked to approve.
 
 ## Modules
 
@@ -48,7 +49,7 @@ can change them with confidence.
 | `nightly.py` | the nightly pass with a lock, its launchd/cron/Task Scheduler entry, the catch-up check, git pull and sync |
 | `ledger.py` | records several machines change (drafts, inbox): one file per machine, merged on read |
 | `lint.py` | MUST: secrets, dead links, duplicate lesson ids. SHOULD: orphans, stale projects, near-duplicates, trigger-less lessons |
-| `trust.py` | the trust ledger: which lessons count, in which exact form (fingerprint), and which wait for `brain trust` |
+| `trust.py` | the trust ledger: which lessons count, in which exact form (fingerprint), and the evidence that settles the ones an agent wrote |
 | `handoff.py` | PreCompact handoff: your last words verbatim, the open question, files in flight; `brain resume` |
 | `replay.py` | past corrections against today's lessons: caught, missed, uncovered, per lesson |
 | `report.py` | report card and badge as SVG, numbers only |
@@ -161,7 +162,7 @@ to-do list for the user:
 
 A fix is rolled back when it would lose a number, link, code span or rule, add a secret, or raise a new MUST
 finding. Each one is a `care` or `merge` line in the journal; an undone fix is vetoed for good. A finding that
-fails twice rests for 30 days. Notes with uncommitted changes, rules waiting for `brain trust`, stale projects
+fails twice rests for 30 days. Notes with uncommitted changes, rules whose evidence is pending, stale projects
 and two notes with one name are not touched.
 
 `curate` keeps the set small: a `reflex` or `skill` lesson that has not fired for `retire_after_days` (60) retires,
@@ -264,14 +265,50 @@ A lesson is plain text in a note, so anything that can write a file can plant on
 (one file per machine, merged on read: the latest entry per lesson counts) records, for every lesson, the fingerprint (rule, mechanism, triggers, check) it had when it was trusted.
 
 - `trust_mode agent` (default): a lesson you wrote by hand counts once the brain has seen it. A lesson that
-  appears or changes while an agent's tool call runs is `pending` and never reaches the agent until
-  `brain trust`.
-- `trust_mode strict`: only lessons the brain wrote itself (the nightly adoption, `brain lesson`) or lessons
-  trusted with `brain trust` count. `trust_mode off` turns the ledger off.
-- A change the brain makes to a lesson (sharpen, escalate, retire) keeps its trust only if it had it: a lesson
-  that waits for `brain trust` keeps waiting. The judge and the adoption see the same effective set the agent does.
-- The commands that change rules, trust or config (`undo`, `trust`, `promote`, `lesson`, `config`, `approve`)
-  match `BRAIN_APPROVAL` in `hooks.py`; when an agent runs one, the pre-tool hook asks you first.
+  appears or changes while an agent's tool call runs is `pending`: silent until its evidence is settled.
+- `trust_mode strict`: only lessons the brain wrote itself (the nightly adoption, `brain lesson` from your
+  terminal), lessons with evidence, or lessons trusted with `brain trust` count. A lesson you wrote by hand and
+  did not trust yet is remembered as `seen`, so no later tool call is taken for its author. `trust_mode off`
+  turns the ledger off.
+- A change the brain makes to a lesson (sharpen, escalate, retire) keeps its trust only if it had it: a pending
+  lesson stays pending. The judge and the adoption see the same effective set the agent does.
+
+### Evidence instead of approval
+
+Nothing waits for you. A pending lesson is settled by what you typed in the session it was written in
+(`trust.own_words`: the transcript's human turns, without tool results, hook or agent text, pasted blocks, or
+messages another session sent). What the agent read is never in there, so it can prove nothing.
+
+1. **In the hook, right after the tool call** (`trust.in_hook`): a passage of one of your messages (three
+   sentences) carries at least 60 % of the rule's word stems, and at least three. The lesson counts at once.
+2. **At night** (`trust.settle`, a step of the nightly run): a model reads only the rule and your messages. Its
+   yes counts only with a quote that stands word for word in one message that has to do with the rule
+   (`trust.quote_holds`). At most `JUDGE_MAX` (8) verdicts a night, inside the LLM budget.
+3. **Without evidence** the lesson is taken back once its session has been quiet for two hours: a new one leaves
+   the note, a changed one returns to the callout the ledger kept from when it last counted (`before`; for an
+   older ledger entry, the form git last saw). Without a model it waits three days at most.
+
+Held to a stricter standard, whatever the evidence: a rule with a secret never counts; a rule naming an address
+or a download command counts only if your message names exactly that; `always` and `guard` need you to have
+said it as a rule (*from now on*, *never again*, *remember*); a guard that would fire on everyday commands
+never counts on its own.
+
+Both outcomes are journal lines (`release`, `discard`) in `brain review`, and `brain undo` reverses either.
+The commands that write rules by hand (`lesson`, `promote`, `undo`, `approve --rule`) vouch for the result only
+when you run them in your own terminal. Inside an agent session (the agent's shell, or `BRAIN_AGENT=1`) what
+they write is pending like any lesson an agent wrote. An agent that brings a discarded lesson back with
+`brain undo` needs you to name that journal id.
+
+The pre-tool hook never asks about a brain command. It refuses two things (`trust.command_denied`,
+`hooks.own_state`) unless you named them in the session: `brain trust <id|--all>` and a change to the settings
+that switch the protection off (`trust_mode`, `allow_public_remote`, `guard_brain_commands`, `llm_cmd`,
+`transcripts`); and shell commands that write into `.brain/` or into a session transcript. That last check
+reads the command text (redirects, `tee`, `sed -i`, `cp`/`mv`, `open(…, "w")`), so it stops the plain cases,
+not a determined process that hides its target.
+
+Known limit: a lesson that arrives in the vault while an agent's shell command is still running is taken for
+the agent's, whether you saved it by hand in that moment or the command pulled it from another machine before a
+hook there had seen it. It is then settled like one, and `brain undo` brings it back.
 
 ## Checks and escalation
 
@@ -294,7 +331,7 @@ question, files touched, the last commands and the repo. After compaction the se
 and asks for each one: which current lesson is about this mistake (its words match the correction, its
 command or check matches one of the last tool calls, or its rule is similar enough), and would it have fired
 before the correction, in that turn's prompt or at a tool call. Results: **caught**, **missed** (a lesson exists, its triggers did not fire; replay names the
-words that would have) and **uncovered**. Lessons still waiting for `brain trust` are not counted. A correction
+words that would have) and **uncovered**. Lessons whose evidence is still pending are not counted. A correction
 from before a lesson's `since` date is one the lesson was learned from: it matches by design, so the percentage
 counts only the others ("unseen").
 

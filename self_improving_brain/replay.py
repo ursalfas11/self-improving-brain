@@ -168,7 +168,7 @@ def render(r: dict, show: int = 6) -> str:
            f" others, the rules catch {r.get('unseen_caught', 0)}{pct}.",
            f"  missed {r['missed']} (a rule exists, its triggers did not fire) · uncovered {r['uncovered']} (no rule yet)"]
     if r.get("silent_lessons"):
-        out.append(f"  {r['silent_lessons']} rules are silent until you trust them (`brain review`) and were not counted.")
+        out.append(f"  {r['silent_lessons']} rules are silent (evidence pending, or not trusted in strict mode) and were not counted.")
     if r["per_lesson"]:
         out.append("RULES")
         for p in r["per_lesson"][:12]:

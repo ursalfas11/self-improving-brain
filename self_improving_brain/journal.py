@@ -13,6 +13,10 @@ needs to be undone (append-only and one file per machine, so syncing the vault n
   replace    your newer word replaced a rule        undo: the old rule holds again
   care       upkeep fixed in a note or a rule       undo: as it was, and it is not fixed again
   merge      two notes that said the same           undo: both notes as they were
+  release    a rule an agent wrote, backed by your  undo: taken back like one without evidence
+             own words in that session
+  discard    a rule an agent wrote without that:    undo: it stands in the note again and counts
+             removed, or set back to what counted
 
 `brain review` lists the last two weeks, `brain undo <n>` takes one back. You have a veto, not a duty.
 """
@@ -92,6 +96,10 @@ def describe(e: dict) -> tuple[str, str, str]:
         return "tidied", f"{e.get('lesson') or e.get('note', '')} › {e.get('what', '')}", e.get("why", "")
     if k == "merge":
         return "merged", f"{e.get('other', '')} into {e.get('note', '')}", e.get("why", "")
+    if k == "release":
+        return "confirmed", e.get("rule", ""), f"an agent wrote it; you said: “{short(e.get('quote', ''), 80)}”"
+    if k == "discard":
+        return "taken back", e.get("rule", ""), f"an agent wrote it; {e.get('why', '')}"
     return k or "?", "", ""
 
 
@@ -180,10 +188,46 @@ def undo(v: Vault, ref: str) -> str:
     elif kind in ("care", "merge"):
         from . import care
         msg = care.undo(v, e)
+    elif kind == "release":  # the evidence does not hold after all: the lesson goes the way of one without
+        from . import trust
+        lesson = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)
+        if lesson is None or trust.discard(v, lesson, {"before": e.get("before", ""), "counted": e.get("counted")}, "undone by you",
+                                           undo_of=e["id"]) is None:
+            raise ValueError(f"{lid} is no longer in its note")
+        learn.block(v, lesson.words if len(lesson.words) >= 2
+                    else [w for w in terms(e.get("rule", "")) if w not in learn.FILLER][:4],
+                    f"undone: {short(e.get('rule', ''), 120)}")
+        msg = (f"{lid} is back to what counted before" if e.get("before")
+               else f"{lid} left its note; this topic is not learned again")
+    elif kind == "discard":  # you want the lesson after all: the callout that was taken back returns
+        from . import trust
+        p = v.root / str(e.get("path") or "")
+        if not p.exists():
+            raise ValueError(f"{e.get('path')} is gone — add the rule with `brain lesson`")
+        cur, block = p.read_text(encoding="utf-8"), str(e.get("block") or "")
+        span = trust._block(cur, lid)
+        if span is not None and not e.get("before"):
+            raise ValueError(f"{lid} already stands in {e.get('path')} again")
+        if span is not None:
+            lines = cur.split("\n")
+            atomic_write(p, "\n".join(lines[:span[0]] + block.split("\n") + lines[span[1]:]))
+        else:
+            atomic_write(p, cur.rstrip() + "\n\n" + block + "\n")
+        lesson = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)
+        # your own terminal vouches for it. Run by an agent it needs your word: name this entry's id in the session
+        trust.hold(trust.in_agent_session())
+        try:
+            if lesson is not None:
+                trust.record(v, [lesson], "undo")
+        finally:
+            trust.hold(False)
+        msg = f"{lid} stands in {e.get('path')} again"
     else:
         raise ValueError(f"{e['id']} ({kind}) cannot be undone")
     append_jsonl(path(v), {"id": "j-" + digest("undo", e["id"], now_iso())[:8], "t": now_iso(), "kind": "undo",
                            "target": e["id"]})
+    if kind == "discard":
+        msg += f" ({e['id']})"  # an agent that ran this for you: your message naming this id is the evidence
     return msg
 
 

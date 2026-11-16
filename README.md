@@ -53,7 +53,7 @@ This brain has no job for you.
 
 Yes, there is a page (`brain ui`). It is for the day you are curious. Nothing waits for you there.
 
-The only thing it will ever ask of you: a rule that an agent wrote into your notes, not you, stays silent until you say `brain trust`. That is a lock, not a chore.
+It asks nothing of you, not even for a rule an agent wrote into your notes. That one counts once your own words in the session back it, and the night takes it back if they do not. You keep the veto: `brain undo`.
 
 ## The problem
 
@@ -118,7 +118,7 @@ Native hooks and a plugin for Claude Code, an MCP server for Cursor, Windsurf, C
 <td valign="top">
 
 ### Never behind your back
-Rules come only from your own words, never from tool output. A rule an agent wrote stays silent until you trust it. Secrets are blocked on save, on write and at commit.
+Rules come only from your own words, never from tool output. A rule an agent wrote counts once your words back it and is taken back if they do not; nobody is asked. Secrets are blocked on save, on write and at commit.
 
 </td>
 </tr>
@@ -321,7 +321,7 @@ A rule is a callout **in the note that owns the topic**, so there is no separate
 
 **Triggers:** `words` (two hits, or one exact phrase) · `tools` (a name suffix: `deploy` matches any `mcp__*__deploy`) · `commands` (a regex on the shell command) · `paths` (a regex on file paths). **`check:`** is a regex on what the agent writes or runs: a match on a reflex is a violation the brain counts on its own; on a guard it asks before the write happens.
 
-**Trust.** A rule is plain text, so anything that can write a file could plant one, including an agent that read a poisoned web page. So the nightly run learns only from what *you* typed, never from tool output, and never adopts a rule with a link or a secret in it. A rule that appears during an agent's tool call stays silent until you trust it; `brain review` lists those. Undo, trust and config are commands the agent has to ask you for.
+**Trust.** A rule is plain text, so anything that can write a file could plant one, including an agent that read a poisoned web page. So the nightly run learns only from what *you* typed, never from tool output, and never adopts a rule with a link or a secret in it. A rule that appears or changes during an agent's tool call needs evidence, not your approval: it counts once a message you typed in that session carries it. If the wording is yours, that happens at once. If you said it in other words, a model reads your messages at night, and its yes counts only with a quote that stands word for word in one of them. Without evidence the night takes the rule back: a new one leaves the note, a changed one returns to the form that counted before. `brain review` lists both, `brain undo` reverses either. `always` and `guard` also need you to have said it as a rule (*from now on*, *never*), and a rule with a secret, or with an address or download command you did not name, never counts on its own. An agent that runs `brain trust`, or switches this protection off, is refused unless you named the rule or the setting in the session.
 
 ## Works with every agent
 
@@ -398,7 +398,7 @@ Open it in Obsidian and you get the graph for free: hubs as cluster centres, not
 | Every change it makes can be undone | – | varies | ✅ |
 | Shows whether your agent's mistakes go down | ✗ | ✗ | ✅ |
 | What it needs from you after the install | everything | a UI to tend | **nothing** |
-| A planted rule stays silent until you trust it | ✗ | ✗ | ✅ |
+| A planted rule never reaches the agent and is taken back without asking you | ✗ | ✗ | ✅ |
 | Context cost per session | grows forever | tool schemas | **a few lines** (hooks) |
 | Runs on | – | a server / cloud | **your laptop** |
 | Format | one big file | a database | **Markdown + links** |
@@ -444,7 +444,7 @@ Both. In Claude Code the brain uses hooks and a CLI: the hooks add a few lines a
 <details>
 <summary><b>Could someone plant a rule in my brain?</b></summary>
 
-That is the risk we designed against. The nightly run turns only your own messages into rules: never tool output, never what an agent reports, and never text with a link or a secret in it. A rule that appears or changes during an agent's tool call is recorded as pending in the trust ledger and never reaches the agent until you trust it. Undo, trust and config are commands the agent cannot run without asking you, and writes into `.brain/` are refused. `trust_mode strict` goes further: only rules the brain wrote itself count.
+That is the risk we designed against. The nightly run turns only your own messages into rules: never tool output, never what an agent reports, and never text with a link or a secret in it. A rule that appears or changes during an agent's tool call is recorded as pending in the trust ledger and reaches the agent only once a message you typed in that session backs it. What the agent read (a web page, a file, a tool result, pasted text) is never part of that, so it can prove nothing; without evidence the nightly run takes the rule back and journals it. You approve nothing. An agent cannot trust a rule past the evidence or switch the protection off unless you named it in the session, and writes into `.brain/` or into the session logs your words are read from are refused. `trust_mode strict` goes further: only rules the brain wrote itself count.
 </details>
 
 <details>

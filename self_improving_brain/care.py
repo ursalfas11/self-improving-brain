@@ -11,7 +11,7 @@ Every fix is checked and rolled back when a check fails (no secret, no number, l
 MUST finding). Every fix is one journal line: `brain review` shows it, `brain undo` takes it back, and what you
 took back is not fixed again. A note with changes you have not committed is left alone that night.
 
-Not touched, because only you know: a stale project, a rule that waits for `brain trust`, two notes with one name.
+Not touched, because only you know: a stale project, a rule an agent wrote whose evidence is not settled yet, two notes with one name.
 """
 from __future__ import annotations
 
@@ -308,7 +308,7 @@ def run(v: Vault, think: bool = False) -> dict:
 
     lib = Library(v.root)
     by_name = {n.name: n for n in lib.notes.values()}
-    active = trust.effective(v, lib.lessons(), record_seen=False)  # a rule that waits for `brain trust` is not touched
+    active = trust.effective(v, lib.lessons(), record_seen=False)  # a rule whose evidence is not settled is not touched
     for l in active:
         note = by_name.get(l.note)
         if note is None or note.rel in dirty:

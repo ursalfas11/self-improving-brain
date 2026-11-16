@@ -193,7 +193,7 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 def _run(v: Vault, quick: bool) -> dict:
     # imported here, so the hooks that only ask `overdue()` stay fast
-    from . import care, curate, distill, extract, freshness, learn, llm, maplib, metrics
+    from . import care, curate, distill, extract, freshness, learn, llm, maplib, metrics, trust
     from .lint import lint
     from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
@@ -222,6 +222,10 @@ def _run(v: Vault, quick: bool) -> dict:
     think = llm.available(v) and not quick
     if think:
         step("judge", lambda: learn.judge(v))
+    if not quick:
+        # rules an agent wrote: backed by your own words they count, without evidence they are taken back. Before
+        # the adoption, so the confirmed ones are part of what it sees. Nothing waits for you.
+        step("settle", lambda: trust.settle(v, think))
     step("adopt", lambda: learn.adopt(v))
     if not quick:  # before distill, so a line that fell behind GitHub is corrected in the same night
         step("github", lambda: freshness.run(v))
@@ -264,6 +268,7 @@ def summary(rep: dict) -> str:
     s = rep.get("steps") or {}
     ad = s.get("adopt") if isinstance(s.get("adopt"), dict) else {}
     cu = s.get("curate") if isinstance(s.get("curate"), dict) else {}
+    se = s.get("settle") if isinstance(s.get("settle"), dict) else {}
     ca = s.get("care") if isinstance(s.get("care"), dict) else {}
     filed = sum(1 for line in s.get("distill") or [] if isinstance(line, str) and ": " in line
                 and line.split(": ", 1)[1].startswith(("append", "update", "new")))
@@ -273,6 +278,9 @@ def summary(rep: dict) -> str:
              if ad.get("sharpened") or ad.get("escalated") else "",
              f"{filed} fact{'s' * (filed != 1)} filed" if filed else "",
              f"{len(cu.get('retired') or [])} retired" if cu.get("retired") else "",
+             f"{len(se.get('backed') or [])} agent rule{'s' * (len(se.get('backed') or []) != 1)} confirmed by your words"
+             if se.get("backed") else "",
+             f"{len(se.get('discarded') or [])} without evidence taken back" if se.get("discarded") else "",
              f"{len(ca.get('fixed') or [])} tidied" if ca.get("fixed") else "",
              "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
     t = str(rep.get("t", ""))

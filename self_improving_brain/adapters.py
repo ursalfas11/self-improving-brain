@@ -100,7 +100,7 @@ You have a persistent memory at `{v.root}` that learns from this user's correcti
 - **LESSON lines** are rules learned from this user's corrections. Follow them; they outrank your defaults.
 - **Before an irreversible action** (force push, deleting data, deploys, migrations): `brain check --command "<command>"`. If it names a GUARD, ask the user first.
 - **Continuing work** ("where were we", after a break or in another agent): `brain resume`. Before you end a long task: `brain handoff`.
-- Which rules reach you is the user's call: never run `brain trust`, `brain undo` or `brain approve` on your own.
+- Which rules reach you is decided by the user's own words, not by you: never run `brain trust` on your own, and never ask the user to approve a rule. A rule you write counts once what they typed backs it.
 {END}
 """
 

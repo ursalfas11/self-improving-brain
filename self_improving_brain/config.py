@@ -53,7 +53,8 @@ DEFAULTS = {
     "allow_public_remote": False,
     # which lessons may reach the agent: agent (default) | strict | off — see trust.py
     "trust_mode": "agent",
-    # an agent running `brain approve/trust/promote/undo/...` gets a permission prompt first
+    # an agent running `brain trust <id>` or changing the protection itself is refused unless you named it in the
+    # session (no prompt: rules are settled by evidence in your own words, see trust.py)
     "guard_brain_commands": True,
     # notes of type project that were not updated for this many days are flagged
     "stale_days": 45,

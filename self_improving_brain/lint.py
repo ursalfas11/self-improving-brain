@@ -64,7 +64,8 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
                            " every one costs tokens in every session; turn some into reflexes"))
     from .trust import untrusted
     for l, why in untrusted(v, lib.lessons()):
-        out.append(Finding("SHOULD", l.note, f"{l.id} is silent ({why}) — read it, then `brain trust {l.id}`"))
+        if "evidence pending" not in why:  # an agent's rule is settled by the night on its own, nothing to do
+            out.append(Finding("SHOULD", l.note, f"{l.id} is silent ({why}) — read it, then `brain trust {l.id}`"))
     for l in lib.lessons():
         if l.check:
             import re
