@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0
 
 Install once, then forget it. The brain now learns on its own every night, and you keep a veto instead
 of a review queue.

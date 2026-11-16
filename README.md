@@ -13,15 +13,14 @@ Your agent makes <b>fewer mistakes every week</b>.
 </p>
 
 <p>
-<b>All your data stays with you.</b> Stored 100 % locally as plain Markdown,<br>
+<b>All your data lives with you.</b> Plain Markdown on your machine,<br>
 backed up only to your own private GitHub repo, if you want one. No server, no sign-up, no API key.
 </p>
 
 <p>
 <a href="https://github.com/ursalfas11/self-improving-brain/actions/workflows/ci.yml"><img src="https://github.com/ursalfas11/self-improving-brain/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <img src="https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white" alt="Python 3.9+">
-<img src="https://img.shields.io/badge/dependencies-0-ffd479" alt="Zero dependencies">
-<img src="https://img.shields.io/badge/data-100%25%20local-7cf7d4" alt="Your data is stored 100% locally">
+<img src="https://img.shields.io/badge/dependencies-0-7cf7d4" alt="Zero dependencies">
 <img src="https://img.shields.io/badge/server-none-8b9bff" alt="No server">
 <img src="https://img.shields.io/badge/license-MIT-f08cff" alt="MIT license">
 <a href="https://github.com/ursalfas11/self-improving-brain/stargazers"><img src="https://img.shields.io/github/stars/ursalfas11/self-improving-brain?style=social" alt="GitHub stars"></a>
