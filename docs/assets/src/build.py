@@ -291,7 +291,7 @@ def banner() -> str:
 <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="{PERI}" stop-opacity=".55"/><stop offset="1" stop-color="{PERI}" stop-opacity="0"/></radialGradient>
 <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".035"/></pattern>
-<clipPath id="tag"><text class="t" x="362" y="232" font-size="25" font-weight="700">This brain gets smarter with every one.</text></clipPath>
+<clipPath id="tag"><text class="t" x="362" y="232" font-size="25" font-weight="700">Install this one once. Never touch it again.</text></clipPath>
 </defs>
 <rect width="1280" height="420" rx="24" fill="url(#bg)"/><rect width="1280" height="420" rx="24" fill="url(#grid)"/>
 {star_svg}
@@ -306,8 +306,8 @@ def banner() -> str:
 <g class="fx">{signals}</g>
 </g>
 <text class="t" x="360" y="150" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1.5">self-improving-brain</text>
-<text class="t" x="362" y="198" font-size="25" fill="{PALE}">Your coding agent forgets everything between sessions.</text>
-<text class="t" x="362" y="232" font-size="25" font-weight="700" fill="url(#accent)">This brain gets smarter with every one.</text>
+<text class="t" x="362" y="198" font-size="25" fill="{PALE}">Every other brain gives you a UI to babysit.</text>
+<text class="t" x="362" y="232" font-size="25" font-weight="700" fill="url(#accent)">Install this one once. Never touch it again.</text>
 <g class="fx" clip-path="url(#tag)"><rect class="shine" x="362" y="200" width="210" height="44" fill="url(#shine)"/></g>
 <g class="m" font-size="15" fill="{TXT}">{"".join(chip_svg)}</g>
 <text class="m" x="362" y="350" font-size="16" fill="#9aa3d6">no server · no API key · no vector DB · zero dependencies · plain Markdown</text>
@@ -325,7 +325,7 @@ def banner() -> str:
 <text class="m" x="0" y="172" font-size="13" fill="#9aa3d6">week 1</text>
 <text class="m" x="200" y="172" font-size="13" fill="#9aa3d6" text-anchor="end">week 8</text>
 </g>"""
-    return svg(1280, 420, "self-improving-brain — your coding agent forgets, this brain gets smarter every session", style, body)
+    return svg(1280, 420, "self-improving-brain — every other brain gives you a UI to babysit; install this one once and never touch it again", style, body)
 
 
 # --- learning loop ------------------------------------------------------------------------------

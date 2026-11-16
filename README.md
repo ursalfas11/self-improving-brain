@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="self-improving-brain: your coding agent forgets everything between sessions. This brain gets smarter with every one." width="100%">
+<img src="docs/assets/banner.svg" alt="self-improving-brain: every other brain gives you a UI to babysit. Install this one once. Never touch it again." width="100%">
 
 <br>
 
 <h3>The self-improving memory &amp; second brain for AI coding agents</h3>
 
 <p>
-<b>Every other brain shows you a UI you will never need.</b><br>
-This one you install once and never touch again. Every night it turns your corrections into rules<br>
-and your decisions into notes, and tidies up after itself. Your agent makes <b>fewer mistakes every week</b>.
+<b>Every other brain gives you a UI to babysit. Install this one once and never touch it again.</b><br>
+Every night it turns your corrections into rules and your decisions into notes, and tidies up after itself.<br>
+Your agent makes <b>fewer mistakes every week</b>.
 </p>
 
 <p>
@@ -40,7 +40,7 @@ and your decisions into notes, and tidies up after itself. Your agent makes <b>f
 
 ## 🛋️ Install it. Never touch it again.
 
-Every other brain shows you a UI you will never need: a dashboard to browse, a graph to admire, a queue of memories to approve, tags to keep tidy. That is a second job. You wanted an agent that stops repeating its mistakes.
+A dashboard to browse, a graph to admire, a queue of memories to approve, tags to keep tidy: that is a second job. You wanted an agent that stops repeating its mistakes.
 
 This brain has no job for you.
 
