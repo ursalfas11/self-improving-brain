@@ -7,6 +7,7 @@ Supported out of the box: Claude Code (~/.claude/projects/**/*.jsonl) and Codex 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,8 +16,20 @@ HOOK_MARK = "[self-improving-brain:check]"
 
 REJECT_MARKERS = (
     "doesn't want to proceed", "does not want to proceed", "user rejected", "tool use was rejected",
-    "user denied", "permission denied by user", "the user declined",
+    "user denied", "permission denied by user", "the user declined", "rejected by user",
 )
+
+# what an IDE or the agent puts in front of what you typed: it is not your words, and your words follow it
+WRAPPED = re.compile(r"<(ide_[a-z_]+|system-reminder)>.*?</\1>", re.S)
+
+
+def _rejection(txt: str, command_output: bool = False) -> bool:
+    """The user refused the tool call: the CLI says so at the very start. A command's own output that mentions
+    "user denied" somewhere (a log, a test fixture) is not a refusal: short, and no exit code."""
+    head = txt.strip().lower()
+    if command_output and (len(head) > 600 or '"exit_code"' in head):
+        return False
+    return any(m in head[:60] for m in REJECT_MARKERS)
 
 
 @dataclass
@@ -34,6 +47,8 @@ class Transcript:
     session: str
     source: str
     turns: list[Turn]
+    cwd: str = ""
+    tokens: int = 0      # new tokens the session cost: input + cache writes + output (cache reads excluded)
 
     @property
     def internal(self) -> bool:
@@ -51,6 +66,8 @@ def _is_noise(text: str) -> bool:
         return False
     if HOOK_MARK in s[:600] or s.startswith("Stop hook feedback"):
         return True
+    if s.startswith("# AGENTS.md instructions") or "<INSTRUCTIONS>" in s[:400]:
+        return True  # Codex puts your AGENTS.md in front of the session as a user message: not something you typed
     return (not s or s.startswith("<") or s.startswith("Caveat:") or s.startswith("[Request interrupted")
             or s.startswith("This session is being continued"))
 
@@ -74,11 +91,19 @@ def _text_of(content) -> str:
 
 def _claude(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
-    session = ""
+    session = cwd = ""
+    usage: dict[str, int] = {}  # per message id: one answer is logged as several lines with the same usage
     for d in lines:
         session = session or d.get("sessionId", "")
+        cwd = cwd or str(d.get("cwd") or "")
         t, msg, ts = d.get("type"), d.get("message"), str(d.get("timestamp") or "")
-        if not isinstance(msg, dict) or d.get("isSidechain") or d.get("isMeta"):
+        if not isinstance(msg, dict) or d.get("isMeta"):
+            continue
+        u = msg.get("usage")
+        if t == "assistant" and isinstance(u, dict):
+            usage[str(msg.get("id") or len(usage))] = sum(int(u.get(k) or 0) for k in (
+                "input_tokens", "cache_creation_input_tokens", "output_tokens"))
+        if d.get("isSidechain"):
             continue
         content = msg.get("content")
         if t == "user":
@@ -86,10 +111,10 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                 for c in content:
                     if isinstance(c, dict) and c.get("type") == "tool_result":
                         txt = _text_of(c.get("content", ""))
-                        rej = bool(c.get("is_error")) and any(m in txt.lower() for m in REJECT_MARKERS)
+                        rej = bool(c.get("is_error")) and _rejection(txt)
                         turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
                 continue
-            txt = _text_of(content)
+            txt = WRAPPED.sub("", _text_of(content)).strip()
             if not _is_noise(txt):
                 turns.append(Turn("user", txt, ts=ts))
         elif t == "assistant" and isinstance(content, list):
@@ -101,16 +126,24 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                 elif c.get("type") == "tool_use":
                     turns.append(Turn("tool_call", json.dumps(c.get("input", {}), ensure_ascii=False)[:2000],
                                       tool=c.get("name", ""), ts=ts))
-    return Transcript(path, session or path.stem, "claude", turns)
+    return Transcript(path, session or path.stem, "claude", turns, cwd, sum(usage.values()))
 
 
 def _codex(lines: list[dict], path: Path) -> Transcript:
     turns: list[Turn] = []
-    session = ""
+    session = cwd = ""
+    tokens = 0
     for d in lines:
         p, ts = d.get("payload") or {}, str(d.get("timestamp") or "")
         if d.get("type") == "session_meta":
             session = p.get("id") or p.get("session_id") or session
+            cwd = cwd or str(p.get("cwd") or "")
+            continue
+        if d.get("type") == "event_msg" and isinstance(p, dict) and p.get("type") == "token_count":
+            u = (p.get("info") or {}).get("total_token_usage") or {}
+            if isinstance(u, dict):  # running totals: the last one counts
+                tokens = (int(u.get("input_tokens") or 0) - int(u.get("cached_input_tokens") or 0)
+                          + int(u.get("output_tokens") or 0))
             continue
         if d.get("type") != "response_item" or not isinstance(p, dict):
             continue
@@ -127,9 +160,9 @@ def _codex(lines: list[dict], path: Path) -> Transcript:
         elif pt in ("function_call_output", "custom_tool_call_output"):
             out = p.get("output")
             txt = out if isinstance(out, str) else json.dumps(out, ensure_ascii=False)
-            rej = any(m in txt.lower() for m in REJECT_MARKERS)
+            rej = _rejection(txt, command_output=True)
             turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
-    return Transcript(path, session or path.stem, "codex", turns)
+    return Transcript(path, session or path.stem, "codex", turns, cwd, max(tokens, 0))
 
 
 def _generic(lines: list[dict], path: Path) -> Transcript:
@@ -162,3 +195,21 @@ def parse_lines(raw_lines, path: Path) -> Transcript | None:
     if any("sessionId" in d or d.get("type") in ("user", "assistant") for d in lines[:50]):
         return _claude(lines, path)
     return _generic(lines, path)
+
+
+def read_part(path: Path, max_bytes: int, from_end: bool = True) -> Transcript | None:
+    """Parse only the start or the end of a (possibly huge) transcript."""
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            if from_end:
+                fh.seek(max(0, size - max_bytes))
+            raw = fh.read(max_bytes).decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    lines = raw.split("\n")  # not splitlines(): JSON strings may hold a raw U+2028
+    if from_end and size > max_bytes:
+        lines = lines[1:]
+    elif not from_end and size > max_bytes:
+        lines = lines[:-1]
+    return parse_lines(lines, path)

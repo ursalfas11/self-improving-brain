@@ -51,6 +51,8 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
     stale = int(v.get("stale_days"))
     for n in lib.notes.values():
         out.extend(lint_note(n, lib, stale))
+    for name, first in lib.shadowed.items():
+        out.append(Finding("SHOULD", lib.notes[name].rel, f"same name as {lib.notes[first].rel}: [[{first}]] reaches only that one — rename one"))
     ids = {}
     for l in lib.lessons():
         if l.id in ids:
@@ -60,12 +62,29 @@ def lint(v: Vault, lib: Library | None = None) -> list[Finding]:
     if len(always) > int(v.get("always_max")):
         out.append(Finding("SHOULD", "(lessons)", f"{len(always)} 'always' lessons (max {v.get('always_max')}) —"
                            " every one costs tokens in every session; turn some into reflexes"))
-    out.extend(duplicates(lib))
+    from .trust import untrusted
+    for l, why in untrusted(v, lib.lessons()):
+        out.append(Finding("SHOULD", l.note, f"{l.id} is silent ({why}) — read it, then `brain trust {l.id}`"))
+    for l in lib.lessons():
+        if l.check:
+            import re
+            try:
+                re.compile(l.check)
+            except re.error as e:
+                out.append(Finding("MUST", l.note, f"{l.id}: check is not a valid regex ({e})"))
+    from . import care
+    out.extend(duplicates(lib, distinct=care.distinct(v)))  # pairs the night judged different are not listed again
+    from . import freshness, github_refs
+    for n, f in freshness.findings(v, lib):  # from the cache of the last nightly check: no network here
+        out.append(Finding("SHOULD", n.rel, "behind GitHub: " + github_refs.finding(f)))
     return sorted(out, key=lambda f: (f.level != "MUST", f.note))
 
 
-def duplicates(lib: Library, threshold: float = 0.7) -> list[Finding]:
-    sig = {k: set(terms(n.title + " " + n.description)) for k, n in lib.notes.items() if not n.is_hub}
+def duplicate_pairs(lib: Library, threshold: float = 0.7) -> list[tuple[str, str, float]]:
+    """(a, b, overlap) for notes whose title and description say nearly the same. A note that was merged into
+    another one (it only points there now) is not compared."""
+    sig = {k: set(terms(n.title + " " + n.description)) for k, n in lib.notes.items()
+           if not n.is_hub and not n.description.startswith("Merged into ")}
     out = []
     for a, b in combinations(sorted(sig), 2):
         sa, sb = sig[a], sig[b]
@@ -73,5 +92,11 @@ def duplicates(lib: Library, threshold: float = 0.7) -> list[Finding]:
             continue
         j = len(sa & sb) / len(sa | sb)
         if j >= threshold:
-            out.append(Finding("SHOULD", lib.notes[a].rel, f"looks like a duplicate of [[{b}]] ({j:.0%} overlap) — merge into one truth"))
+            out.append((a, b, j))
     return out
+
+
+def duplicates(lib: Library, threshold: float = 0.7, distinct=frozenset()) -> list[Finding]:
+    return [Finding("SHOULD", lib.notes[a].rel, f"looks like a duplicate of [[{b}]] ({j:.0%} overlap) — the nightly "
+                    "run reads both and merges them if they say the same")
+            for a, b, j in duplicate_pairs(lib, threshold) if tuple(sorted((a, b))) not in distinct]

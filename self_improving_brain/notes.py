@@ -21,7 +21,7 @@ LINK = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]*)?(?:\|[^\]]*)?\]\]")
 LESSON_HEAD = re.compile(r"^>\s*\[!lesson\][+-]?\s*(\S+)?\s*(.*)$", re.I)
 LESSON_FIELD = re.compile(r"^>\s*([a-z_]+)\s*:\s*(.*)$", re.I)
 
-LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "since", "evidence", "class")
+LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "check", "since", "evidence", "class", "retired")
 MECHANISMS = ("always", "reflex", "guard", "skill")
 
 
@@ -46,9 +46,11 @@ class Lesson:
     commands: str = ""
     paths: str = ""
     words: list[str] = field(default_factory=list)
+    check: str = ""      # regex on what the agent wrote or ran: a match is a violation, found without you
     since: str = ""
     evidence: str = ""
     klass: str = ""
+    retired: str = ""    # "<date> · <why>": kept in the note for the record, never injected
 
     def as_callout(self) -> str:
         lines = [f"> [!lesson]- {self.id}", f"> rule: {self.rule}", f"> mechanism: {self.mechanism}"]
@@ -60,12 +62,16 @@ class Lesson:
             lines.append(f"> paths: {self.paths}")
         if self.words:
             lines.append("> words: " + ", ".join(self.words))
+        if self.check:
+            lines.append(f"> check: {self.check}")
         if self.klass:
             lines.append(f"> class: {self.klass}")
         if self.since:
             lines.append(f"> since: {self.since}")
         if self.evidence:
             lines.append(f"> evidence: {self.evidence}")
+        if self.retired:
+            lines.append(f"> retired: {self.retired}")
         return "\n".join(lines)
 
 
@@ -289,12 +295,16 @@ def parse_lessons(body: str, note_name: str) -> list[Lesson]:
             cur.paths = v
         elif k == "words":
             cur.words = [x.strip() for x in v.split(",") if x.strip()]
+        elif k == "check":
+            cur.check = v
         elif k == "since":
             cur.since = v
         elif k == "evidence":
             cur.evidence = v
         elif k == "class":
             cur.klass = v
+        elif k == "retired":
+            cur.retired = v
     return [l for l in lessons if l.rule]
 
 
@@ -303,14 +313,14 @@ def strip_code(body: str) -> str:
     return INLINE_CODE.sub("", FENCE.sub("", body))
 
 
-def load_note(path: Path, root: Path) -> Note | None:
+def load_note(path: Path, root: Path, name: str | None = None) -> Note | None:
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
     meta, body = parse_frontmatter(text)
     rel = path.relative_to(root).as_posix()
-    name = str(meta.get("name") or path.stem)
+    name = name or str(meta.get("name") or path.stem)
     title, sections = split_sections(body)
     prose = strip_code(body)
     links = []
@@ -337,12 +347,16 @@ class Library:
         self.root = root
         self.notes: dict[str, Note] = {}
         self.by_stem: dict[str, str] = {}
+        self.shadowed: dict[str, str] = {}  # a note that goes by its path -> the note that has its name
         for p in iter_note_paths(root):
             n = load_note(p, root)
             if n is None:
                 continue
+            if n.name in self.notes:  # two notes share a name: the second goes by its path, and lint names both
+                first, n = n.name, load_note(p, root, n.rel.removesuffix(".md"))
+                self.shadowed[n.name] = first
             self.notes[n.name] = n
-            self.by_stem[p.stem.lower()] = n.name
+            self.by_stem.setdefault(p.stem.lower(), n.name)
 
     def find(self, ref: str) -> Note | None:
         ref = ref.strip().removesuffix(".md")
@@ -360,11 +374,9 @@ class Library:
     def resolve(self, link: str) -> Note | None:
         return self.notes.get(link) or self.notes.get(self.by_stem.get(link.lower(), ""), None)
 
-    def lessons(self) -> list[Lesson]:
-        out = []
-        for n in self.notes.values():
-            out.extend(n.lessons)
-        return out
+    def lessons(self, retired: bool = False) -> list[Lesson]:
+        """Active lessons; retired=True includes the ones the brain (or you) retired."""
+        return [l for n in self.notes.values() for l in n.lessons if retired or not l.retired]
 
     def neighbors(self) -> dict[str, set[str]]:
         """Undirected link graph without hubs (hubs would connect everything to everything)."""

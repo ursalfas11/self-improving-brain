@@ -32,14 +32,13 @@ fi
 chmod +x "$DEST/brain"
 
 # link `brain`, but never replace a file that belongs to something else
-CMD="$DEST/brain"
 mkdir -p "$BIN"
 if [ ! -e "$BIN/brain" ] && [ ! -L "$BIN/brain" ]; then
   ln -s "$DEST/brain" "$BIN/brain"
 fi
 if [ -L "$BIN/brain" ] && [ "$(readlink "$BIN/brain")" = "$DEST/brain" ]; then
   case ":$PATH:" in
-    *":$BIN:"*) CMD="brain" ;;
+    *":$BIN:"*) ;;
     *)
       case "$(basename "${SHELL:-sh}")" in
         fish) hint="fish_add_path ~/.local/bin" ;;
@@ -54,9 +53,6 @@ else
   warn "$BIN/brain already exists and is not this brain — left untouched. Use $DEST/brain instead."
 fi
 
-# `curl … | sh` gives the script your pipe as stdin: the questions need the terminal itself
-if (exec </dev/tty) 2>/dev/null; then
-  "$PY" "$DEST/brain" setup </dev/tty
-else
-  say "Installed. Finish in a terminal with:  $CMD setup"
-fi
+# setup asks nothing, so it runs without a terminal too (an agent installing it for you); stdin is the pipe of
+# `curl … | sh`, so it gets none
+"$PY" "$DEST/brain" setup </dev/null

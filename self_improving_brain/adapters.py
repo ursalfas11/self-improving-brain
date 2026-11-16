@@ -1,6 +1,6 @@
 """Connect agents to the brain.
 
-  claude   native hooks in ~/.claude/settings.json + slash commands + a block in ~/.claude/CLAUDE.md
+  claude   native hooks in ~/.claude/settings.json + the /brain command + a block in ~/.claude/CLAUDE.md
   codex    block in ~/.codex/AGENTS.md          (instruction-based: the agent calls the CLI)
   gemini   block in ~/.gemini/GEMINI.md
   agents   block in ./AGENTS.md of the current project (Cursor, Aider, Grok CLI, Zed, Cline, ...)
@@ -66,6 +66,17 @@ def brain_cmd() -> str:
     return f'"{sys.executable}"{" -P" if sys.version_info >= (3, 11) else ""} -m self_improving_brain'
 
 
+def brain_argv() -> list[str]:
+    """brain_cmd() as an argument list, for configs that take command + args (MCP clients)."""
+    shim = PKG_ROOT / "brain"
+    if shim.is_file():
+        return [_python().strip('"'), str(shim)]
+    script = console_script()
+    if script:
+        return [str(script)]
+    return [sys.executable, *(["-P"] if sys.version_info >= (3, 11) else []), "-m", "self_improving_brain"]
+
+
 def cli_name() -> str:
     """`brain` if it is on PATH and points here, else the full command."""
     found = shutil.which("brain")
@@ -78,15 +89,18 @@ def cli_name() -> str:
 
 
 def block(v: Vault) -> str:
-    b = brain_cmd()
+    """For agents without hooks (Codex, Gemini CLI, AGENTS.md). It sits in every session, so every word counts:
+    the long command is named once."""
     return f"""{BEGIN}
 ## Brain (self-improving-brain)
-You have a persistent, self-improving memory at `{v.root}`. Use it — it is how you get smarter over time.
-- **Start of a task:** run `{b} context` once (skip if a BRAIN block is already in your context).
-- **Before answering from memory** (project facts, decisions, "how did we…"): `{b} search "<question>"`, then `{b} read <note> [section]`. Cite the note.
-- **Learned something worth keeping** (a decision, a pitfall, a user preference, a fact that took effort): `{b} remember <fact|decision|pitfall|preference|todo|status> "<one self-contained sentence>" --quote "<user's words>"`. Never store secrets — store the variable name and where the value lives.
-- **Lessons** (`LESSON …` lines) are rules learned from your past mistakes with this user. Follow them; they outrank your defaults.
-- **Never** approve lesson drafts or delete notes on your own; show the user and wait for an explicit OK.
+You have a persistent memory at `{v.root}` that learns from this user's corrections. Below, `brain` stands for `{brain_cmd()}`.
+- **Start of a task:** run `brain context` once (skip it if a SELF-IMPROVING-BRAIN line is already in your context).
+- **Before answering from memory** (project facts, decisions, "how did we…"): `brain search "<question>"`, then `brain read <note> [section]`.
+- **Worth keeping** (a decision, a pitfall, a preference, a fact that took effort): `brain remember <fact|decision|pitfall|preference> "<one sentence>"`. Never store secrets: store the variable name and where the value lives.
+- **LESSON lines** are rules learned from this user's corrections. Follow them; they outrank your defaults.
+- **Before an irreversible action** (force push, deleting data, deploys, migrations): `brain check --command "<command>"`. If it names a GUARD, ask the user first.
+- **Continuing work** ("where were we", after a break or in another agent): `brain resume`. Before you end a long task: `brain handoff`.
+- Which rules reach you is the user's call: never run `brain trust`, `brain undo` or `brain approve` on your own.
 {END}
 """
 
@@ -99,9 +113,36 @@ def _write(path: Path, text: str) -> None:
 
 
 def _backup(path: Path) -> None:
+    """The file as it was before the brain's first edit. A file the brain already edited is not that."""
     bak = path.with_name(path.name + ".bak-self-improving-brain")
     if path.exists() and not bak.exists():
-        shutil.copy2(path, bak)
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if BEGIN not in text and HOOK_TAG not in text:
+            shutil.copy2(path, bak)
+
+
+def _tidy(path: Path) -> bool:
+    """After the brain's part is out: a file that held only that goes, and so does the backup once the file equals
+    it again. True when the file is gone."""
+    bak = path.with_name(path.name + ".bak-self-improving-brain")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if text.strip() in ("", "{}"):
+        path.unlink()
+        text = ""
+    try:
+        old = bak.read_text(encoding="utf-8")
+        try:
+            same = json.loads(old or "{}") == json.loads(text or "{}")
+        except ValueError:
+            same = old.split() == text.split()
+        if same:
+            bak.unlink()
+    except OSError:
+        pass
+    return not text
 
 
 def _put_block(path: Path, text: str) -> str:
@@ -119,18 +160,25 @@ def _put_block(path: Path, text: str) -> str:
     return f"updated {path}"
 
 
+def has_block(path: Path) -> bool:
+    try:
+        return BEGIN in path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
 def _drop_block(path: Path) -> str:
     if not path.exists():
-        return f"skip {path} (missing)"
+        return ""
     old = path.read_text(encoding="utf-8")
     if BEGIN not in old:
-        return f"skip {path} (no self-improving-brain block)"
+        return ""  # nothing of the brain's in it: nothing to say
     if END not in old:
         return f"skip {path} (self-improving-brain end marker missing — remove the block by hand)"
     pre, rest = old.split(BEGIN, 1)
     _, post = rest.split(END, 1)
     _write(path, (pre.rstrip() + "\n" + post.lstrip()).strip() + "\n")
-    return f"cleaned {path}"
+    return f"removed {path} (it held only the brain's part)" if _tidy(path) else f"took the brain's part out of {path}"
 
 
 def _ours(group) -> bool:
@@ -142,10 +190,42 @@ CLAUDE_HOOKS = [
     ("SessionStart", None, "session-start", 15, False),
     ("UserPromptSubmit", None, "prompt", 10, False),
     ("PreToolUse", "*", "pre-tool", 10, False),
-    ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit", "post-tool", 15, False),
-    ("Stop", None, "stop", 10, False),
+    ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit|NotebookEdit", "post-tool", 15, False),
+    ("PreCompact", None, "pre-compact", 20, False),
     ("SessionEnd", None, "session-end", 5, True),
 ]
+
+
+def from_plugin() -> bool:
+    """Running from a Claude Code plugin install (its path changes with every plugin update)."""
+    return "/.claude/plugins/" in PKG_ROOT.as_posix() + "/"
+
+
+def plugin_hooks() -> dict:
+    """hooks/hooks.json of the Claude Code plugin; tests keep the file in sync with CLAUDE_HOOKS."""
+    out: dict = {}
+    for event, matcher, handler, timeout, is_async in CLAUDE_HOOKS:
+        h = {"type": "command", "command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}/brain" hook {handler} --plugin', "timeout": timeout}
+        if is_async:
+            h["async"] = True
+        g = {"matcher": matcher, "hooks": [h]} if matcher else {"hooks": [h]}
+        out.setdefault(event, []).append(g)
+    return {"description": "self-improving-brain: rules from your corrections at the right moment, guards, recall, handoffs",
+            "hooks": out}
+
+
+def plugin_command(t: Path) -> str:
+    """A slash command for the plugin: `brain` is the command from the SELF-IMPROVING-BRAIN context line."""
+    _, head, body = t.read_text(encoding="utf-8").split("---\n", 2)
+    return (f"---\n{head}---\n`brain` below is the brain command shown in the SELF-IMPROVING-BRAIN line of your context.\n\n"
+            + body.lstrip("\n").replace("{{BRAIN}}", "brain"))
+
+
+def claude_hooks_installed() -> bool:
+    try:
+        return HOOK_TAG in _claude_settings().read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def _claude_settings() -> Path:
@@ -162,6 +242,19 @@ def _load_settings(p: Path) -> dict:
     if not isinstance(data, dict) or not isinstance(data.get("hooks", {}), dict):
         raise SystemExit(f"{p} has an unexpected shape; nothing changed.")
     return data
+
+
+# slash commands of earlier versions, removed on install and uninstall
+OLD_COMMANDS = ("brain-review.md", "brain-distill.md", "brain-ask.md", "brain-ingest.md")
+
+
+def _ours_command(f: Path) -> bool:
+    """A command file this tool wrote (its description names the brain), not one of yours with the same name."""
+    try:
+        head = f.read_text(encoding="utf-8", errors="replace")[:400]
+    except OSError:
+        return False
+    return any(l.startswith("description:") and "brain" in l.lower() for l in head.splitlines())
 
 
 def install_claude(v: Vault) -> list[str]:
@@ -183,10 +276,16 @@ def install_claude(v: Vault) -> list[str]:
     out = [f"hooks → {p}"]
     cmd_dir = Path.home() / ".claude" / "commands"
     cmd_dir.mkdir(parents=True, exist_ok=True)
+    for old in OLD_COMMANDS:
+        if _ours_command(cmd_dir / old):
+            (cmd_dir / old).unlink()
     for t in sorted((TEMPLATES / "commands").glob("*.md")):
         (cmd_dir / t.name).write_text(t.read_text(encoding="utf-8").replace("{{BRAIN}}", brain_cmd()), encoding="utf-8")
         out.append(f"command /{t.stem}")
-    out.append(_put_block(Path.home() / ".claude" / "CLAUDE.md", block(v)))
+    # the hooks say all of it, and only where it matters: a block in CLAUDE.md would sit in every session
+    gone = _drop_block(Path.home() / ".claude" / "CLAUDE.md")
+    if gone:
+        out.append(gone)
     return out
 
 
@@ -196,21 +295,27 @@ def uninstall_claude() -> list[str]:
     if p.exists():
         data = _load_settings(p)
         hooks = data.get("hooks", {})
+        removed = 0
         for event in list(hooks):
             if not isinstance(hooks[event], list):
                 continue
-            hooks[event] = [g for g in hooks[event] if not _ours(g)]
+            keep = [g for g in hooks[event] if not _ours(g)]
+            removed += len(hooks[event]) - len(keep)
+            hooks[event] = keep
             if not hooks[event]:
                 del hooks[event]
-        _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        out.append(f"hooks removed from {p}")
-    for t in (TEMPLATES / "commands").glob("*.md"):
-        f = Path.home() / ".claude" / "commands" / t.name
-        if f.exists():
+        if removed:
+            if isinstance(hooks, dict) and not hooks:
+                data.pop("hooks", None)
+            _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            out.append(f"removed the hooks from {p}" + (" (and the file, it held only them)" if _tidy(p) else ""))
+    for name in [t.name for t in (TEMPLATES / "commands").glob("*.md")] + list(OLD_COMMANDS):
+        f = Path.home() / ".claude" / "commands" / name
+        if _ours_command(f):
             f.unlink()
-            out.append(f"removed /{t.stem}")
+            out.append(f"removed the /{f.stem} command")
     out.append(_drop_block(Path.home() / ".claude" / "CLAUDE.md"))
-    return out
+    return [x for x in out if x]
 
 
 TARGETS = {
@@ -234,5 +339,5 @@ def uninstall(agent: str) -> list[str]:
     if agent == "claude":
         return uninstall_claude()
     if agent in TARGETS:
-        return [_drop_block(TARGETS[agent]())]
+        return [x for x in [_drop_block(TARGETS[agent]())] if x]
     raise ValueError(f"unknown agent {agent!r}")
