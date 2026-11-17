@@ -49,7 +49,8 @@ def git(v: Vault, *args: str) -> subprocess.CompletedProcess:
     return git_in(v.root, *args)
 
 
-GITHUB = re.compile(r"github\.com[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+# the host must be github.com itself, not a path that mentions it (https://evil.example/github.com/me/x)
+GITHUB = re.compile(r"^(?:(?:https?|ssh|git)://(?:[^@/\s]+@)?|[^@/\s:]+@)?github\.com(?::\d+)?[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 
 
 def remote_visibility(url: str) -> str:

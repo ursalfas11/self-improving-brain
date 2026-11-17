@@ -284,6 +284,17 @@ class TestJournalAndFacts(VaultCase):
         self.assertFalse(p.exists())
         self.assertNotIn("[[payments]]", (self.root / "00-hubs/hub-projects.md").read_text())
 
+    def test_a_synced_journal_entry_never_reaches_outside_the_vault(self):
+        # journals come from every machine through git: a planted entry with a matching checksum still stays inside
+        victim = Path(self.root).parent / "victim.txt"
+        victim.write_text("keep me")
+        for i, rel in enumerate((str(victim), "../victim.txt", ".git/config")):
+            append_jsonl(journal.path(self.v), {"kind": "fact", "action": "new", "path": rel, "id": f"j-planted{i}",
+                                                "after": journal.sha("keep me"), "t": "2026-11-17T00:00:00"})
+            with self.assertRaises(ValueError):
+                journal.undo(self.v, f"j-planted{i}")
+        self.assertTrue(victim.exists())
+
     def test_review_lists_and_undoes_by_number(self):
         journal.log(self.v, "retire", lesson="L-x", rule="Rule x.", why="not needed in 60 days")
         out = run_cli("review", "--no-input")
@@ -926,3 +937,14 @@ class TestFirstWeek(VaultCase):
         self.assertEqual(out.strip(), "brain: unknown command 'foo' · `brain --help` lists the ones you need")
         self.assertRegex(run_cli("--version"), r"^self-improving-brain \d+\.\d+")
 
+
+
+class TestBackupRemote(VaultCase):
+    def test_only_github_itself_counts_as_github(self):
+        # a path that mentions github.com must not get checked against (and vouched for by) the wrong repo
+        for url, want in (("git@github.com:me/brain.git", ("me", "brain")),
+                          ("https://github.com/me/brain", ("me", "brain")),
+                          ("ssh://git@github.com/me/brain.git", ("me", "brain")),
+                          ("https://evil.example/github.com/me/brain", None)):
+            m = nightly.GITHUB.search(url)
+            self.assertEqual(m.groups() if m else None, want, url)
