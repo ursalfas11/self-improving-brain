@@ -279,6 +279,12 @@ Nothing waits for you. A pending lesson is settled by what you typed in the sess
 (`trust.own_words`: the transcript's human turns, without tool results, hook or agent text, pasted blocks, or
 messages another session sent). What the agent read is never in there, so it can prove nothing.
 
+An answer you picked in a question dialog is your decision, too (`trust.own_decisions`: the agent's question and
+your choice, read only from a dialog the transcript records as the agent's). It counts like a message, except
+for `always` and `guard` and for the guarded commands, which need what you typed. If only a lesson's trigger
+changed (tools, words), it is enough that one message or dialog answer names the lesson and every trigger that
+was added or dropped.
+
 1. **In the hook, right after the tool call** (`trust.in_hook`): a passage of one of your messages (three
    sentences) carries at least 60 % of the rule's word stems, and at least three. The lesson counts at once.
 2. **At night** (`trust.settle`, a step of the nightly run): a model reads only the rule and your messages. Its

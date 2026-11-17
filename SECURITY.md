@@ -8,8 +8,8 @@ Secrets are blocked at three points: `brain remember`, agent Write/Edit into the
 `self_improving_brain/secrets.py`. If you find a secret format that slips through, please open an issue
 **without** a real secret in it.
 
-A rule that an agent writes into your notes reaches the agent only once a message you typed in that session
-backs it; otherwise the nightly run takes it back. The evidence is read from the session transcript, so the
+A rule that an agent writes into your notes reaches the agent only once a message you typed in that session,
+or an answer you picked in a question dialog, backs it (`always` and `guard` need what you typed); otherwise the nightly run takes it back. The evidence is read from the session transcript, so the
 hooks refuse an agent's writes into `.brain/` or into a transcript, by file tool or shell command. For a shell
 command the check reads the command text and stops the plain cases. A process on your machine that hides where it writes is outside what a hook can
 see: if you find a way to get a rule trusted without the user's words, please report it.

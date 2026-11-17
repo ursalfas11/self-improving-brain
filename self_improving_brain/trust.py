@@ -101,6 +101,49 @@ def own_words(path) -> list[str]:
     return out
 
 
+def own_decisions(path) -> list[str]:
+    """What you picked in a question dialog of this session, as "<question> → <answer>" per answered question.
+    The agent wrote the question, you chose: it counts like a message from you, but not for `always` and `guard`
+    and not for the guarded commands (those need what you typed). Only the answer to a dialog the transcript itself
+    records as the agent's AskUserQuestion is read; nothing from sub-agents."""
+    import json
+    from .transcripts import parse
+    if not path:
+        return []
+    tr = parse(Path(str(path)))
+    if tr is None or tr.internal:
+        return []
+    out, dialogs = [], set()
+    try:
+        with open(str(path), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if "AskUserQuestion" not in line and '"answers"' not in line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(r, dict) or r.get("isSidechain"):
+                    continue
+                c = (r.get("message") or {}).get("content")
+                blocks = [x for x in c if isinstance(x, dict)] if isinstance(c, list) else []
+                if r.get("type") == "assistant":
+                    dialogs.update(x["id"] for x in blocks
+                                   if x.get("type") == "tool_use" and x.get("name") == "AskUserQuestion" and x.get("id"))
+                    continue
+                res = r.get("toolUseResult")
+                if r.get("type") != "user" or not isinstance(res, dict) or not isinstance(res.get("answers"), dict):
+                    continue
+                if not any(x.get("type") == "tool_result" and x.get("tool_use_id") in dialogs for x in blocks):
+                    continue
+                for q, a in res["answers"].items():
+                    if isinstance(q, str) and isinstance(a, str) and q.strip() and a.strip():
+                        out.append(f"{q.strip()} → {a.strip()}")
+    except OSError:
+        pass
+    return out
+
+
 def _flat(t: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[„“”\"'`«»]", "", t or "")).strip().lower()
 
@@ -162,16 +205,47 @@ def _plainly(message: str) -> bool:
                 or (learn.LASTING.search(message) and not learn.NOT_LASTING.search(message)))
 
 
-def evidence(l: Lesson, words: list[str], refs=()) -> tuple[str, str]:
+def _named_trigger(l: Lesson, before: str, messages: list[str]) -> str:
+    """Only the trigger changed (tools, words; rule, mechanism, commands, paths and check as before), and one message
+    names the lesson and every trigger that was added or dropped. Returns the quote, or ''."""
+    if not before:
+        return ""
+    from .notes import parse_lessons
+    try:
+        old = next((x for x in parse_lessons(before, l.note) if x.id == l.id), None)
+    except Exception:
+        old = None
+    same = lambda a, b: _flat(a or "") == _flat(b or "")  # noqa: E731
+    if old is None or not all(same(getattr(old, k), getattr(l, k)) for k in ("rule", "mechanism", "commands", "paths", "check")):
+        return ""
+    low = lambda xs: {str(x).strip().lower() for x in xs or [] if str(x).strip()}  # noqa: E731
+    changed = (low(old.tools) ^ low(l.tools)) | (low(old.words) ^ low(l.words))
+    if not changed:
+        return ""
+    for w in reversed(list(messages)):
+        wl = w.lower()
+        if l.id.lower() in wl and all(t in wl for t in changed):
+            return short(w, 240)
+    return ""
+
+
+def evidence(l: Lesson, words: list[str], refs=(), decisions=(), before: str = "") -> tuple[str, str]:
     """Does this rule stand in your own words? Returns (quote, '') or ('', why not).
     A passage of ONE message must carry the rule's core. `always` and `guard` also need you to say it as a rule in
-    that message. `refs`: journal ids with which exactly this lesson was brought back; naming one is the evidence."""
+    that message. `refs`: journal ids with which exactly this lesson was brought back; naming one is the evidence.
+    `decisions`: what you picked in a question dialog (own_decisions); counts like a message, but not for `always`
+    and `guard`. `before`: the callout before the change; if only the trigger changed, naming the lesson and the
+    trigger is enough."""
     why = locked(l)
     if why:
         return "", why
     foreign, hard = _foreign(l), l.mechanism in HARD
+    picked = [] if hard else list(decisions or [])
+    quote = _named_trigger(l, before, picked + list(words or []))
+    if quote:
+        return quote, ""
     near = ""
-    for w in reversed(list(words or [])):  # your latest message first
+    for w in reversed(picked + list(words or [])):  # your latest message first, then what you picked in a dialog
         if any(r and r.lower() in w.lower() for r in refs):
             return short(w, 240), ""
         for a in _passages(w):
@@ -183,6 +257,8 @@ def evidence(l: Lesson, words: list[str], refs=()) -> tuple[str, str]:
                 near = near or f"“{l.mechanism}” needs you to say it as a rule (from now on, never again, remember)"
             else:
                 return short(a, 240), ""
+    if hard and decisions and not near:
+        near = f"“{l.mechanism}” needs what you typed: an answer picked in a dialog is not enough"
     return "", near or "nothing you typed in this session carries it"
 
 
@@ -440,13 +516,13 @@ def in_hook(v: Vault, new: list[str], transcript) -> list[str]:
     if not new:
         return []
     from .notes import Library
-    words = own_words(transcript)
+    words, picked = own_words(transcript), own_decisions(transcript)
     pending = load(v).get("pending") or {}
     backed, waiting = [], []
     for l in Library(v.root).lessons():
         if l.id not in new:
             continue
-        quote, why = evidence(l, words, brought_back(v, l.id))
+        quote, why = evidence(l, words, brought_back(v, l.id), picked, str((pending.get(l.id) or {}).get("before") or ""))
         if quote:
             release(v, l, quote, "wording", pending.get(l.id))
             backed.append(l.id)
@@ -574,7 +650,10 @@ def settle(v: Vault, think: bool = True, judge=None) -> dict:
             continue
         tp = _transcript(v, str(e.get("session") or ""))
         words = own_words(tp) if tp else []
-        quote, why = evidence(l, words, brought_back(v, lid))
+        picked = own_decisions(tp) if tp else []
+        quote, why = evidence(l, words, brought_back(v, lid), picked, str(e.get("before") or ""))
+        if l.mechanism not in HARD:  # the model may quote what you picked in a dialog, too
+            words = words + picked
         how, decided = "wording", bool(locked(l))
         if not quote and not decided and words and asked < JUDGE_MAX:
             asked += 1

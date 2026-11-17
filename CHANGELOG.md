@@ -12,6 +12,8 @@ words decide, and the brain settles it without you.
 - Without evidence the nightly run takes the lesson back after the session has been quiet for two hours: a new
   one leaves the note, a changed one returns to the form that counted before. Both are in `brain review`;
   `brain undo` reverses either.
+- An answer you picked in a question dialog counts like a message you typed, except for `always` and `guard`.
+  If only a lesson's trigger changed, naming the lesson and the trigger is enough.
 - `always` and `guard` need you to have said it as a rule. A rule with a secret, or with an address or download
   command you did not name, never counts on its own.
 - The pre-tool hook no longer asks about brain commands. `brain lesson`, `promote`, `undo` and `approve` run
