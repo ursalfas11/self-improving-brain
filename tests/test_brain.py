@@ -778,6 +778,13 @@ class TestMcp(VaultCase):
         self.assertFalse(r[6]["result"]["isError"])
         self.assertEqual(r[7]["error"]["code"], -32601)
 
+    def test_values_starting_with_a_dash_stay_values(self):
+        call = lambda i, name, **args: {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": name, "arguments": args}}
+        r = self._talk(call(1, "brain_search", query="--help"), call(2, "brain_read", note="-h"),
+                       call(3, "brain_check", command="--force"), call(4, "brain_remember", type="fact", claim="--note=x"))
+        for x in r:
+            self.assertNotIn("usage:", x["result"]["content"][0]["text"], x)
+
     def test_install_keeps_other_servers(self):
         from self_improving_brain import mcp
         cur = Path(os.environ["HOME"]) / ".cursor" / "mcp.json"
