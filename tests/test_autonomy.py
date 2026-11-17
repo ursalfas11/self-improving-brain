@@ -697,8 +697,11 @@ class TestMachines(VaultCase):
             self.assertEqual(nightly.sync(open_vault(str(other))), "synced")
         note.write_text(note.read_text().replace("8080", "7070"))  # not committed yet, the same line
         with self.on("laptop"):
-            self.assertTrue(nightly.pull(self.v).startswith("pull failed"))
+            self.assertEqual(nightly.pull(self.v), "pulled", "a conflict must not stop the backup for good")
+            self.assertEqual(nightly.sync(self.v), "synced")
         self.assertIn("7070", note.read_text(), "your edit stays where you made it")
+        self.assertIn("9090", note.read_text(), "and the other machine's line stays too: nothing is thrown away")
+        self.assertTrue(any(e.get("k") == "sync_union" for e in events.all_events(self.v)))
         self.assertNotIn("<<<<<<<", note.read_text())
         self.assertFalse(any((self.root / ".git" / d).exists() for d in ("rebase-merge", "rebase-apply")),
                          "no half-done rebase")
