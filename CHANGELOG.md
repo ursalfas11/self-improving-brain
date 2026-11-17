@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Text you pasted into a message no longer counts as your own words. Claude Code repeats the id in the closing
+  tag, which the check did not expect, so a pasted rule could vouch for itself.
+
 ## 0.3.1
 
 A review for production: what a secret, a planted file or a second laptop could still do, and where the nightly
