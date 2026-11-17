@@ -358,7 +358,7 @@ def schedule_install(v: Vault, hour: int = 3) -> str:
     v.path("state").mkdir(parents=True, exist_ok=True)
     save_json(v.path("state", "schedule.json"), {"t": now_iso(), "hour": hour})
     if target == "schtasks":
-        subprocess.run(body, check=True, shell=True, capture_output=True)
+        subprocess.run(body, check=True, capture_output=True)  # CreateProcess, no cmd.exe: & or % in a path stay text
         return f"installed Windows task {TASK} (daily at {hour:02d}:17; a missed night runs at your next session)"
     if target == "crontab":
         cur = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
