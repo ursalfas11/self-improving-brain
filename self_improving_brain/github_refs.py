@@ -180,21 +180,8 @@ def _clause_span(line: str, start: int, end: int) -> tuple:
     return a, b
 
 
-def _clause(line: str, start: int, end: int) -> str:
-    a, b = _clause_span(line, start, end)
-    return line[a:b]
-
-
 def _struck(line: str, start: int) -> bool:
     return line[:start].count("~~") % 2 == 1
-
-
-def says_open(clause: str) -> bool:
-    """The clause calls its subject unfinished and nowhere finished. 'not merged' counts as unfinished."""
-    rest = NOT_DONE.sub(" ", clause)
-    if DONE.search(rest):
-        return False
-    return bool(NOT_DONE.search(clause) or OPEN.search(rest))
 
 
 def open_at(line: str, start: int, end: int) -> str:

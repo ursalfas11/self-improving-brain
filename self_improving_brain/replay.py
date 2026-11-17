@@ -21,7 +21,7 @@ from pathlib import Path
 
 from . import cache, learn, trust
 from .config import Vault
-from .hooks import WRITE_TOOLS, check_hits, command_head, fires, regex_match, words_match
+from .hooks import check_hits, command_head, fires, regex_match, words_match
 from .notes import Lesson
 from .transcripts import parse
 from .util import append_jsonl, digest, load_json, now_iso, save_json, short, terms

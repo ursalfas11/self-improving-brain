@@ -49,7 +49,8 @@ def git(v: Vault, *args: str) -> subprocess.CompletedProcess:
     return git_in(v.root, *args)
 
 
-GITHUB = re.compile(r"github\.com[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+# the host must be github.com itself, not a path that mentions it (https://evil.example/github.com/me/x)
+GITHUB = re.compile(r"^(?:(?:https?|ssh|git)://(?:[^@/\s]+@)?|[^@/\s:]+@)?github\.com(?::\d+)?[:/]+([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 
 
 def remote_visibility(url: str) -> str:
@@ -120,10 +121,9 @@ def sync(v: Vault, message: str = "brain: sync") -> str:
     if not v.get("allow_public_remote") and remote_visibility(url) == "PUBLIC":
         return f"committed, NOT pushed: {url} is public — make it private (or `brain config allow_public_remote true`)"
     if git(v, "rev-parse", "--abbrev-ref", "@{u}").returncode == 0:
-        pull = git(v, "pull", "--rebase", "--autostash", "-q")
-        if pull.returncode != 0:
-            git(v, "rebase", "--abort")
-            return "pull failed — resolve by hand: " + pull.stderr.strip()[:200]
+        problem = _pull(v)
+        if problem:
+            return problem
     push = git(v, "push", "-q", "-u", name, "HEAD")
     return "synced" if push.returncode == 0 else "push failed: " + push.stderr.strip()[:200]
 
@@ -136,11 +136,32 @@ def pull(v: Vault) -> str:
     problem = _commit(v, "brain: sync")
     if problem:
         return problem
+    return _pull(v) or "pulled"
+
+
+UNION = "*.md merge=union\n*.jsonl merge=union\n"
+
+
+def _pull(v: Vault) -> str:
+    """Rebase onto what the other machines pushed. '' when that worked, else the problem.
+
+    Two laptops that both added a line to the same note conflict, and a backup that waits for a human to resolve
+    it stops for good. So a conflict is retried once with git's union merge for notes and logs: both sides' lines
+    stay, nothing is thrown away, and the night goes on. Only what union cannot settle still waits for a human."""
     r = git(v, "pull", "--rebase", "--autostash", "-q")
-    if r.returncode != 0:
-        git(v, "rebase", "--abort")
-        return "pull failed: " + r.stderr.strip()[:200]
-    return "pulled"
+    if r.returncode == 0:
+        return ""
+    git(v, "rebase", "--abort")
+    attrs = v.path("state", "union.gitattributes")  # .brain/state/ is per machine, never committed
+    attrs.parent.mkdir(parents=True, exist_ok=True)
+    attrs.write_text(UNION, encoding="utf-8")
+    u = git(v, "-c", f"core.attributesFile={attrs}", "pull", "--rebase", "--autostash", "-q")
+    if u.returncode == 0:
+        from . import events
+        events.log(v, "sync_union", detail=short(r.stderr.strip(), 200))
+        return ""
+    git(v, "rebase", "--abort")
+    return "pull failed — resolve by hand: " + (u.stderr or r.stderr).strip()[:200]
 
 
 def _locked(v: Vault) -> bool:
@@ -199,6 +220,15 @@ def _run(v: Vault, quick: bool) -> dict:
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
     s = rep["steps"]
     llm.PROBLEMS.clear()
+    prev = load_json(v.path("state", "nightly.json"), {})
+    rep["after_broken"] = bool(isinstance(prev, dict) and prev.get("broken"))  # this run is the one retry
+    wanted = v.path("state", "llm_wanted.json")
+    if not llm.available(v) and wanted.exists() and not quick:  # setup found no LLM CLI, you wanted one
+        found = llm.detect()
+        if found:
+            v.set("llm_cmd", found)
+            wanted.unlink(missing_ok=True)
+            s["llm_found"] = found.split()[0]
 
     def broken(msg: str) -> None:
         """Something failed: `brain` lists it, and the next session tells you once."""
@@ -343,11 +373,15 @@ def overdue(v: Vault) -> bool:
     launchd skips it when the Mac was off). The first session after that starts it."""
     import datetime as dt
     plan = load_json(v.path("state", "schedule.json"), None)
-    if not isinstance(plan, dict) or v.path("state", "nightly.lock").exists():
+    if not isinstance(plan, dict) or _locked(v):  # a lock left by a crashed run does not block forever
         return False
-    last = str(load_json(v.path("state", "nightly.json"), {}).get("t") or plan.get("t") or "")
+    rep = load_json(v.path("state", "nightly.json"), {})
+    rep = rep if isinstance(rep, dict) else {}
+    last = str(rep.get("t") or plan.get("t") or "")
+    # a night that broke (LLM login, network, backup) is tried once more after a few hours, not only tomorrow
+    hours = 6 if rep.get("broken") and not rep.get("after_broken") else 26
     try:
-        return (dt.datetime.now() - dt.datetime.fromisoformat(last[:19])).total_seconds() > 26 * 3600
+        return (dt.datetime.now() - dt.datetime.fromisoformat(last[:19])).total_seconds() > hours * 3600
     except ValueError:
         return True
 
@@ -357,7 +391,7 @@ def schedule_install(v: Vault, hour: int = 3) -> str:
     v.path("state").mkdir(parents=True, exist_ok=True)
     save_json(v.path("state", "schedule.json"), {"t": now_iso(), "hour": hour})
     if target == "schtasks":
-        subprocess.run(body, check=True, shell=True, capture_output=True)
+        subprocess.run(body, check=True, capture_output=True)  # CreateProcess, no cmd.exe: & or % in a path stay text
         return f"installed Windows task {TASK} (daily at {hour:02d}:17; a missed night runs at your next session)"
     if target == "crontab":
         cur = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout

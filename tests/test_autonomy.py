@@ -284,6 +284,17 @@ class TestJournalAndFacts(VaultCase):
         self.assertFalse(p.exists())
         self.assertNotIn("[[payments]]", (self.root / "00-hubs/hub-projects.md").read_text())
 
+    def test_a_synced_journal_entry_never_reaches_outside_the_vault(self):
+        # journals come from every machine through git: a planted entry with a matching checksum still stays inside
+        victim = Path(self.root).parent / "victim.txt"
+        victim.write_text("keep me")
+        for i, rel in enumerate((str(victim), "../victim.txt", ".git/config")):
+            append_jsonl(journal.path(self.v), {"kind": "fact", "action": "new", "path": rel, "id": f"j-planted{i}",
+                                                "after": journal.sha("keep me"), "t": "2026-11-17T00:00:00"})
+            with self.assertRaises(ValueError):
+                journal.undo(self.v, f"j-planted{i}")
+        self.assertTrue(victim.exists())
+
     def test_review_lists_and_undoes_by_number(self):
         journal.log(self.v, "retire", lesson="L-x", rule="Rule x.", why="not needed in 60 days")
         out = run_cli("review", "--no-input")
@@ -686,8 +697,11 @@ class TestMachines(VaultCase):
             self.assertEqual(nightly.sync(open_vault(str(other))), "synced")
         note.write_text(note.read_text().replace("8080", "7070"))  # not committed yet, the same line
         with self.on("laptop"):
-            self.assertTrue(nightly.pull(self.v).startswith("pull failed"))
+            self.assertEqual(nightly.pull(self.v), "pulled", "a conflict must not stop the backup for good")
+            self.assertEqual(nightly.sync(self.v), "synced")
         self.assertIn("7070", note.read_text(), "your edit stays where you made it")
+        self.assertIn("9090", note.read_text(), "and the other machine's line stays too: nothing is thrown away")
+        self.assertTrue(any(e.get("k") == "sync_union" for e in events.all_events(self.v)))
         self.assertNotIn("<<<<<<<", note.read_text())
         self.assertFalse(any((self.root / ".git" / d).exists() for d in ("rebase-merge", "rebase-apply")),
                          "no half-done rebase")
@@ -926,3 +940,42 @@ class TestFirstWeek(VaultCase):
         self.assertEqual(out.strip(), "brain: unknown command 'foo' · `brain --help` lists the ones you need")
         self.assertRegex(run_cli("--version"), r"^self-improving-brain \d+\.\d+")
 
+
+
+class TestBackupRemote(VaultCase):
+    def test_only_github_itself_counts_as_github(self):
+        # a path that mentions github.com must not get checked against (and vouched for by) the wrong repo
+        for url, want in (("git@github.com:me/brain.git", ("me", "brain")),
+                          ("https://github.com/me/brain", ("me", "brain")),
+                          ("ssh://git@github.com/me/brain.git", ("me", "brain")),
+                          ("https://evil.example/github.com/me/brain", None)):
+            m = nightly.GITHUB.search(url)
+            self.assertEqual(m.groups() if m else None, want, url)
+
+
+class TestNightHeals(VaultCase):
+    def test_a_later_installed_llm_is_picked_up_only_when_you_wanted_one(self):
+        self.v.cfg["llm_cmd"] = ""
+        with mock.patch.object(llm, "detect", return_value=llm.KNOWN["claude"]), \
+                mock.patch.object(llm, "ask_json", side_effect=llm.NoLLM("stub")):
+            nightly.run(self.v)
+            self.assertFalse(self.v.get("llm_cmd"), "--no-llm stays off: no wish recorded")
+            from self_improving_brain.util import save_json
+            save_json(self.v.path("state", "llm_wanted.json"), {"t": "2026-11-17"})
+            rep = nightly.run(self.v)
+        self.assertEqual(rep["steps"].get("llm_found"), "claude")
+        self.assertTrue(self.v.get("llm_cmd").startswith("claude"))
+        self.assertFalse(self.v.path("state", "llm_wanted.json").exists())
+
+    def test_a_broken_night_is_retried_once_and_a_dead_lock_blocks_nothing(self):
+        from self_improving_brain.util import save_json
+        save_json(self.v.path("state", "schedule.json"), {"t": "2026-11-01T03:17:00", "hour": 3})
+        eight_h = __import__("datetime").datetime.now() - __import__("datetime").timedelta(hours=8)
+        save_json(self.v.path("state", "nightly.json"), {"t": eight_h.isoformat(timespec="seconds"), "broken": ["x"]})
+        self.assertTrue(nightly.overdue(self.v), "a broken night is tried again after a few hours")
+        save_json(self.v.path("state", "nightly.json"), {"t": eight_h.isoformat(timespec="seconds"), "broken": ["x"],
+                                                         "after_broken": True})
+        self.assertFalse(nightly.overdue(self.v), "but only once: the retry broke too, tomorrow is soon enough")
+        save_json(self.v.path("state", "nightly.json"), {"t": "2026-11-01T03:17:00"})
+        self.v.path("state", "nightly.lock").write_text("999999 1000")  # a crashed run, days ago
+        self.assertTrue(nightly.overdue(self.v))

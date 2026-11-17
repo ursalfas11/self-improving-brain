@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .secrets import redact
+
 # Our Stop-hook message carries this; agents may log it as a user turn, which must not count as one.
 HOOK_MARK = "[self-improving-brain:check]"
 
@@ -39,6 +41,11 @@ class Turn:
     tool: str = ""
     rejected: bool = False
     ts: str = ""
+
+    def __post_init__(self):
+        # everything downstream (drafts, events, evidence, the prompt to the LLM CLI) starts here:
+        # a token pasted into a session never travels further than the transcript it was typed into
+        self.text = redact(self.text)
 
 
 @dataclass

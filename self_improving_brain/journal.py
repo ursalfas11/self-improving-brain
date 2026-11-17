@@ -146,7 +146,7 @@ def undo(v: Vault, ref: str) -> str:
         learn.set_lesson_field(v, lid, "retired", "", by="undo")
         msg = f"{lid} is active again"
     elif kind == "fact":
-        p = v.root / e["path"]
+        p = _inside(v, e["path"])
         cur = p.read_text(encoding="utf-8") if p.exists() else None
         if e.get("action") == "new":
             if cur is None:
@@ -157,7 +157,7 @@ def undo(v: Vault, ref: str) -> str:
                 p.unlink()
                 msg = f"removed the note the brain wrote, {e['path']}"
             hub = e.get("hub")
-            if hub and (v.root / hub).exists():
+            if hub and _inside(v, hub).exists():
                 h = (v.root / hub).read_text(encoding="utf-8")
                 if e.get("hub_line") and e["hub_line"] in h:
                     atomic_write(v.root / hub, _drop_block(h, e["hub_line"]))
@@ -229,6 +229,16 @@ def undo(v: Vault, ref: str) -> str:
     if kind == "discard":
         msg += f" ({e['id']})"  # an agent that ran this for you: your message naming this id is the evidence
     return msg
+
+
+def _inside(v: Vault, rel: str) -> Path:
+    """A path from a journal entry. Journals arrive from every machine through git: an entry that points
+    outside the vault (absolute, ..) is never followed, whatever its checksum says."""
+    root = v.root.resolve()
+    p = (root / rel).resolve()
+    if not p.is_relative_to(root) or p == root or ".git" in p.relative_to(root).parts:
+        raise ValueError(f"{rel} is not a note in this vault")
+    return p
 
 
 def _drop_block(text: str, block: str) -> str:

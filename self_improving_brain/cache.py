@@ -107,14 +107,3 @@ def index(v: Vault, learned: dict):
         _store(v, "index", fp, idx)
     idx.learned = learned
     return idx
-
-
-def must_findings(v: Vault) -> list:
-    from .lint import lint_note
-    fp = fingerprint(v.root)
-    found = _load(v, "must", fp)
-    if found is None:
-        lib = library(v, fp)
-        found = [str(f) for n in lib.notes.values() for f in lint_note(n, lib) if f.level == "MUST"]
-        _store(v, "must", fp, found)
-    return found

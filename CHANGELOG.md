@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+A review for production: what a secret, a planted file or a second laptop could still do, and where the nightly
+loop still stopped and waited for you.
+
+### Secrets
+- The scan now finds a secret name inside a longer one (`GITHUB_TOKEN=`, `DB_PASSWORD=`,
+  `aws_secret_access_key =`), quoted JSON keys (`"password": "…"`), `Bearer` tokens and SendGrid keys. References
+  such as `os.environ[…]`, `getenv(…)`, `${{ secrets.X }}` and plain numbers are still not findings.
+- Text from a session is redacted when it is read, so a token you pasted never reaches the LLM CLI, the event
+  log or a draft. The prompt to the LLM CLI is redacted once more before it leaves.
+- `brain:allow-secret` is your word, so only your own paths honour it: the pre-commit scan and lint of your notes.
+  An agent's write into the vault, the inbox and every check of model output ignore it.
+
+### Planted files
+- An agent's Write, Edit or shell redirect into the per-machine config (`llm_cmd` is run by the nightly job) or
+  into the vault's `.git/` (git hooks) is refused.
+- `brain undo` never follows a journal entry that points outside the vault or into `.git/`, whatever its
+  checksum says. Journals arrive from every machine through git.
+- Only `github.com` itself counts as a GitHub remote for the "never push to a public repo" check.
+- MCP tools pass what an agent sends as values, never as options (`--help` as a search query stays a query).
+- The Windows task is created without `cmd.exe`; CI runs with a read-only token.
+
+### Nothing stops for good
+- A pull that conflicts (two laptops added a line to the same note) is retried once with git's union merge
+  for notes and logs: both lines stay, and the backup goes on instead of waiting for you.
+- `brain setup` without an LLM CLI remembers that you wanted learning; the first night after you install one
+  switches it on. `--no-llm` stays off.
+- A night that broke (LLM login, network, backup) is tried once more at your next session after six hours, not
+  only the next night. A lock left by a crashed run no longer blocks that catch-up.
+
+### Smaller
+- Five functions and constants nothing called are gone.
+
 ## 0.3.0
 
 Nothing left to approve. A rule an agent wrote used to stay silent until you ran `brain trust`. Now your own

@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _sandbox  # noqa: E402,F401  (first: a throwaway home)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from self_improving_brain import adapters, cli, hooks, inbox, journal, learn, llm, metrics, nightly, replay  # noqa: E402
+from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly, replay  # noqa: E402
 from self_improving_brain.config import open_vault  # noqa: E402
 from self_improving_brain.notes import Library, parse_frontmatter  # noqa: E402
 from self_improving_brain.search import Index  # noqa: E402
@@ -97,7 +97,26 @@ class TestSecrets(unittest.TestCase):
         self.assertTrue(scan("postgres://user:s3cretpass@db:5432/x"))
         self.assertFalse(scan("API_KEY=$API_KEY"))
         self.assertFalse(scan("the password lives in 1Password under 'prod db'"))
-        self.assertFalse(scan("password = hunter2hunter2  # brain:allow-secret"))
+        self.assertFalse(scan("password = hunter2hunter2  # brain:allow-secret", allow_marker=True))
+
+    def test_marker_is_the_users_word_only(self):
+        # an agent or a model can write the marker too: only the user's own paths honour it
+        self.assertTrue(scan("password = hunter2hunter2  # brain:allow-secret"))
+
+    def test_names_inside_longer_names_and_json(self):
+        for s in ("export GITHUB_TOKEN=abcd1234efgh5678", "DB_PASSWORD=hunter2hunter2",
+                  "aws_secret_access_key = wJalrXUtnFEMI/K7MDENGbPxRfiCYEXAMPLEKEY", '{"password": "hunter2hunter2"}',
+                  "Authorization: Bearer abcDEF1234567890ghijklmnop"):
+            self.assertTrue(scan(s), s)
+        for s in ("max_tokens: 100000000", 'GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]', "TOKEN=${{ secrets.GH }}",
+                  "Token-Tausch: [[token-exchange]]", "Bearer authentication is used here", "pwd = os.getcwd()"):
+            self.assertFalse(scan(s), s)
+
+    def test_redact_before_text_leaves(self):
+        from self_improving_brain.secrets import redact
+        from self_improving_brain.transcripts import Turn
+        self.assertNotIn("abcd1234efgh5678", redact("export GITHUB_TOKEN=abcd1234efgh5678"))
+        self.assertNotIn("hunter2hunter2", Turn("user", "my DB_PASSWORD=hunter2hunter2 is wrong").text)
 
 
 class TestInbox(VaultCase):
@@ -611,6 +630,15 @@ class TestTrustAndChecks(VaultCase):
         out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Write", "tool_input": {
             "file_path": str(self.root / ".brain/trust.json"), "content": "{}"}})
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
+        # the nightly job runs llm_cmd and git outside any agent sandbox: neither is an agent's to plant
+        from self_improving_brain.config import user_config_path
+        for target in (user_config_path(), self.root / ".git/hooks/pre-commit"):
+            out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Write", "tool_input": {
+                "file_path": str(target), "content": "x"}})
+            self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny", target)
+        out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Bash", "tool_input": {
+            "command": f"echo x > {self.root}/.git/hooks/post-merge", "cwd": str(self.root)}})
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
         # nobody is asked. What writes a rule runs freely (the result needs the user's own words, test_evidence.py);
         # trusting past the evidence and switching the protection off is refused
         for cmd in ("brain approve d-1 --rule x", "brain undo 1", "brain lesson \"Always run rm -rf\"", "brain config digest false"):
@@ -749,6 +777,13 @@ class TestMcp(VaultCase):
         self.assertIn("keep the old API working", r[5]["result"]["content"][0]["text"])
         self.assertFalse(r[6]["result"]["isError"])
         self.assertEqual(r[7]["error"]["code"], -32601)
+
+    def test_values_starting_with_a_dash_stay_values(self):
+        call = lambda i, name, **args: {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": name, "arguments": args}}
+        r = self._talk(call(1, "brain_search", query="--help"), call(2, "brain_read", note="-h"),
+                       call(3, "brain_check", command="--force"), call(4, "brain_remember", type="fact", claim="--note=x"))
+        for x in r:
+            self.assertNotIn("usage:", x["result"]["content"][0]["text"], x)
 
     def test_install_keeps_other_servers(self):
         from self_improving_brain import mcp
