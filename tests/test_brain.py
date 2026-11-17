@@ -97,7 +97,26 @@ class TestSecrets(unittest.TestCase):
         self.assertTrue(scan("postgres://user:s3cretpass@db:5432/x"))
         self.assertFalse(scan("API_KEY=$API_KEY"))
         self.assertFalse(scan("the password lives in 1Password under 'prod db'"))
-        self.assertFalse(scan("password = hunter2hunter2  # brain:allow-secret"))
+        self.assertFalse(scan("password = hunter2hunter2  # brain:allow-secret", allow_marker=True))
+
+    def test_marker_is_the_users_word_only(self):
+        # an agent or a model can write the marker too: only the user's own paths honour it
+        self.assertTrue(scan("password = hunter2hunter2  # brain:allow-secret"))
+
+    def test_names_inside_longer_names_and_json(self):
+        for s in ("export GITHUB_TOKEN=abcd1234efgh5678", "DB_PASSWORD=hunter2hunter2",
+                  "aws_secret_access_key = wJalrXUtnFEMI/K7MDENGbPxRfiCYEXAMPLEKEY", '{"password": "hunter2hunter2"}',
+                  "Authorization: Bearer abcDEF1234567890ghijklmnop"):
+            self.assertTrue(scan(s), s)
+        for s in ("max_tokens: 100000000", 'GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]', "TOKEN=${{ secrets.GH }}",
+                  "Token-Tausch: [[token-exchange]]", "Bearer authentication is used here", "pwd = os.getcwd()"):
+            self.assertFalse(scan(s), s)
+
+    def test_redact_before_text_leaves(self):
+        from self_improving_brain.secrets import redact
+        from self_improving_brain.transcripts import Turn
+        self.assertNotIn("abcd1234efgh5678", redact("export GITHUB_TOKEN=abcd1234efgh5678"))
+        self.assertNotIn("hunter2hunter2", Turn("user", "my DB_PASSWORD=hunter2hunter2 is wrong").text)
 
 
 class TestInbox(VaultCase):

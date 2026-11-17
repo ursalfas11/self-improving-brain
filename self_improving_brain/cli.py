@@ -998,14 +998,14 @@ def c_scan(a):
                 print(f"✗ {name}: could not read staged content")
                 bad += 1
                 continue
-            for kind, sample in scan(show.stdout.decode("utf-8", errors="replace")):
+            for kind, sample in scan(show.stdout.decode("utf-8", errors="replace"), allow_marker=True):
                 print(f"✗ {name}: {kind} ({sample})")
                 bad += 1
         if bad:
             print("commit blocked by self-improving-brain secret scan. Remove the value or mark the line with brain:allow-secret.")
         return 1 if bad else 0
     text = sys.stdin.read() if not a.files else "\n".join(Path(f).read_text(encoding="utf-8", errors="replace") for f in a.files)
-    found = scan(text)
+    found = scan(text, allow_marker=True)
     for kind, sample in found:
         print(f"✗ {kind} ({sample})")
     return 1 if found else 0

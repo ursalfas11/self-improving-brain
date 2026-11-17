@@ -26,7 +26,7 @@ class Finding:
 
 def lint_note(n: Note, lib: Library, stale_days: int = 45) -> list[Finding]:
     out = []
-    for kind, sample in scan(n.body + "\n" + n.description):
+    for kind, sample in scan(n.body + "\n" + n.description, allow_marker=True):
         out.append(Finding("MUST", n.rel, f"possible secret ({kind}: {sample})"))
     for link in n.links:
         if lib.resolve(link) is None:

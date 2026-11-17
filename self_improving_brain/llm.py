@@ -17,6 +17,7 @@ import shlex
 import subprocess
 
 from .config import Vault
+from .secrets import redact
 from .util import load_json, save_json, today
 
 # Every prompt we send starts with this, so `brain learn` can recognise and skip transcripts of
@@ -108,6 +109,7 @@ def _ask(v: Vault, prompt: str) -> str:
         raise NoLLM("no llm_cmd configured")
     if not budget_left(v):
         raise NoLLM("today's learning budget is used up (llm_budget_usd / llm_max_calls)")
+    prompt = redact(prompt)  # notes and drafts are scanned already; this is the last gate before text leaves
     # a run started from a session hook must not look like part of that session to the CLI
     env = {k: val for k, val in os.environ.items() if k not in SESSION_VARS and not k.startswith("CLAUDE_CODE_MESSAGING")}
     env["BRAIN_HOOKS_OFF"] = "1"
