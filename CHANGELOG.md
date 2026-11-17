@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
 A review for production: what a secret, a planted file or a second laptop could still do, and where the nightly
 loop still stopped and waited for you.
