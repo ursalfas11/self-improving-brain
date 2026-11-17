@@ -21,7 +21,7 @@ from pathlib import Path
 
 from . import adapters, learn, llm, metrics, nightly
 from .config import candidate_roots, is_vault, open_vault
-from .util import load_json
+from .util import load_json, now_iso, save_json
 
 PKG_ROOT = Path(__file__).resolve().parent.parent
 NAMES = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "claude-desktop": "Claude Desktop",
@@ -183,7 +183,9 @@ def choose_llm(o: Out, v, allow: bool) -> bool:
     else:
         cmd = llm.detect()
         if not cmd:
-            o.row("warn", "Learning", "no LLM CLI found (claude, codex, ollama) — install one, then run brain setup again")
+            # you wanted learning: the nightly run looks again each night and switches it on once one is installed
+            save_json(v.path("state", "llm_wanted.json"), {"t": now_iso()})
+            o.row("warn", "Learning", "no LLM CLI found (claude, codex, ollama) — install one: the next night picks it up")
             return False
         v.set("llm_cmd", cmd)
     model = " (Haiku)" if " haiku" in cmd else ""

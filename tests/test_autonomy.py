@@ -951,3 +951,31 @@ class TestBackupRemote(VaultCase):
                           ("https://evil.example/github.com/me/brain", None)):
             m = nightly.GITHUB.search(url)
             self.assertEqual(m.groups() if m else None, want, url)
+
+
+class TestNightHeals(VaultCase):
+    def test_a_later_installed_llm_is_picked_up_only_when_you_wanted_one(self):
+        self.v.cfg["llm_cmd"] = ""
+        with mock.patch.object(llm, "detect", return_value=llm.KNOWN["claude"]), \
+                mock.patch.object(llm, "ask_json", side_effect=llm.NoLLM("stub")):
+            nightly.run(self.v)
+            self.assertFalse(self.v.get("llm_cmd"), "--no-llm stays off: no wish recorded")
+            from self_improving_brain.util import save_json
+            save_json(self.v.path("state", "llm_wanted.json"), {"t": "2026-11-17"})
+            rep = nightly.run(self.v)
+        self.assertEqual(rep["steps"].get("llm_found"), "claude")
+        self.assertTrue(self.v.get("llm_cmd").startswith("claude"))
+        self.assertFalse(self.v.path("state", "llm_wanted.json").exists())
+
+    def test_a_broken_night_is_retried_once_and_a_dead_lock_blocks_nothing(self):
+        from self_improving_brain.util import save_json
+        save_json(self.v.path("state", "schedule.json"), {"t": "2026-11-01T03:17:00", "hour": 3})
+        eight_h = __import__("datetime").datetime.now() - __import__("datetime").timedelta(hours=8)
+        save_json(self.v.path("state", "nightly.json"), {"t": eight_h.isoformat(timespec="seconds"), "broken": ["x"]})
+        self.assertTrue(nightly.overdue(self.v), "a broken night is tried again after a few hours")
+        save_json(self.v.path("state", "nightly.json"), {"t": eight_h.isoformat(timespec="seconds"), "broken": ["x"],
+                                                         "after_broken": True})
+        self.assertFalse(nightly.overdue(self.v), "but only once: the retry broke too, tomorrow is soon enough")
+        save_json(self.v.path("state", "nightly.json"), {"t": "2026-11-01T03:17:00"})
+        self.v.path("state", "nightly.lock").write_text("999999 1000")  # a crashed run, days ago
+        self.assertTrue(nightly.overdue(self.v))

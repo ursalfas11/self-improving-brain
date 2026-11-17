@@ -220,6 +220,15 @@ def _run(v: Vault, quick: bool) -> dict:
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
     s = rep["steps"]
     llm.PROBLEMS.clear()
+    prev = load_json(v.path("state", "nightly.json"), {})
+    rep["after_broken"] = bool(isinstance(prev, dict) and prev.get("broken"))  # this run is the one retry
+    wanted = v.path("state", "llm_wanted.json")
+    if not llm.available(v) and wanted.exists() and not quick:  # setup found no LLM CLI, you wanted one
+        found = llm.detect()
+        if found:
+            v.set("llm_cmd", found)
+            wanted.unlink(missing_ok=True)
+            s["llm_found"] = found.split()[0]
 
     def broken(msg: str) -> None:
         """Something failed: `brain` lists it, and the next session tells you once."""
@@ -364,11 +373,15 @@ def overdue(v: Vault) -> bool:
     launchd skips it when the Mac was off). The first session after that starts it."""
     import datetime as dt
     plan = load_json(v.path("state", "schedule.json"), None)
-    if not isinstance(plan, dict) or v.path("state", "nightly.lock").exists():
+    if not isinstance(plan, dict) or _locked(v):  # a lock left by a crashed run does not block forever
         return False
-    last = str(load_json(v.path("state", "nightly.json"), {}).get("t") or plan.get("t") or "")
+    rep = load_json(v.path("state", "nightly.json"), {})
+    rep = rep if isinstance(rep, dict) else {}
+    last = str(rep.get("t") or plan.get("t") or "")
+    # a night that broke (LLM login, network, backup) is tried once more after a few hours, not only tomorrow
+    hours = 6 if rep.get("broken") and not rep.get("after_broken") else 26
     try:
-        return (dt.datetime.now() - dt.datetime.fromisoformat(last[:19])).total_seconds() > 26 * 3600
+        return (dt.datetime.now() - dt.datetime.fromisoformat(last[:19])).total_seconds() > hours * 3600
     except ValueError:
         return True
 
