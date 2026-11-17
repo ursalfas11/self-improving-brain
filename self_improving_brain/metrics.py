@@ -258,14 +258,3 @@ def autotune(v: Vault) -> str | None:
 
 def refresh_cache(v: Vault) -> None:
     save_json(v.path("state", "learned.json"), build_learned(v))
-
-
-def summary_line(v: Vault) -> str:
-    r = recall_numbers(v)
-    curve = weekly_curve(v, 2)
-    parts = []
-    if r["precision"] is not None:
-        parts.append(f"recall precision {r['precision']:.0%}")
-    if curve:
-        parts.append(f"corrections/100 msgs {curve[-1]['per100']} ({curve[-1]['week']})")
-    return " · ".join(parts)

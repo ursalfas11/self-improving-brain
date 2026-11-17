@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _sandbox  # noqa: E402,F401  (first: a throwaway home)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from self_improving_brain import adapters, cli, hooks, inbox, journal, learn, llm, metrics, nightly, replay  # noqa: E402
+from self_improving_brain import adapters, cli, hooks, inbox, learn, llm, metrics, nightly, replay  # noqa: E402
 from self_improving_brain.config import open_vault  # noqa: E402
 from self_improving_brain.notes import Library, parse_frontmatter  # noqa: E402
 from self_improving_brain.search import Index  # noqa: E402

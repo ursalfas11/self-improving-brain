@@ -21,7 +21,6 @@ LINK = re.compile(r"\[\[([^\]\|#]+)(?:#[^\]\|]*)?(?:\|[^\]]*)?\]\]")
 LESSON_HEAD = re.compile(r"^>\s*\[!lesson\][+-]?\s*(\S+)?\s*(.*)$", re.I)
 LESSON_FIELD = re.compile(r"^>\s*([a-z_]+)\s*:\s*(.*)$", re.I)
 
-LESSON_KEYS = ("rule", "mechanism", "tools", "commands", "paths", "words", "check", "since", "evidence", "class", "retired")
 MECHANISMS = ("always", "reflex", "guard", "skill")
 
 
