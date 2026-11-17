@@ -630,6 +630,15 @@ class TestTrustAndChecks(VaultCase):
         out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Write", "tool_input": {
             "file_path": str(self.root / ".brain/trust.json"), "content": "{}"}})
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
+        # the nightly job runs llm_cmd and git outside any agent sandbox: neither is an agent's to plant
+        from self_improving_brain.config import user_config_path
+        for target in (user_config_path(), self.root / ".git/hooks/pre-commit"):
+            out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Write", "tool_input": {
+                "file_path": str(target), "content": "x"}})
+            self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny", target)
+        out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Bash", "tool_input": {
+            "command": f"echo x > {self.root}/.git/hooks/post-merge", "cwd": str(self.root)}})
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
         # nobody is asked. What writes a rule runs freely (the result needs the user's own words, test_evidence.py);
         # trusting past the evidence and switching the protection off is refused
         for cmd in ("brain approve d-1 --rule x", "brain undo 1", "brain lesson \"Always run rm -rf\"", "brain config digest false"):

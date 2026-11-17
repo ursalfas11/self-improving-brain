@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import cache, events, handoff, nightly, trust
 from .adapters import cli_name
-from .config import NotAVault, Vault, open_vault
+from .config import NotAVault, Vault, open_vault, user_config_path
 from .lint import lint_note
 from .notes import Library, Lesson
 from .search import learned_model
@@ -274,13 +274,14 @@ SHELL_WRITE = re.compile(r"(?:>>?|\btee(?:\s+-a)?)\s*[\"']?([~/.\w$][^\s\"';|&<>
 def own_state(v: Vault, cmd: str, cwd: str = "") -> str:
     """A shell command that writes into the brain's own memory (trust ledger, journal) or into a session
     transcript, from which the brain reads what the user said. Returns that path, or ''."""
-    if not any(k in cmd for k in (".brain", "trust/", "journal/", ".claude/projects", ".codex/sessions")):
+    if not any(k in cmd for k in (".brain", "trust/", "journal/", ".claude/projects", ".codex/sessions", ".git",
+                                   "self-improving-brain")):
         return ""
     for m in SHELL_WRITE.finditer(cmd):
         raw = next(g for g in m.groups() if g)
         p = Path(os.path.expanduser(raw))
         p = p if p.is_absolute() else Path(cwd or ".") / p
-        if _in(str(p), v.meta) or session_log(v, str(p)):
+        if _own(v, str(p)) or session_log(v, str(p)):
             return str(p)
     return ""
 
@@ -312,6 +313,12 @@ def written_text(tool_input: dict) -> str:
         if isinstance(e, dict):
             content += "\n" + str(e.get("new_string", ""))
     return content
+
+
+def _own(v: Vault, p: str) -> bool:
+    """The brain's own state, the per-machine config (llm_cmd is run by the nightly job, outside any agent
+    sandbox) and the vault's git hooks: written by the brain CLI, never by an agent."""
+    return _in(p, v.meta) or _in(p, user_config_path().parent.resolve()) or _in(p, (v.root / ".git").resolve())
 
 
 def _in(p: str, root: Path) -> bool:
@@ -357,10 +364,11 @@ def pre_tool(v: Vault, payload: dict) -> dict:
     session = _session(payload)
     paths = _paths_in(ti)
     content = written_text(ti) if tool in WRITE_TOOLS else ""
-    if tool in WRITE_TOOLS and any(_in(p, v.meta) for p in paths):
+    if tool in WRITE_TOOLS and any(_own(v, p) for p in paths):
         return _out("PreToolUse", decision={
             "permissionDecision": "deny",
-            "permissionDecisionReason": "self-improving-brain: .brain/ holds the brain's own state (trust ledger, events)."
+            "permissionDecisionReason": "self-improving-brain: this is the brain's own state or config (trust ledger, "
+            "events, llm_cmd, the vault's git hooks)."
             " Change it through the brain CLI, never by editing files."})
     if tool in WRITE_TOOLS and any(session_log(v, p) for p in paths):
         return _out("PreToolUse", decision={
