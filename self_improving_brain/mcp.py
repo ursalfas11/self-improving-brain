@@ -118,7 +118,8 @@ class Server:
                  "status": "open", "score": 0.6, "quote": short(what, 500), "context": "(reported by the agent over MCP)",
                  "session": self.session, "source": "mcp", "ts": now_iso(), "rule": short(str(args.get("rule") or ""), 240)}
             append_jsonl(learn.drafts_path(v), d)
-            return f"✓ draft {d['id']} — the user turns it into a lesson with `brain review` (nothing is approved yet)."
+            return (f"✓ draft {d['id']} — it stays a draft: the nightly run only acts on the user's own words. The user "
+                    f"turns it into a lesson with `brain approve {d['id']}` from their own terminal.")
         if name == "brain_remember":
             argv = ["remember", str(args["type"]), str(args["claim"])]
             if args.get("note"):

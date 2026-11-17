@@ -18,7 +18,11 @@ words decide, and the brain settles it without you.
   freely, and inside an agent session what they write needs the same evidence. `brain trust` and changes to
   `trust_mode`, `allow_public_remote`, `guard_brain_commands`, `llm_cmd` and `transcripts` are refused for an
   agent unless you named them in the session.
-- Shell commands that write into `.brain/` or into a session transcript are refused.
+- Shell commands that write into `.brain/` or into a session transcript are refused, and so is an agent's
+  Write or Edit of a transcript. Inside an agent session `brain learn --file` only reads logs below a
+  `transcripts` folder.
+- A correction an agent reported over MCP stays the agent's wording: approved inside an agent session it
+  needs your own words like any lesson an agent wrote. From your own terminal `brain approve` vouches for it.
 - The nightly summary says what was confirmed by your words and what was taken back.
 
 ## 0.2.0

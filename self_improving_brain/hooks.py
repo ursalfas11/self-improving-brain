@@ -276,19 +276,28 @@ def own_state(v: Vault, cmd: str, cwd: str = "") -> str:
     transcript, from which the brain reads what the user said. Returns that path, or ''."""
     if not any(k in cmd for k in (".brain", "trust/", "journal/", ".claude/projects", ".codex/sessions")):
         return ""
-    logs = []
-    for g in v.get("transcripts") or []:
-        try:  # resolved like the target below: /var is /private/var on a Mac
-            logs.append(Path(os.path.expanduser(str(g).split("*")[0])).resolve())
-        except OSError:
-            pass
     for m in SHELL_WRITE.finditer(cmd):
         raw = next(g for g in m.groups() if g)
         p = Path(os.path.expanduser(raw))
         p = p if p.is_absolute() else Path(cwd or ".") / p
-        if _in(str(p), v.meta) or (p.suffix == ".jsonl" and any(_in(str(p), root) for root in logs if str(root) not in ("", "."))):
+        if _in(str(p), v.meta) or session_log(v, str(p)):
             return str(p)
     return ""
+
+
+def session_log(v: Vault, path: str) -> bool:
+    """A session transcript below one of the configured `transcripts` folders: where the brain reads what the user
+    said. An agent neither writes such a file nor hands the brain one from somewhere else."""
+    if Path(path).suffix != ".jsonl":
+        return False
+    for g in v.get("transcripts") or []:
+        try:  # resolved like the target: /var is /private/var on a Mac
+            root = Path(os.path.expanduser(str(g).split("*")[0])).resolve()
+        except OSError:
+            continue
+        if str(root) not in ("", ".", "/") and _in(path, root):
+            return True
+    return False
 
 
 def _paths_in(tool_input: dict) -> list[str]:
@@ -353,6 +362,11 @@ def pre_tool(v: Vault, payload: dict) -> dict:
             "permissionDecision": "deny",
             "permissionDecisionReason": "self-improving-brain: .brain/ holds the brain's own state (trust ledger, events)."
             " Change it through the brain CLI, never by editing files."})
+    if tool in WRITE_TOOLS and any(session_log(v, p) for p in paths):
+        return _out("PreToolUse", decision={
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "self-improving-brain: this is a session transcript the brain reads the user's "
+            "words from. Not a file for an agent to write."})
     if tool in WRITE_TOOLS and any(_in(p, v.root) for p in paths):
         found = scan(content)
         if found:

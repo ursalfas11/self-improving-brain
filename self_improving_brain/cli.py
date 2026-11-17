@@ -649,6 +649,10 @@ def c_init(a):
 
 def c_learn(a):
     v = _vault(a)
+    if a.file and trust.in_agent_session() and not hooks.session_log(v, a.file):
+        # what stands in a transcript counts as your own words: an agent hands in real session logs only
+        print(f"{a.file} is not below a `transcripts` folder (see `brain config`): run this from your own terminal")
+        return 1
     files = [Path(a.file)] if a.file else None
     st = learn.scan(v, files)
     if not a.quiet:
@@ -738,9 +742,11 @@ def c_distill(a):
 
 def c_approve(a):
     v = _vault(a)
-    # The draft comes from your own corrections: taken as it is, the brain vouches for it. With another rule text
-    # or mechanism an agent is saying something new, and that needs your own words like any lesson an agent wrote.
-    trust.hold(trust.in_agent_session() and bool(a.rule or a.mechanism))
+    # A draft from a transcript comes from your own corrections: taken as it is, the brain vouches for it. With
+    # another rule text or mechanism an agent is saying something new, and a draft an agent reported over MCP was
+    # the agent's wording from the start: both need your own words like any lesson an agent wrote.
+    reported = any(d.get("id") == a.id and d.get("source") == "mcp" for d in learn.all_drafts(v))
+    trust.hold(trust.in_agent_session() and (bool(a.rule or a.mechanism) or reported))
     try:
         l = learn.approve(v, a.id, rule=a.rule or "", mechanism=a.mechanism or "", note=a.note or "",
                           words=_csv(a.words), tools=_csv(a.tools), commands=a.commands or "",
