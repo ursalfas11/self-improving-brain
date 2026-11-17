@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 Nothing left to approve. A rule an agent wrote used to stay silent until you ran `brain trust`. Now your own
 words decide, and the brain settles it without you.
@@ -26,6 +26,9 @@ words decide, and the brain settles it without you.
 - A correction an agent reported over MCP stays the agent's wording: approved inside an agent session it
   needs your own words like any lesson an agent wrote. From your own terminal `brain approve` vouches for it.
 - The nightly summary says what was confirmed by your words and what was taken back.
+- Coming from 0.2: a lesson that still waits for `brain trust` is settled by the next nightly run like any
+  other. With evidence it counts, without it is taken back, and `brain undo` brings it back. To keep one for
+  sure, run `brain trust <id>` before you update.
 
 ## 0.2.0
 
