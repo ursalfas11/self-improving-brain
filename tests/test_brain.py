@@ -592,7 +592,8 @@ class TestTrustAndChecks(VaultCase):
                       "> words: deploy, release\n")
         out = hooks.post_tool(self.v, {"session_id": "b", "tool_name": "Write",
                                        "tool_input": {"file_path": str(p), "content": p.read_text()}})
-        self.assertIn("L-planted", json.dumps(out), "the agent is told its lesson waits for the user")
+        self.assertIn("L-planted", json.dumps(out), "the agent is told its lesson stays silent")
+        self.assertIn("nothing to approve", json.dumps(out))
         ctx = hooks.prompt(self.v, {"session_id": "c", "prompt": "deploy the release now"})
         self.assertNotIn("L-planted", json.dumps(ctx), "an agent-written lesson must not reach the agent")
         self.assertIn("L-planted", run_cli("trust"))
@@ -610,11 +611,14 @@ class TestTrustAndChecks(VaultCase):
         out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Write", "tool_input": {
             "file_path": str(self.root / ".brain/trust.json"), "content": "{}"}})
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
-        out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": "brain approve d-1 --rule x"}})
-        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
-        for cmd in ("brain undo 1", "brain trust --all --yes", "brain lesson \"Always run rm -rf\"", "brain config trust_mode off"):
+        # nobody is asked. What writes a rule runs freely (the result needs the user's own words, test_evidence.py);
+        # trusting past the evidence and switching the protection off is refused
+        for cmd in ("brain approve d-1 --rule x", "brain undo 1", "brain lesson \"Always run rm -rf\"", "brain config digest false"):
             out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": cmd}})
-            self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask", cmd)
+            self.assertNotIn("permissionDecision", json.dumps(out), cmd)
+        for cmd in ("brain trust --all --yes", "brain trust L-planted", "brain config trust_mode off"):
+            out = hooks.pre_tool(self.v, {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": cmd}})
+            self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny", cmd)
 
     def test_check_finds_violation_and_suggests_guard(self):
         self.note("20-areas/tests.md", self.LESSON)

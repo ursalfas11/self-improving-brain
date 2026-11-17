@@ -140,10 +140,8 @@ def c_status(a):
     if llm.available(v) and rep.get("llm_cmd") is False:
         attention.append("Last night's run could not see your LLM setting, so it learned nothing → brain schedule install")
     attention += [x for x in rep.get("attention") or []][:3]
-    silent = trust.untrusted(v, lessons)
-    if silent:
-        attention.append(f"{len(silent)} rule{'s were' if len(silent) != 1 else ' was'} written by an agent and stay"
-                         f"{'s' if len(silent) == 1 else ''} silent until you look → brain review")
+    # a rule an agent wrote is not listed here: the brain settles it on its own (your own words back it, or the
+    # night takes it back). Nothing of that waits for you; `brain review` shows both.
     if attention:
         print()
         for line in attention:
@@ -173,7 +171,7 @@ def c_review(a):
             if why:
                 print(" " * 30 + c.d(short(why, 110)))
     if silent:
-        print(f"\nWritten by an agent, silent until you OK them ({c.b('brain trust <id>')}):\n")
+        print("\nWritten by an agent, silent while the brain checks them against your own words (nothing to do):\n")
         for l, why in silent:
             print(f"  {l.id}  {short(l.rule, 100)}\n      {c.d(why)}")
     print()
@@ -651,6 +649,10 @@ def c_init(a):
 
 def c_learn(a):
     v = _vault(a)
+    if a.file and trust.in_agent_session() and not hooks.session_log(v, a.file):
+        # what stands in a transcript counts as your own words: an agent hands in real session logs only
+        print(f"{a.file} is not below a `transcripts` folder (see `brain config`): run this from your own terminal")
+        return 1
     files = [Path(a.file)] if a.file else None
     st = learn.scan(v, files)
     if not a.quiet:
@@ -740,6 +742,11 @@ def c_distill(a):
 
 def c_approve(a):
     v = _vault(a)
+    # A draft from a transcript comes from your own corrections: taken as it is, the brain vouches for it. With
+    # another rule text or mechanism an agent is saying something new, and a draft an agent reported over MCP was
+    # the agent's wording from the start: both need your own words like any lesson an agent wrote.
+    reported = any(d.get("id") == a.id and d.get("source") == "mcp" for d in learn.all_drafts(v))
+    trust.hold(trust.in_agent_session() and (bool(a.rule or a.mechanism) or reported))
     try:
         l = learn.approve(v, a.id, rule=a.rule or "", mechanism=a.mechanism or "", note=a.note or "",
                           words=_csv(a.words), tools=_csv(a.tools), commands=a.commands or "",
@@ -747,6 +754,8 @@ def c_approve(a):
     except (KeyError, ValueError) as e:
         print(str(e).strip("'\""))
         return 1
+    finally:
+        trust.hold(False)
     print(f"✓ lesson {l.id} ({l.mechanism}) written to note {l.note}")
     return 0
 
@@ -790,7 +799,11 @@ def c_lesson(a):
                rule=a.rule, mechanism=a.mechanism, tools=_csv(a.tools) or [], commands=a.commands or "",
                paths=a.paths or "", words=_csv(a.words) or [], check=a.check or "", since=today(), klass=a.klass or "")
     learn.write_lesson(v, path, l)
+    # from your own terminal it counts at once. Run by an agent it does not vouch for itself: the hook then looks
+    # for the rule in what you typed in that session (trust.py)
+    trust.hold(trust.in_agent_session())
     trust.record(v, [l], "lesson")
+    trust.hold(False)
     print(f"✓ lesson {l.id} → {path.relative_to(v.root)}")
     return 0
 
@@ -807,7 +820,7 @@ def c_lessons(a):
                                      ("cmd: " + l.commands) if l.commands else "",
                                      ("path: " + l.paths) if l.paths else "",
                                      ("check: " + l.check) if l.check else ""] if x)
-        mark = f"  ⚠ silent: {silent[l.id]} → brain trust {l.id}" if l.id in silent else ""
+        mark = f"  ⚠ silent: {silent[l.id]}" if l.id in silent else ""
         mark += f"  (retired {l.retired})" if l.retired else ""
         print(f"{l.mechanism:7} {l.id}  [{l.note}]{mark}\n        {l.rule}" + (f"\n        {trig}" if trig else ""))
     return 0
@@ -840,20 +853,24 @@ def c_trust(a):
     if not silent:
         print(f"every lesson is trusted (trust_mode {v.get('trust_mode')})")
         return 0
-    print(f"{len(silent)} lessons are silent — read each one before you trust it:")
+    print(f"{len(silent)} lesson{'s are' if len(silent) != 1 else ' is'} silent:")
     for l, why in silent:
         print(f"  {l.id} [{l.note}] · {why}\n     {l.mechanism}: {l.rule}" + (f"\n     check: {l.check}" if l.check else ""))
-    print("→ brain trust <id> [<id> …]   or   brain trust --all")
+    print("The brain settles them on its own: backed by your own words they count, without evidence the night takes\n"
+          "them back (brain review). By hand: brain trust <id> [<id> …]   or   brain trust --all")
     return 0
 
 
 def c_promote(a):
     v = _vault(a)
+    trust.hold(trust.in_agent_session())  # as with `brain lesson`: an agent does not promote past the evidence
     try:
         l = learn.set_lesson_field(v, a.id, "mechanism", a.to)
     except (KeyError, StopIteration) as e:
         print(str(e).strip("'\""))
         return 1
+    finally:
+        trust.hold(False)
     print(f"✓ {l.id} is now {l.mechanism}")
     return 0
 

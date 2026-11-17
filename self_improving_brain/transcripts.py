@@ -114,6 +114,9 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                         rej = bool(c.get("is_error")) and _rejection(txt)
                         turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
                 continue
+            origin = d.get("origin")
+            if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
+                continue  # sent by another session, an agent or a task: not something you typed
             txt = WRAPPED.sub("", _text_of(content)).strip()
             if not _is_noise(txt):
                 turns.append(Turn("user", txt, ts=ts))

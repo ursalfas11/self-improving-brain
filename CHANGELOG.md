@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+Nothing left to approve. A rule an agent wrote used to stay silent until you ran `brain trust`. Now your own
+words decide, and the brain settles it without you.
+
+### Evidence instead of approval
+- A lesson that appears or changes during an agent's tool call counts once a message **you typed** in that
+  session carries it: at once when the wording is yours, at night when a model finds it and quotes you word for
+  word. Tool results, pasted text, hook and agent text and messages from another session never count.
+- Without evidence the nightly run takes the lesson back after the session has been quiet for two hours: a new
+  one leaves the note, a changed one returns to the form that counted before. Both are in `brain review`;
+  `brain undo` reverses either.
+- An answer you picked in a question dialog counts like a message you typed, except for `always` and `guard`.
+  If only a lesson's trigger changed, naming the lesson and the trigger is enough.
+- `always` and `guard` need you to have said it as a rule. A rule with a secret, or with an address or download
+  command you did not name, never counts on its own.
+- The pre-tool hook no longer asks about brain commands. `brain lesson`, `promote`, `undo` and `approve` run
+  freely, and inside an agent session what they write needs the same evidence. `brain trust` and changes to
+  `trust_mode`, `allow_public_remote`, `guard_brain_commands`, `llm_cmd` and `transcripts` are refused for an
+  agent unless you named them in the session.
+- Shell commands that write into `.brain/` or into a session transcript are refused, and so is an agent's
+  Write or Edit of a transcript. Inside an agent session `brain learn --file` only reads logs below a
+  `transcripts` folder.
+- A correction an agent reported over MCP stays the agent's wording: approved inside an agent session it
+  needs your own words like any lesson an agent wrote. From your own terminal `brain approve` vouches for it.
+- The nightly summary says what was confirmed by your words and what was taken back.
+
 ## 0.2.0
 
 Install once, then forget it. The brain now learns on its own every night, and you keep a veto instead

@@ -817,7 +817,7 @@ def set_lesson_field(v: Vault, lesson_id: str, key: str, value: str, by: str = "
             lines.insert(end, f"> {key}: {value}")
     atomic_write(note.path, set_field("\n".join(lines), "updated", today()))
     lesson = next(l for l in Library(v.root).lessons(retired=True) if l.id == lesson_id)
-    if was_trusted:  # a rule that waits for `brain trust` stays waiting: a change by the brain does not vouch for it
+    if was_trusted:  # a rule whose evidence is not settled stays waiting: a change by the brain does not vouch for it
         trust.record(v, [lesson], by or f"set {key}")
     return lesson
 
