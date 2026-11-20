@@ -40,9 +40,10 @@ can change them with confidence.
 | `distill.py` | inbox → wiki: append, replace the outdated text, or a new note; lint + rollback; journaled |
 | `curate.py` | retire quiet lessons, demote over the `always` cap, keep under the lesson cap |
 | `journal.py` | every autonomous change, per host and append-only; `brain review` and `brain undo` |
-| `llm.py` | the LLM CLI (claude, codex, ollama): headless call, JSON answer, cost booking, daily budget |
+| `llm.py` | the LLM CLI (claude, codex, ollama): headless call, JSON answer, cost booking, daily budget and the share per purpose, reachability probe |
+| `answers.py` | the answer check: each answer against the `always` rules (Stop hook, detached), feedback once in the next prompt, `brain answers`, sharpening of rules that do not work |
 | `metrics.py` | learned recall model, weekly correction curve, token share, weekly digest, lesson health, threshold autotune |
-| `hooks.py` | Claude Code hook protocol: session-start (one line, `always` lessons, repo notes, handoff, the weekly line), prompt, pre-tool (guards, `check:` on writes), post-tool (`check:` violations), pre-compact, session-end |
+| `hooks.py` | Claude Code hook protocol: session-start (one line, `always` lessons, repo notes, handoff, the weekly line), prompt, pre-tool (guards, `check:` on writes), post-tool (`check:` violations), pre-compact, session-end, stop (starts the answer check, detached) |
 | `cache.py` | parsed vault + BM25 index cached in `~/.cache/self-improving-brain/`, keyed by a fingerprint of every note's size and mtime plus the code version |
 | `setup.py` | `brain setup` without questions: vault, agents, PATH, history baseline, LLM CLI, nightly schedule, `--github` backup |
 | `adapters.py` | install/uninstall into Claude Code, Codex, Gemini, project `AGENTS.md`; the plugin's hooks and commands |
@@ -95,10 +96,13 @@ one event per call: characters injected, injections, writes checked, violations.
 ```
 pull       what the other machines pushed (git sync on)                    no LLM
 learn      new transcripts: corrections → drafts, turns → events          no LLM
+probe*     one tiny call: unreachable → a broken night, tried again later  1 call
 judge*     draft groups → rule | fact | once | noise                      ≤ 3 batches of 20 groups
+merge*     draft groups that ask for the same thing in other words        1 call, ≤ 150 groups
 adopt      fixed rules: lessons, facts, sharpenings, escalations          no LLM
 extract*   new sessions → inbox claims                                     ≤ 8 sessions, ≤ 24k chars a call
-distill*   inbox claims → notes                                            ≤ 15 claims
+distill*   inbox claims → notes                                            ≤ 15 claims, ≤ 50 % of the day
+answers*   always rules the answer check finds broken → sharper wording   ≤ 2 rules
 curate     retire, demote                                                  no LLM
 replay · cache · autotune · index · lint · sync
 ```
@@ -117,8 +121,9 @@ hangs (a password prompt, a dead remote) gives up after five minutes.
 `distill` replaces outdated text only when it is one line found exactly once, and never inside a lesson, the
 frontmatter or code. A new note never takes a name in use. No item waits for you: a claim whose answer could not
 be used (an unknown note, a target line that is not there, a rule it would touch, a rollback by lint) is tried
-again the next night with the reason in the prompt, and dropped after three nights, journaled as `drop`
-(`brain undo` puts it back in the inbox). An answer the LLM garbled is not counted against the claim; the item
+again the next night with the reason in the prompt; after three nights it is parked for a week (`parked_until`)
+and tried again, at most three times, and only then dropped, journaled as `drop` (`brain undo` puts it back in
+the inbox). An item the LLM decided to skip is closed at once. An answer the LLM garbled is not counted against the claim; the item
 only moves behind the others, so a broken CLI can neither empty the inbox nor block it. A bad answer is about that item; an LLM that is
 gone or out of budget stops the step. Text an IDE or Codex puts in front of your message (open files, your
 `AGENTS.md`) is not read as something you said, and only a refusal at the start of a tool result counts as one.
@@ -141,11 +146,18 @@ The judge only sorts. What changes the vault is decided by fixed rules in `learn
   narrow and `commands`/`paths` decide (`hooks.fires`): `tools: Bash` with a command regex fires on that
   command, not on every shell call. A broad tool alone (Bash, Edit, Read …) never makes a guard.
 - One group that fails (a disk error, a note that no longer parses) is logged and skipped; the others go on.
-- Drafts that never came back expire after 120 days.
+- Drafts that never came back expire after 120 days; a single case (one session, not explicit) after 30.
+- A **guard** from words said for the moment ("not yet", "for now", "erstmal", "this time"), with nothing that
+  makes it lasting, is closed as `once`.
+- Groups the nightly `merge` found to ask for the same thing (state/draft_pairs.json) count as one group, so their
+  sessions add up.
 - A correction the judge marked as the **opposite of an existing lesson** is settled by date and wording
   (`learn._contradiction`), never put to the user. Drafts older than the lesson's `since` are closed: the lesson
   replaced them. Newer drafts replace the lesson when one of them is explicit; the old lesson is retired and the
-  change is journaled as `replace`. Everything else waits and expires.
+  change is journaled as `replace`. A newer draft that is not explicit is closed at once (said plainly, it comes
+  back as a new draft). The judge also sees the user's own instruction files (`~/.claude/CLAUDE.md`,
+  `~/CLAUDE.md`, `~/.codex/AGENTS.md`, without the brain's block), so a standing permission there is not undone by
+  a draft that asks for the question again.
 
 ## Self-care
 
@@ -159,6 +171,7 @@ to-do list for the user:
 | reflex or skill rule without a trigger | the rule's own words as `words:` | no |
 | rule longer than 240 characters | one shorter sentence; code spans and numbers must survive | yes |
 | near-duplicate notes | verdict `different` is remembered, `same` merges both bodies into the kept note and turns the other into a pointer | yes |
+| note larger than `lint.SPLIT_AT` (7,500 tokens) with 3+ `##` sections | the sections move word for word into parts (`part_of: <note>`, a link back); the note keeps its intro and lists the parts. Refused if a line would get lost or a link break; never a hub or a note with rules; ≤ 2 a night | no |
 
 A fix is rolled back when it would lose a number, link, code span or rule, add a secret, or raise a new MUST
 finding. Each one is a `care` or `merge` line in the journal; an undone fix is vetoed for good. A finding that

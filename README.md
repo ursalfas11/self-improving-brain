@@ -98,7 +98,7 @@ Decisions, facts about your projects and pitfalls from your sessions land in the
 <td valign="top">
 
 ### Cleans up after itself
-A rule that keeps getting broken gets sharper, then stricter. A rule that never fired in 60 days retires. At most eight rules are always on. Notes too: a missing description, an orphan or a near-duplicate is fixed at night, checked, and undoable.
+A rule that keeps getting broken gets sharper, then stricter; an `always` rule is checked against every answer, and one that keeps being broken is worded sharper. A rule that never fired in 60 days retires. At most eight rules are always on. Notes too: a missing description, an orphan or a near-duplicate is fixed at night, a note too large to read whole is split by its sections without losing a line, all of it checked and undoable.
 
 </td>
 </tr>
@@ -339,12 +339,12 @@ A rule is a callout **in the note that owns the topic**, so there is no separate
 At 03:17 (launchd, cron or Task Scheduler; a night the laptop slept through runs at your next session), the brain runs one pass and backs itself up to your **private** repo:
 
 ```text
-pull → read sessions → weigh corrections* → adopt rules → check GitHub → extract knowledge* → file it* → clean up → tidy up* → replay → tune recall → INDEX.md → lint → git sync
+pull → read sessions → probe the LLM → weigh corrections* → join drafts that mean the same* → adopt rules → check GitHub → extract knowledge* → file it* → sharpen rules the answer check finds broken* → clean up → tidy up* → replay → tune recall → INDEX.md → lint → git sync
 ```
 
 **Check GitHub:** notes fall behind the moment someone merges. The brain collects the pull requests and issues your notes mention (`acme/api#12`, `api#12` for a repository it knows, or the link), asks GitHub for their state in one batched call through your `gh` login, and files a correction for every line that still calls a merged or closed one open. The correction goes the way every fact goes, so it shows in `brain review` and can be undone. Short names come from the clones on your machine (`brain config repo_roots '["~/code"]'`) or from `brain config github_repos '{"api": "acme/api"}'`. What leaves your machine: owner, repository and number of those references, to GitHub, with your own login. Off: `brain config github_check false`.
 
-\*These steps use the LLM CLI that setup found, under a hard daily budget: `llm_budget_usd` 0.10 and `llm_max_calls` 40. When the budget is used up, the rest waits for the next night. The brain never holds an API key. Another CLI: `brain config llm_cmd "codex exec -"` or `"ollama run llama3.1"`.
+\*These steps use the LLM CLI that setup found, under a hard daily budget: `llm_budget_usd` 0.10 and `llm_max_calls` 40. Filing facts gets at most half of it, the answer check after each answer (`brain answers`, off with `brain config answer_check false`) at most a quarter. When the budget is used up, the rest waits for the next night. If the probe finds the LLM unreachable, the night is tried again a few hours later. The brain never holds an API key. Another CLI: `brain config llm_cmd "codex exec -"` or `"ollama run llama3.1"`.
 
 <details>
 <summary><b>📋 Commands</b></summary>
@@ -478,7 +478,7 @@ Yes: `brain setup --vault ~/notes`. It adds `.brain/`, a generated `INDEX.md` an
 
 ## Contributing
 
-Issues and PRs are very welcome, above all adapters for more agents, transcript parsers and Brain-Bench tasks. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`. The README images are built by `python3 docs/assets/src/build.py`.
+Issues and PRs are very welcome, above all adapters for more agents, transcript parsers and Brain-Bench tasks. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md). To run the tests: `python3 -m unittest discover -s tests`. A change to anything the hooks run also goes through `python3 eval/e2e_claude.py`: real Claude Code sessions against a throwaway vault, a few cents with haiku. The README images are built by `python3 docs/assets/src/build.py`.
 
 <div align="center">
 

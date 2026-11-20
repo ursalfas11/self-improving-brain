@@ -16,6 +16,14 @@ BRAIN_VAULT=/tmp/v ./brain init /tmp/v && BRAIN_VAULT=/tmp/v BRAIN_DEBUG=1 ./bra
 ```
 `BRAIN_DEBUG=1` lets hook exceptions surface instead of being swallowed.
 
+Before you push a change to anything the hooks run (the package, `brain`, `hooks/hooks.json`), run the hooks in
+real Claude Code sessions too:
+```bash
+python3 eval/e2e_claude.py          # a throwaway vault, none of your settings; a few cents with haiku
+python3 eval/e2e_claude.py --status # 0 if it was green for the code as it is now
+```
+`--status` fits a pre-push hook: `python3 eval/e2e_claude.py --status || exit 1` in `.git/hooks/pre-push`.
+
 ## Most wanted
 - native hooks for Codex CLI / Gemini CLI / others (see `docs/architecture.md` → Adding an agent)
 - transcript parsers for Cursor, Aider, Grok CLI

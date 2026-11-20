@@ -58,6 +58,17 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/brain\" hook stop --plugin",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [

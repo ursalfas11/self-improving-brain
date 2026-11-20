@@ -7,9 +7,11 @@ of the child process.
 
 Every call counts against a daily budget (`llm_budget_usd`, `llm_max_calls`), kept per machine in
 `.brain/state/llm.json`. Claude Code reports what a call cost; for other CLIs only the calls are counted.
+One purpose may use only its SHARE of the day, so filing facts can not starve the rest of the night.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -82,14 +84,43 @@ def _book(v: Vault, usd: float | None, tokens: int) -> None:
     row["calls"] += 1
     row["usd"] = round(row["usd"] + (usd or 0.0), 6)
     row["tokens"] += tokens
+    if _PURPOSE:
+        by = row.setdefault("by", {}).setdefault(_PURPOSE, {"calls": 0, "usd": 0.0})
+        by["calls"] += 1
+        by["usd"] = round(by["usd"] + (usd or 0.0), 6)
     for old in sorted(d)[:-90]:  # three months are enough for every number the brain shows
         del d[old]
     save_json(_ledger_path(v), d)
 
 
-def budget_left(v: Vault) -> bool:
+# At most this share of the day's budget per purpose. Filing facts once used up the whole day on its own, and
+# the upkeep after it got no call. The answer check runs after every answer, so it gets a small share.
+SHARE = {"distill": 0.5, "answers": 0.25}
+_PURPOSE = ""
+
+
+@contextlib.contextmanager
+def purpose(name: str):
+    """Book the calls inside to `name` and hold them to its SHARE: `with llm.purpose("distill"): ...`"""
+    global _PURPOSE
+    before, _PURPOSE = _PURPOSE, name
+    try:
+        yield
+    finally:
+        _PURPOSE = before
+
+
+def budget_left(v: Vault, what: str | None = None) -> bool:
     s = spent(v)
-    return s["calls"] < int(v.get("llm_max_calls")) and s["usd"] < float(v.get("llm_budget_usd"))
+    max_calls, max_usd = int(v.get("llm_max_calls")), float(v.get("llm_budget_usd"))
+    if not (s["calls"] < max_calls and s["usd"] < max_usd):
+        return False
+    what = _PURPOSE if what is None else what
+    share = SHARE.get(what)
+    if not share:
+        return True
+    by = (s.get("by") or {}).get(what) or {}
+    return by.get("calls", 0) < max(1, int(share * max_calls)) and by.get("usd", 0.0) < share * max_usd
 
 
 PROBLEMS: list[str] = []  # why the LLM stopped in this process: the nightly report shows it, not only the log
@@ -108,6 +139,8 @@ def _ask(v: Vault, prompt: str) -> str:
     if not cmd:
         raise NoLLM("no llm_cmd configured")
     if not budget_left(v):
+        if _PURPOSE in SHARE and budget_left(v, ""):
+            raise NoLLM(f"today's learning budget for {_PURPOSE} is used up (at most {SHARE[_PURPOSE]:.0%} of the day)")
         raise NoLLM("today's learning budget is used up (llm_budget_usd / llm_max_calls)")
     prompt = redact(prompt)  # notes and drafts are scanned already; this is the last gate before text leaves
     # a run started from a session hook must not look like part of that session to the CLI
@@ -129,9 +162,9 @@ def _ask(v: Vault, prompt: str) -> str:
             usd = float(d.get("total_cost_usd") or 0.0)
             tokens = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens",
                                                        "cache_read_input_tokens", "output_tokens")) or tokens
-            if d.get("is_error"):
+            if d.get("is_error"):  # which error it was, not only that one happened
                 _book(v, usd, tokens)
-                raise NoLLM(f"llm_cmd failed: {str(d.get('result'))[:300]}")
+                raise NoLLM(f"llm_cmd failed ({d.get('subtype') or 'error'}): {str(d.get('result'))[:300]}")
             out = str(d.get("result") or "")
     except (json.JSONDecodeError, TypeError, ValueError):
         pass
@@ -139,6 +172,22 @@ def _ask(v: Vault, prompt: str) -> str:
     if res.returncode != 0:
         raise NoLLM(f"llm_cmd failed ({res.returncode}): {res.stderr.strip()[:300]}")
     return out
+
+
+def reachable(v: Vault) -> tuple[bool, str]:
+    """One tiny call before the steps that think. A machine asleep or offline fails every call within a second;
+    without this the night would count as done and the steps that need the LLM would be lost for the day.
+    -> (ok, why). An exhausted budget is not "unreachable": the steps themselves stop at the budget."""
+    if not budget_left(v, ""):
+        return True, "budget"
+    try:
+        with purpose("probe"):
+            ask_json(v, MARKER + '\nReply with exactly this JSON: {"ok": true}')
+    except NoLLM as e:  # in PROBLEMS now: the nightly report names the failed call like any other
+        return False, re.sub(r"\s+", " ", str(e)).strip()[:160]
+    except (ValueError, OSError):
+        pass  # it answered, only not as asked: reachable
+    return True, ""
 
 
 def ask_json(v: Vault, prompt: str):

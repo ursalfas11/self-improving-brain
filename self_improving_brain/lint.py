@@ -24,6 +24,10 @@ class Finding:
         return f"{self.level:6} {self.note}: {self.msg}"
 
 
+# A note larger than this (estimated tokens) is read whole far too often; care.py splits it by its sections.
+SPLIT_AT = 7500
+
+
 def lint_note(n: Note, lib: Library, stale_days: int = 45) -> list[Finding]:
     out = []
     for kind, sample in scan(n.body + "\n" + n.description, allow_marker=True):
@@ -37,6 +41,9 @@ def lint_note(n: Note, lib: Library, stale_days: int = 45) -> list[Finding]:
         out.append(Finding("SHOULD", n.rel, "orphan: links to nothing — add its hub, e.g. [[hub-…]]"))
     if n.type == "project" and n.updated and (days_since(n.updated) or 0) > stale_days:
         out.append(Finding("SHOULD", n.rel, f"stale: project not updated for {days_since(n.updated)} days"))
+    if not n.is_hub and n.tokens > SPLIT_AT and not n.meta.get("part_of"):
+        out.append(Finding("SHOULD", n.rel, f"large: ~{n.tokens} tokens (more than {SPLIT_AT}) — the nightly care "
+                                            "splits it into parts by its ## sections, text unchanged"))
     for l in n.lessons:
         if len(l.rule) > 240:
             out.append(Finding("SHOULD", n.rel, f"{l.id}: rule longer than 240 chars"))

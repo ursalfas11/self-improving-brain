@@ -769,7 +769,8 @@ def c_reject(a):
 
 def c_drafts(a):
     v = _vault(a)
-    gs = learn.groups([d for d in learn.drafts(v, None) if d.get("status") in ("open", "held")])
+    gs = learn.groups([d for d in learn.drafts(v, None) if d.get("status") in ("open", "held")],
+                      pairs=learn.merge_pairs(v))
     if not gs:
         print("no drafts waiting")
         return 0
@@ -782,7 +783,38 @@ def c_drafts(a):
             print(f"   rule:      {d['rule']}")
         if d.get("conflicts"):
             print(f"   contradicts the rule {d['conflicts']}: replaces it if you said so plainly after the rule "
-                  "existed, otherwise it expires")
+                  "existed, otherwise it is closed")
+    return 0
+
+
+def c_answers(a):
+    """The answer check of the `always` rules: per rule, answers checked and broken, now and the window before."""
+    from . import answers
+    v = _vault(a)
+    if a.check:  # the Stop hook, detached
+        if not a.file or (trust.in_agent_session() and not hooks.session_log(v, a.file)):
+            return 1
+        r = answers.check(v, Path(a.file), a.session or "")
+        if not a.quiet:
+            print(json.dumps(r, ensure_ascii=False))
+        return 0
+    now = answers.stats(v, a.days)
+    import time
+    before = answers.stats(v, a.days, time.time() - a.days * 86400)
+    if not now:
+        state = "on" if v.get("answer_check") else "off (brain config answer_check true)"
+        print(f"no answer checked in the last {a.days} days · answer check {state}"
+              + ("" if v.get("llm_cmd") else " · needs llm_cmd"))
+        return 0
+    print(f"answer check of the always rules · last {a.days} days (the {a.days} before in brackets)\n")
+    print(f"  {'rule':<36} {'checked':>8} {'broken':>8} {'share':>7} {'(before)':>9}")
+    for i, x in sorted(now.items(), key=lambda kv: -(kv[1]["share"] or 0)):
+        b = (before.get(i) or {}).get("share")
+        was = "–" if b is None else f"{100 * b:.0f}%"
+        print(f"  {i:<36} {x['checked']:>8} {x['broken']:>8} {100 * (x['share'] or 0):>6.0f}% {was:>9}")
+    weak = answers.ineffective(v)
+    if weak:
+        print("\n  not working (the nightly run words them more concretely): " + ", ".join(w["id"] for w in weak))
     return 0
 
 
@@ -1092,6 +1124,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--result"); s.set_defaults(f=c_inbox)
     s = add("distill", "inbox -> notes (--auto with the LLM; else a work packet for your agent)", True)
     s.add_argument("--auto", action="store_true"); s.set_defaults(f=c_distill)
+    s = add("answers", "the answer check: how often each always rule is broken", True)
+    s.add_argument("--days", type=int, default=14); s.add_argument("--check", action="store_true")
+    s.add_argument("--file"); s.add_argument("--session"); s.add_argument("--quiet", action="store_true")
+    s.set_defaults(f=c_answers)
     s = add("drafts", "corrections waiting for the nightly judge or for a second time", True)
     s.add_argument("--limit", type=int, default=20); s.set_defaults(f=c_drafts)
     s = add("approve", "turn a draft into a rule by hand", True)

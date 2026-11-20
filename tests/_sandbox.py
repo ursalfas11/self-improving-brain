@@ -15,3 +15,7 @@ for key, sub in (("XDG_CONFIG_HOME", ".config"), ("XDG_CACHE_HOME", ".cache"), (
 for key in ("BRAIN_VAULT", "BRAIN_HOST", "BRAIN_AGENT", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID",
             "CLAUDE_CODE_SSE_PORT"):
     os.environ.pop(key, None)
+# run from a git hook (pre-commit, pre-push), git sets GIT_INDEX_FILE, GIT_DIR and friends: every git call a test makes
+# in its own throwaway repo would then act on the repo that runs the hook
+for key in [k for k in os.environ if k.startswith("GIT_")]:
+    os.environ.pop(key, None)

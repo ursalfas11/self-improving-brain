@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+- Text you pasted into a message no longer counts as your own words. Claude Code repeats the id in the closing
+  tag, which the check did not expect, so a pasted rule could vouch for itself.
+
+### Rules that are there but do not work
+- **Answer check.** `always` rules sit in every session, so nothing measured whether they hold. Now, after each
+  answer, the Stop hook starts a detached check: the LLM reads the answer against your `always` rules, and a breach
+  counts only with a word-for-word quote from the answer or its tool calls. It is shown once, with the quote, in
+  your next prompt of that session. `brain answers` lists per rule how many answers were checked and broken, now
+  and in the window before. A rule broken in a fifth of 20+ answers that does not get better is worded sharper at
+  night, once (journaled, `brain undo` takes it back). Uses `llm_cmd` and at most a quarter of the day's budget;
+  `brain config answer_check false` turns it off.
+
+### Nothing piles up
+- Drafts: a single case (one session, not said as lasting) that did not come back within 30 days expires,
+  instead of 120. A stop said for the moment ("not yet", "for now", "erstmal") is steering of one task, not a
+  guard. A correction against a rule you have that was not said plainly is closed at once instead of being judged
+  again every night. Drafts that ask for the same thing in other words are joined by the LLM at night, so one rule
+  said three ways reaches two sessions.
+- The judge sees your standing instructions (`~/.claude/CLAUDE.md`, `~/CLAUDE.md`, `~/.codex/AGENTS.md`, without
+  the brain's own block): a permission you gave for good is not undone by a draft that asks for the question again.
+- Inbox: a claim that could not be filed in three nights is parked for a week and tried again, at most three
+  times, before it is dropped. An item the LLM decided to skip is still closed at once.
+- Care splits a note larger than ~7,500 tokens into parts by its `##` sections, word for word: the note stays
+  the way in and lists its parts, each part links back (`part_of`), and a check refuses the split if a single line
+  would get lost. No LLM. A note that carries rules stays whole. `brain undo` makes it one note again. Lint shows
+  such a note as `large`.
+
+### The nightly run
+- One tiny LLM call first: when the machine is offline or asleep, the night counts as broken and is tried again
+  a few hours later, instead of passing as a quiet night with nothing learned.
+- Each purpose gets at most its share of the day's budget (filing facts 50 %, the answer check 25 %), so one step
+  can no longer use up the whole day. A failed `claude` call says which error it was.
+
+### Tested in real sessions
+- `eval/e2e_claude.py` runs the hooks in real `claude -p` sessions against a throwaway vault, with exactly the
+  hooks `brain install claude` writes and none of your settings: session start, a rule on a keyword, reflex and
+  guard before Bash, the secret block and the lint around Write, the handoff at `/compact`, the answer check and its
+  feedback, the transcript read at the session end. `--status` says whether it was green for the code as it is
+  now, for a pre-push hook. The test sessions never become drafts and their transcripts are removed.
+
 ## 0.3.1
 
 A review for production: what a secret, a planted file or a second laptop could still do, and where the nightly

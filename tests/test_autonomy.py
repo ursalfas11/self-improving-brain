@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import date as _date, timedelta as _timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -24,8 +25,13 @@ from self_improving_brain.transcripts import parse  # noqa: E402
 from self_improving_brain.util import append_jsonl, read_jsonl, today  # noqa: E402
 
 
+def _ago(days: int) -> str:
+    return (_date.today() - _timedelta(days=days)).isoformat()
+
+
 def held(i, session, rule="Never push to main; open a pull request.", quote="why did you push to main", **kw):
-    return {"id": f"d-{i}", "t": f"2026-10-{10 + i:02d}T10:00:00", "ts": f"2026-10-{10 + i:02d}T10:00:00",
+    # recent, one day apart: a single case older than learn.SINGLE_DAYS expires instead of waiting
+    return {"id": f"d-{i}", "t": f"{_ago(25 - i)}T10:00:00", "ts": f"{_ago(25 - i)}T10:00:00",
             "status": "held", "verdict": "rule", "score": 0.85, "kind": "lesson", "quote": quote, "session": session,
             "source": "claude", "rule": rule, "suggest": {"mechanism": "reflex", "words": ["push", "main"]}, **kw}
 
@@ -129,10 +135,11 @@ class TestAdopt(VaultCase):
         out = learn.adopt(self.v)
         self.assertEqual((out["rules"], out.get("superseded")), ([], 1))
         self.assertEqual([d["status"] for d in learn.all_drafts(self.v) if d["id"] == "d-3"], ["expired"])
-        # newer, but said in passing: it waits and nothing changes
+        # newer, but said in passing: closed at once, nothing changes (said plainly, it would come back as a new draft)
         self.add(held(4, "s4", rule=ask, quote="ask me first", conflicts=lid, **later))
         out = learn.adopt(self.v)
-        self.assertEqual((out["rules"], out["waiting"]), ([], 1))
+        self.assertEqual((out["rules"], out.get("closed"), out["waiting"]), ([], 1, 0))
+        self.assertEqual([d["status"] for d in learn.all_drafts(self.v) if d["id"] == "d-4"], ["expired"])
         self.assertNotIn(ask, self.rules())
         with mock.patch.object(llm, "available", return_value=False):
             rep = nightly.run(self.v, quick=True)
@@ -153,7 +160,7 @@ class TestAdopt(VaultCase):
         self.add(held(1, "s1"), held(2, "s2"))
         lid = learn.adopt(self.v)["rules"][0]
         self.add(held(3, "s0", existing=lid))  # dated before the rule existed
-        learn.set_lesson_field(self.v, lid, "since", "2026-10-30")
+        learn.set_lesson_field(self.v, lid, "since", _ago(25 - 4))  # the day after the draft
         out = learn.adopt(self.v)
         self.assertEqual((out["sharpened"], out["escalated"]), ([], []))
 
@@ -743,17 +750,26 @@ class TestSafeguards(VaultCase):
         self.assertEqual(len(by), 3)
         self.assertEqual(sorted(i.get("stumbles", 0) for i in by.values()), [1, 1, 2], "each one got its turn")
         self.assertFalse(any(i.get("tries") or i.get("conflict") for i in by.values()))
-        # an answer that cannot be used for this claim: told why the next night, dropped after three
+        # an answer that cannot be used for this claim: told why the next night; after three nights parked for a
+        # week (by then upkeep has often tidied around it), at most three times, then dropped
         seen = []
 
         def nowhere(v, prompt):
             seen.append(prompt)
             return {"action": "append", "note": "no-such-note", "text": "- Deploys run on Fridays only."}
-        for night in range(distill.TRIES_MAX):
-            with mock.patch.object(llm, "ask_json", nowhere):
-                out = distill.auto(self.v, limit=3)
-            if night == 0:
-                self.assertTrue(all("tried again next night (1/3)" in line for line in out), out)
+        for rnd in range(distill.PARK_ROUNDS + 1):
+            day = (_date.today() + _timedelta(days=rnd * distill.PARK_DAYS)).isoformat()
+            with mock.patch.object(distill, "today", lambda d=day: d):
+                for night in range(distill.TRIES_MAX):
+                    with mock.patch.object(llm, "ask_json", nowhere):
+                        out = distill.auto(self.v, limit=3)
+                    if (rnd, night) == (0, 0):
+                        self.assertTrue(all("tried again next night (1/3)" in line for line in out), out)
+                if rnd < distill.PARK_ROUNDS:
+                    self.assertTrue(all(f"parked for 7 days, then tried again ({rnd + 1}/3)" in line for line in out), out)
+                    with mock.patch.object(llm, "ask_json", side_effect=AssertionError("a parked item waits")):
+                        self.assertEqual(distill.auto(self.v, limit=3), [])
+                    self.assertEqual(len(inbox.items(self.v)), 3, "parked, not dropped")
         self.assertNotIn("An earlier attempt", seen[0])
         self.assertIn("An earlier attempt to file this claim failed: note 'no-such-note' does not exist", seen[-1])
         self.assertEqual(inbox.items(self.v), [], "nothing is left for you")

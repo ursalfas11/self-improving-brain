@@ -2,13 +2,16 @@
 
   pull       what your other machines learned (if the vault syncs through git)
   learn      mine new transcripts for your corrections (no LLM)
+  probe      one tiny LLM call: unreachable (asleep, offline) = a broken night, tried again in a few hours
   judge      the LLM sorts them: lasting rule, one-off steering, fact to remember, or noise   (budgeted)
+  merge      the LLM joins drafts that ask for the same thing in other words                 (budgeted)
   adopt      policy, no LLM: what you said twice or as "always/never" becomes a rule; a rule that comes
              back gets sharpened, then escalated
   github     the pull requests and issues your notes mention: a line that calls a merged one open
              becomes a claim, so it is corrected the same night (no LLM, one batched `gh` call)
   extract    the LLM reads what is new in your sessions for decisions, facts, pitfalls       (budgeted)
   distill    files them into the notes; a newer statement replaces an outdated one           (budgeted)
+  answers    an always rule the answer check finds broken again and again is worded sharper  (budgeted)
   curate     quiet rules retire, the rule set stays within its caps
   replay     past corrections against today's rules: would they have been caught?
   cache      rebuild the learned recall model; autotune the recall threshold from its precision
@@ -251,7 +254,14 @@ def _run(v: Vault, quick: bool) -> dict:
     step("learn", lambda: learn.scan(v))
     think = llm.available(v) and not quick
     if think:
+        # one tiny call first: a machine asleep or offline fails every call within a second, and the night would
+        # count as done with nothing learned. Unreachable = broken, so the run is tried again after a few hours.
+        ok, why = llm.reachable(v)
+        s["probe"] = "ok" if ok else f"unreachable: {why}"
+        think = ok  # the failed call is in llm.PROBLEMS: reported below as broken, so the night is tried again
+    if think:
         step("judge", lambda: learn.judge(v))
+        step("merge", lambda: learn.merge(v))  # the same rule in other words, before the adoption counts sessions
     if not quick:
         # rules an agent wrote: backed by your own words they count, without evidence they are taken back. Before
         # the adoption, so the confirmed ones are part of what it sees. Nothing waits for you.
@@ -262,6 +272,9 @@ def _run(v: Vault, quick: bool) -> dict:
     if think:
         step("extract", lambda: extract.run(v))
         step("distill", lambda: distill.auto(v, limit=int(v.get("distill_max"))))
+    if think:
+        from . import answers
+        step("answers", lambda: answers.sharpen(v))  # always rules the answer check finds broken again and again
     step("curate", lambda: curate.run(v))
     step("care", lambda: care.run(v, think))
     if not quick:
