@@ -192,6 +192,7 @@ CLAUDE_HOOKS = [
     ("PreToolUse", "*", "pre-tool", 10, False),
     ("PostToolUse", "Read|Bash|Write|Edit|MultiEdit|NotebookEdit", "post-tool", 15, False),
     ("PreCompact", None, "pre-compact", 20, False),
+    ("Stop", None, "stop", 10, False),  # sync: an async one is cancelled when -p exits
     ("SessionEnd", None, "session-end", 5, True),
 ]
 
@@ -257,19 +258,28 @@ def _ours_command(f: Path) -> bool:
     return any(l.startswith("description:") and "brain" in l.lower() for l in head.splitlines())
 
 
-def install_claude(v: Vault) -> list[str]:
-    p = _claude_settings()
-    data = _load_settings(p)
-    _backup(p)
-    hooks = data.setdefault("hooks", {})
+def claude_hook_groups() -> dict:
+    """{event: the hook group `brain install claude` writes}. One source for install and for the Claude Code test
+    suite (eval/e2e_claude.py): what is tested is exactly what gets installed."""
+    out = {}
     for event, matcher, handler, timeout, is_async in CLAUDE_HOOKS:
-        groups = [g for g in hooks.get(event, []) if not _ours(g)]
         h = {"type": "command", "command": f"{brain_cmd()} hook {handler}  # {HOOK_TAG}", "timeout": timeout}
         if is_async:
             h["async"] = True
         g = {"hooks": [h]}
         if matcher:
             g["matcher"] = matcher
+        out[event] = g
+    return out
+
+
+def install_claude(v: Vault) -> list[str]:
+    p = _claude_settings()
+    data = _load_settings(p)
+    _backup(p)
+    hooks = data.setdefault("hooks", {})
+    for event, g in claude_hook_groups().items():
+        groups = [x for x in hooks.get(event, []) if not _ours(x)]
         groups.append(g)
         hooks[event] = groups
     _write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n")

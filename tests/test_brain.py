@@ -416,7 +416,9 @@ class TestImprovements(VaultCase):
         self.assertIn("1 session · 1 of your messages", again, "a second setup still knows your history")
         settings = json.loads((Path(os.environ["HOME"]) / ".claude/settings.json").read_text())
         self.assertIn("SessionStart", settings["hooks"])
-        self.assertNotIn("Stop", settings["hooks"])
+        stop = json.dumps(settings["hooks"]["Stop"])
+        self.assertIn("hook stop", stop, "the Stop hook only starts the answer check, detached")
+        self.assertNotIn('"async"', stop, "an async Stop hook is cancelled when a headless session exits")
         self.assertIn("brain setup --github", out)  # a backup is offered, never created unasked
 
 

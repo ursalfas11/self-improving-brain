@@ -255,6 +255,10 @@ def prompt(v: Vault, payload: dict) -> dict:
             f"{h.note.name} — {short(h.note.description, 110)}" for h in chosen))
     lines += [f"LESSON {l.id}: {l.rule}" for l in rules]
     events.save_session_state(v, session, st)
+    from . import answers
+    fb = answers.feedback(v, session)  # what the answer check found in the last answer: once, with the quote
+    if fb:
+        lines.insert(0, fb)
     return _out("UserPromptSubmit", "\n".join(lines)) if lines else {}
 
 
@@ -503,6 +507,16 @@ def _background(v: Vault, *args: str) -> None:
         pass
 
 
+def stop(v: Vault, payload: dict) -> dict:
+    """The agent finished an answer: check it against the `always` rules, detached (answers.py). Never after an
+    extra round a Stop hook asked for, and never in the brain's own headless calls (BRAIN_HOOKS_OFF)."""
+    tp = payload.get("transcript_path")
+    if (not payload.get("stop_hook_active") and tp and Path(str(tp)).is_file() and v.get("answer_check")
+            and v.get("llm_cmd")):
+        _background(v, "answers", "--check", "--file", str(tp), "--session", _session(payload))
+    return {}
+
+
 def session_end(v: Vault, payload: dict) -> dict:
     tp = payload.get("transcript_path")
     if tp and Path(tp).exists():
@@ -517,6 +531,7 @@ HANDLERS = {
     "post-tool": post_tool,
     "session-end": session_end,
     "pre-compact": pre_compact,
+    "stop": stop,
 }
 
 

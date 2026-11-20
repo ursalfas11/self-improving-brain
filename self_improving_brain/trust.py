@@ -49,7 +49,7 @@ FOREIGN = re.compile(r"https?://|www\.|\b\d{1,3}(?:\.\d{1,3}){3}\b|\b[\w-]+\.(?:
                      r"|\b(?:curl|wget|nc|base64|eval)\b|\|\s*(?:ba|z)?sh\b", re.I)
 WRAPPED = re.compile(r"<(system-reminder|pasted_content|task-notification|local-command-stdout|local-command-stderr"
                      r"|command-name|command-message|command-args|bash-input|bash-stdout|bash-stderr|ide_[a-z_]+)\b[^>]*>"
-                     r".*?</\1>", re.S)
+                     r".*?</\1\b[^>]*>", re.S)   # a closing tag can carry the id too
 EVERYDAY = ("ls -la", "git status", "git diff", "cd src", "cat README.md", "python3 script.py", "npm test",
             "git add file.txt", "echo hello", "grep -n word file.txt")
 

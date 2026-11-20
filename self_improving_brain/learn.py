@@ -130,8 +130,21 @@ BUGGY = _rx(r"error", r"fail(s|ed|ing)?", r"bug", r"broken", r"crash\w*", r"time
             r"rott[oa]")
 ACCIDENT = re.compile(r"^\s*(sorry|sry|sorri|oops|ups|weiter|continue|go on|mach weiter|ok(ay)?|passt|egal|"
                       r"aus versehen|versehentlich|my bad|mistake)\b", re.I)
+# Said for the moment, not for good: "not yet", "for now", "this time". A stop like that is steering of one task,
+# unless the same words also make it lasting ("from now on", "remember").
+FOR_NOW = _rx(
+    r"for now", r"not (yet|now|right now)", r"(?:don'?t|do not|not)\b[^.!?\n]{0,40}?\byet", r"this time", r"for today", r"hold off", r"for the moment",
+    r"erst ?mal", r"vorerst", r"noch nicht", r"noch nichts", r"noch kein", r"diesmal", r"dieses mal", r"f[üu]r heute",
+    r"f[üu]r jetzt", r"gerade nicht", r"jetzt nicht", r"nicht jetzt", r"warte mal", r"moment mal",
+    r"por ahora", r"todav[ií]a no", r"a[uú]n no", r"esta vez", r"por hoy", r"de momento",
+    r"pour l'instant", r"pas encore", r"pas maintenant", r"cette fois", r"pour aujourd'hui", r"pour le moment",
+    r"por enquanto", r"ainda n[aã]o", r"agora n[aã]o", r"desta vez", r"por hoje", r"por agora",
+    r"per ora", r"non ancora", r"non adesso", r"questa volta", r"per oggi", r"per il momento")
 DRAFT_MIN = 0.4
 EXPIRE_DAYS = 120   # a correction that never came back in four months was not a pattern
+# A single case (one session, not said as lasting) that did not come back within a month was not a pattern either.
+# With 120 days alone the drafts piled up: nearly every group was a single case, and none expired for months.
+SINGLE_DAYS = 30
 # a guard's command regex must not stop everyday work
 HARMLESS = ("git status", "git diff", "git log --oneline", "ls -la", "cat README.md", "npm test", "pytest -q",
             "python3 -m unittest", "grep -rn foo .", "cd src")
@@ -220,9 +233,10 @@ def similarity(a: str, b: str) -> float:
     return _overlap(set(terms(a)), set(terms(b)))
 
 
-def groups(ds: list[dict], threshold: float = 0.5, limit: int = 500) -> list[list[dict]]:
+def groups(ds: list[dict], threshold: float = 0.5, limit: int = 500, pairs=None) -> list[list[dict]]:
     """Cluster similar drafts. A mistake you corrected four times beats one you corrected once.
-    Only the `limit` strongest drafts are clustered, so a long history never slows anything down."""
+    Only the `limit` strongest drafts are clustered, so a long history never slows anything down.
+    `pairs` (draft ids the nightly LLM found to ask for the same thing, see merge) join their groups."""
     out: list[tuple[set, list[dict]]] = []
     for d in sorted(ds, key=lambda x: -_score(x))[:limit]:
         t = set(terms(d.get("rule") or d.get("quote", "")))
@@ -233,8 +247,83 @@ def groups(ds: list[dict], threshold: float = 0.5, limit: int = 500) -> list[lis
         else:
             out.append((t, [d]))
     gs = [g for _, g in out]
+    if pairs:
+        where = {d.get("id"): i for i, g in enumerate(gs) for d in g}
+        parent = list(range(len(gs)))
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+        for a, b in pairs:
+            if a in where and b in where:
+                parent[find(where[a])] = find(where[b])
+        joined: dict[int, list[dict]] = {}
+        for i, g in enumerate(gs):
+            joined.setdefault(find(i), []).extend(g)
+        gs = list(joined.values())
     gs.sort(key=lambda g: -(max(_score(x) for x in g) + 0.15 * (len(g) - 1)))
     return gs
+
+
+# --- merge: the same rule in other words ------------------------------------------------------------
+
+MERGE_PROMPT = llm.MARKER + """
+Below are numbered rule drafts a learning system took from one user's corrections. Many ask for the same thing in
+other words. Put drafts into one group when they ask for the SAME behaviour (the same action, the same occasion),
+whatever the words. Never group drafts that only share a topic or a tool but ask for different things. Name only
+groups of two or more drafts, every number at most once.
+
+Return JSON: {"groups": [{"drafts": [1, 4], "why": "<short reason>"}]}
+
+Drafts:
+@DRAFTS@
+"""
+MERGE_MAX = 150  # groups per call: one line each
+
+
+def _pairs_path(v: Vault) -> Path:
+    return v.path("state", "draft_pairs.json")
+
+
+def merge_pairs(v: Vault) -> list[tuple[str, str]]:
+    return [tuple(p) for p in (load_json(_pairs_path(v), {}).get("pairs") or [])
+            if isinstance(p, (list, tuple)) and len(p) == 2]
+
+
+def merge(v: Vault) -> dict:
+    """At night: join draft groups that ask for the same thing in other words (one LLM call). Overlapping words
+    alone split one rule said three ways into three single cases, and none of them ever reaches two sessions.
+    Remembers the pairs in state/draft_pairs.json; groups() joins them from then on."""
+    all_d = all_drafts(v)
+    pairs = merge_pairs(v)
+    gs = [g for g in groups(_candidates(all_d), pairs=pairs) if any(d.get("id") for d in g)][:MERGE_MAX]
+    out = {"groups": len(gs), "merged": 0}
+    res = None
+    if len(gs) >= 2:
+        lines = [f"{i}. {short(str(g[0].get('rule') or g[0].get('quote') or ''), 200)}" for i, g in enumerate(gs, 1)]
+        try:
+            res = llm.ask_json(v, MERGE_PROMPT.replace("@DRAFTS@", "\n".join(lines)))
+        except (llm.NoLLM, ValueError, OSError) as e:
+            events.log(v, "error", where="merge", msg=str(e)[:200])
+    have = set(pairs)
+    for grp in (res.get("groups") or []) if isinstance(res, dict) else []:
+        nums = sorted({n for n in (grp.get("drafts") or []) if isinstance(n, int) and 1 <= n <= len(gs)}) \
+            if isinstance(grp, dict) else []
+        if len(nums) < 2:
+            continue
+        head = gs[nums[0] - 1][0]["id"]
+        for n in nums[1:]:
+            p = (gs[n - 1][0]["id"], head)
+            if p not in have:
+                have.add(p)
+                pairs.append(p)
+                out["merged"] += 1
+    alive = {d.get("id") for d in all_d if d.get("status") in ("open", "held")}
+    pairs = [p for p in pairs if p[0] in alive and p[1] in alive]  # settled drafts drop out
+    save_json(_pairs_path(v), {"t": now_iso(), "pairs": [list(p) for p in pairs]})
+    return out
 
 
 # a draft only moves forward: what another machine decided later wins over an older copy
@@ -299,10 +388,15 @@ def _context_before(turns, i: int) -> str:
     return ""
 
 
+# Project folders of the Claude Code test suite (eval/e2e_claude.py): throwaway sessions, never your corrections.
+E2E_TAG = "brain-e2e-"
+
+
 def transcript_files(v: Vault) -> list[Path]:
     out = []
     for pattern in v.get("transcripts") or []:
-        out.extend(Path(p) for p in glob.glob(os.path.expanduser(pattern), recursive=True))
+        out.extend(Path(p) for p in glob.glob(os.path.expanduser(pattern), recursive=True)
+                   if E2E_TAG not in p)
     return sorted(set(out), key=lambda p: p.stat().st_mtime if p.exists() else 0)
 
 
@@ -386,7 +480,9 @@ moments are grouped; "sessions" says in how many different sessions it happened.
 For EACH group decide:
 - verdict: "rule"  a way of working worth keeping: a mistake likely to repeat, a lasting preference, a convention
            "fact"  the user asked to remember a fact (a port, a name, where something lives), not a way of working
-           "once"  steering of this one task only (which file, which value, "not now", fixing a typo)
+           "once"  steering of this one task only (which file, which value, "not now", fixing a typo). Said for the
+                   moment ("for now", "not yet", "this time") is "once" too, unless the user says it should hold
+                   from now on
            "noise" not a correction: an answer to the agent's question, praise, a new task, the user correcting
                    themselves, a bug report about the code
 - explicit: true only if the user's own words make it lasting ("always", "never", "from now on", "in this repo we",
@@ -406,12 +502,33 @@ For EACH group decide:
 Existing rules:
 @RULES@
 
+The user's own standing instructions (their instruction files). A standing permission there ("merge your own
+PRs without asking") still holds: a group that asks again for a question or a stop it already permits
+contradicts it, unless the user plainly takes the permission back. Then it is "once".
+@STANDING@
+
 Return a JSON list: [{"group": 1, "verdict": "...", "explicit": false, "rule": "...", "mechanism": "...",
 "words": [], "tools": [], "commands": "", "class": "", "existing": "", "conflicts": ""}]
 
 Groups:
 @GROUPS@
 """
+
+
+def standing_instructions() -> str:
+    """The user's global instruction files: permissions given for good live there, not only in the rules.
+    The block the brain writes into such a file itself is left out (it is the rules, listed already)."""
+    from .adapters import BEGIN, END
+    parts = []
+    for p in (Path.home() / ".claude" / "CLAUDE.md", Path.home() / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"):
+        try:
+            t = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        t = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", t, flags=re.S).strip()
+        if t:
+            parts.append(f"### {str(p).replace(str(Path.home()), '~', 1)}\n{t[:4000]}")
+    return "\n\n".join(parts) or "(none)"
 
 
 def _candidates(ds: list[dict]) -> list[dict]:
@@ -446,7 +563,8 @@ def judge(v: Vault, batch: int = 20, batches: int = 3) -> int:
         rules = "\n".join(f"- {l.id}: {l.rule}" for l in lessons) or "(none yet)"
         body = "\n\n".join(_render_group(i, g) for i, g in enumerate(todo, 1))
         try:
-            res = llm.ask_json(v, JUDGE_PROMPT.replace("@RULES@", rules).replace("@GROUPS@", body))
+            res = llm.ask_json(v, JUDGE_PROMPT.replace("@RULES@", rules).replace("@STANDING@", standing_instructions())
+                               .replace("@GROUPS@", body))
         except (llm.NoLLM, ValueError, OSError) as e:
             events.log(v, "error", where="judge", msg=str(e)[:200])
             break
@@ -622,7 +740,7 @@ def adopt(v: Vault) -> dict:
     cap = int(v.get("learn_max_new"))
     held = [d for d in _candidates(all_d) if d.get("status") == "held"]
     try:
-        for g in groups(held):
+        for g in groups(held, pairs=merge_pairs(v)):
             try:
                 lib, active, always_n = _adopt_group(v, g, topics, lib, active, always_n, out, cap)
             except (OSError, ValueError, KeyError, UnicodeError) as e:  # one odd note must not stop the night
@@ -631,6 +749,15 @@ def adopt(v: Vault) -> dict:
     finally:
         save_drafts(v, all_d)
     return out
+
+
+def _for_now(g: list[dict]) -> bool:
+    """A stop the user said for the moment ("not yet", "for now"): every quote says so, none makes it lasting."""
+    if str((g[0].get("suggest") or {}).get("mechanism") or "").lower() != "guard":
+        return False
+    quotes = [str(d.get("quote") or "") for d in g if str(d.get("quote") or "").strip()]
+    return bool(quotes) and all(FOR_NOW.search(q) for q in quotes) \
+        and not any(FUTURE.search(q) or REMEMBER.search(q) for q in quotes)
 
 
 def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, cap):
@@ -643,6 +770,11 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
     if _blocked(rule + " " + best.get("quote", ""), topics):
         for d in g:
             d["status"] = "rejected"  # a topic you undid once is not learned again
+        return lib, active, always_n
+    if _for_now(g):
+        for d in g:
+            d["status"], d["why"] = "once", "a stop for the moment, not for good"
+        out["once"] = out.get("once", 0) + 1
         return lib, active, always_n
     if best.get("verdict") == "fact":
         if not _suspicious(rule):
@@ -671,6 +803,11 @@ def _adopt_group(v: Vault, g: list[dict], topics, lib, active, always_n, out, ca
         return lib, active, always_n
     sessions = len({d.get("session") for d in g})
     explicit = any(d.get("explicit") or (d.get("kind") == "preference" and _score(d) >= 0.8) for d in g)
+    if not (sessions >= 2 or explicit) and (days_since(max(_day(d) for d in g)) or 0) > SINGLE_DAYS:
+        for d in g:
+            d["status"], d["why"] = "expired", f"a single case that did not come back in {SINGLE_DAYS} days"
+        out["expired"] = out.get("expired", 0) + 1
+        return lib, active, always_n
     if not (sessions >= 2 or explicit) or _suspicious(rule) or len(out["rules"]) >= cap:
         out["waiting"] += 1  # once is not a pattern yet; it is adopted when it comes back
         return lib, active, always_n
@@ -695,7 +832,8 @@ def _contradiction(v: Vault, g: list[dict], best: dict, against: Lesson, lib, ac
 
       said before the rule existed   it is what the rule replaced: the drafts are closed
       newer, and you said it plainly your word replaces the rule ("from now on", "remember", a clear preference)
-      newer, said in passing         it waits, and expires like every correction that never came back
+      newer, said in passing         closed at once: not plain enough to overturn a rule. Waiting only made the judge
+                                     see it again every night; say it plainly and it comes back as a new draft
 
     The replaced rule is retired, not deleted, and `brain undo` brings it back."""
     newer = [d for d in g if _day(d) > (against.since or "")]
@@ -706,7 +844,12 @@ def _contradiction(v: Vault, g: list[dict], best: dict, against: Lesson, lib, ac
         return lib, active, always_n
     rule = str(best.get("rule") or "")
     explicit = any(d.get("explicit") or (d.get("kind") == "preference" and _score(d) >= 0.8) for d in newer)
-    if not explicit or _suspicious(rule) or len(out["rules"]) >= cap:
+    if not explicit:
+        for d in g:
+            d["status"], d["why"] = "expired", f"contradicts the rule {against.id} and was not said plainly enough"
+        out["closed"] = out.get("closed", 0) + 1
+        return lib, active, always_n
+    if _suspicious(rule) or len(out["rules"]) >= cap:
         out["waiting"] += 1
         return lib, active, always_n
     lesson = _new_lesson(v, lib, newer, best, always_n - (against.mechanism == "always"))

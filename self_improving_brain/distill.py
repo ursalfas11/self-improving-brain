@@ -9,13 +9,16 @@ Two ways, same rules:
   * `brain distill`          prints a work packet for your agent instead, for setups without an LLM CLI.
 
 No item waits for you. A claim that could not be filed is tried again the next night with the reason in the
-prompt; after TRIES_MAX nights it is dropped, which is one line in the journal (`brain undo` puts it back).
+prompt; after TRIES_MAX nights it is parked for PARK_DAYS (by then upkeep has often tidied the notes around it)
+and tried again, at most PARK_ROUNDS times. Only then it is dropped, which is one line in the journal (`brain undo`
+puts it back). An item the LLM decided to skip is closed at once: that is a decision, nothing to park.
 An answer the LLM garbled is not the claim's fault: the item only moves to the back of the queue.
 """
 from __future__ import annotations
 
 import re
 import subprocess
+from datetime import date as _date, timedelta as _timedelta
 
 from . import events, inbox, journal, llm, nightly
 from .config import Vault
@@ -29,6 +32,8 @@ from .util import short, slugify, today
 # rewrite one), and text that would turn into a rule
 LESSON_LIKE = re.compile(r"\[!lesson\]", re.I)
 TRIES_MAX = 3
+PARK_DAYS = 7
+PARK_ROUNDS = 3
 
 
 def _protected(text: str) -> list[tuple[int, int]]:
@@ -169,9 +174,15 @@ def auto(v: Vault, limit: int = 20) -> list[str]:
     report = []
     lib = Library(v.root)
     hubs = ", ".join(n.name for n in lib.notes.values() if n.is_hub) or "(none)"
-    # an item that failed before must not block the ones behind it: fresh ones first
-    queue = sorted(inbox.items(v, mine=True), key=lambda i: int(i.get("tries") or 0) + int(i.get("stumbles") or 0))
-    for it in queue[:limit]:
+    # an item that failed before must not block the ones behind it: fresh ones first; a parked one waits its days
+    queue = sorted((i for i in inbox.items(v, mine=True) if str(i.get("parked_until") or "") <= today()),
+                   key=lambda i: int(i.get("tries") or 0) + int(i.get("stumbles") or 0))
+    with llm.purpose("distill"):
+        return _auto(v, queue[:limit], lib, hubs, report)
+
+
+def _auto(v: Vault, queue: list[dict], lib: Library, hubs: str, report: list[str]) -> list[str]:
+    for it in queue:
         cands = candidates(lib, it["claim"])
         about = lib.find(str(it["note"])) if it.get("note") else None
         ctext = "\n\n".join(([_about(about, it.get("quote", ""))] if about else [])
@@ -304,16 +315,26 @@ def _stumbled(v: Vault, item_id: str) -> None:
 
 def _failed(v: Vault, it: dict, reason: str) -> str:
     """The answer could not be used for this claim. The next night tries again and is told why; after TRIES_MAX
-    nights the claim is dropped and journaled. Returns what happened, for the report."""
+    nights the claim is parked for PARK_DAYS, at most PARK_ROUNDS times, then dropped and journaled.
+    Returns what happened, for the report."""
     tries = int(it.get("tries") or 0) + 1
+    rounds = int(it.get("parked") or 0)
+    park = tries >= TRIES_MAX and rounds < PARK_ROUNDS
 
     def note(rec: dict) -> None:
-        rec.update(tries=tries, hint=short(reason, 200))
+        rec.update(tries=0 if park else tries, hint=short(reason, 200))
+        if park:
+            rec.update(parked=rounds + 1, parked_until=(_date.fromisoformat(today()) + _timedelta(days=PARK_DAYS))
+                       .isoformat())
         rec.pop("conflict", None)  # until 0.2 such an item waited for you
     _change(v, it["id"], note)
     if tries < TRIES_MAX:
         return f"tried again next night ({tries}/{TRIES_MAX})"
+    if park:
+        return f"parked for {PARK_DAYS} days, then tried again ({rounds + 1}/{PARK_ROUNDS})"
     inbox.close(v, it["id"], "dropped", short(reason, 200))
     journal.log(v, "drop", item=it["id"], type=it.get("type", "fact"), claim=it["claim"], quote=it.get("quote", ""),
-                source=it.get("source", ""), why=f"could not be filed in {TRIES_MAX} nights: {short(reason, 160)}")
-    return f"dropped after {TRIES_MAX} nights — `brain undo` puts it back"
+                source=it.get("source", ""),
+                why=f"could not be filed in {TRIES_MAX * (PARK_ROUNDS + 1)} nights over {PARK_ROUNDS * PARK_DAYS}+ days: "
+                    f"{short(reason, 140)}")
+    return f"dropped after {PARK_ROUNDS} parked rounds — `brain undo` puts it back"

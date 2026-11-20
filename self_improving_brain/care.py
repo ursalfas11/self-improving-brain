@@ -6,6 +6,8 @@
   shorten       a rule longer than 240 characters is shortened by the LLM; names, commands and numbers must survive
   duplicate     the LLM reads two notes that look alike: different → remembered and never reported again,
                 the same → merged into one note, and the other one points to it
+  split         a note larger than lint.SPLIT_AT tokens moves its ## sections, word for word, into parts that
+                link back to it; the note stays the way in and lists them. No LLM; nothing may get lost
 
 Every fix is checked and rolled back when a check fails (no secret, no number, link, code or rule lost, no new
 MUST finding). Every fix is one journal line: `brain review` shows it, `brain undo` takes it back, and what you
@@ -19,15 +21,17 @@ import re
 
 from . import journal, learn, llm, trust
 from .config import Vault
-from .lint import duplicate_pairs, lint_note
+from .lint import SPLIT_AT, duplicate_pairs, lint_note
 from .notes import Library, Note, atomic_write, dump_frontmatter, parse_frontmatter, set_field
 from .search import Index
 from .secrets import scan
-from .util import days_since, load_json, save_json, short, terms, today
+from .util import days_since, load_json, save_json, short, slugify, terms, today
 
 MERGE_MAX = 6000     # characters per note: above that a merge is not safe to check, the pair stays as it is
 TRIES_MAX = 2        # failed attempts per finding, then it rests
 REST_DAYS = 30
+PART_TOKENS = 4500   # a part holds sections up to this size (a single larger section is a part of its own)
+SPLIT_MAX = 2        # notes split per night
 IDENT = re.compile(r"\[\[[^\]|#]+|`[^`\n]+`|https?://[^\s)>\]]+|#\d+|(?<![\w.,])\d[\d.,:]*\d|\b\d{2,}\b")
 FOOTER = re.compile(r"^\s*(Part of|Linked from|Merged into) \[\[[^\]]+\]\]")
 
@@ -272,6 +276,102 @@ def _merge(v: Vault, a: Note, b: Note) -> dict | None:
                        why=why or "both notes said the same")
 
 
+# --- split: a note too large to read whole, without losing a line --------------------------------
+
+def _sections(body: str) -> tuple[str, list[tuple[str, str]]]:
+    """Body -> (text before the first ## heading, [(title, text from its ## line)]). Code blocks do not count."""
+    pre: list[str] = []
+    parts: list[tuple[str, list[str]]] = []
+    fence = False
+    for line in body.split("\n"):
+        if line.strip().startswith("```"):
+            fence = not fence
+        if not fence and line.startswith("## "):
+            parts.append((line[3:].strip(), [line]))
+            continue
+        (parts[-1][1] if parts else pre).append(line)
+    return "\n".join(pre).rstrip(), [(t, "\n".join(x).strip("\n")) for t, x in parts]
+
+
+def _pack(sections: list[tuple[str, str]], budget: int = PART_TOKENS) -> list[list[tuple[str, str]]]:
+    out: list[list[tuple[str, str]]] = []
+    cur: list[tuple[str, str]] = []
+    size = 0
+    for title, text in sections:
+        t = len(text) // 4
+        if cur and size + t > budget:
+            out.append(cur)
+            cur, size = [], 0
+        cur.append((title, text))
+        size += t
+    if cur:
+        out.append(cur)
+    return out
+
+
+def split_candidates(lib: Library, dirty: set[str] = frozenset()) -> list[Note]:
+    """Notes to split, largest first. Never a hub, a part, a note you are editing, or one that carries rules
+    (a rule stays where it is: its trust is tied to it)."""
+    out = []
+    for n in lib.notes.values():
+        if n.is_hub or n.meta.get("part_of") or n.lessons or n.rel in dirty or n.tokens <= SPLIT_AT:
+            continue
+        if len(_sections(n.body)[1]) >= 3:
+            out.append(n)
+    return sorted(out, key=lambda n: -n.tokens)
+
+
+def _split(v: Vault, n: Note, lib: Library) -> dict | None:
+    """Split one note. Returns the journal entry, or None when there is nothing to split; raises ValueError when a
+    check fails (the files are then as they were)."""
+    raw = n.path.read_text(encoding="utf-8")
+    head, body = _body_of(raw)
+    pre, sections = _sections(body)
+    packs = _pack(sections)
+    if len(packs) < 2:
+        return None
+    title = n.title or n.name
+    taken = set(lib.notes)
+    files: dict = {}
+    listing = []
+    for i, pack in enumerate(packs, 1):
+        name = f"{n.name}-{slugify(pack[0][0])[:40].strip('-') or 'part'}"
+        while name in taken or (n.path.parent / f"{name}.md").exists():
+            name = f"{name}-{i}"
+        taken.add(name)
+        titles = [t for t, _ in pack]
+        desc = short(f"{title}: " + " · ".join(titles), 200)
+        text = (dump_frontmatter({"description": desc, "part_of": n.name, "updated": today()})
+                + f"\n# {title} — {pack[0][0]}\n\nPart of [[{n.name}]] (split on {today()}, text unchanged).\n\n"
+                + "\n\n".join(t for _, t in pack) + "\n")
+        files[n.path.parent / f"{name}.md"] = text
+        listing.append(f"- [[{name}]] — " + short(" · ".join(titles), 160))
+    main = set_field(head + ("" if head.endswith("\n\n") or not head else "\n")
+                     + pre + f"\n\n## Parts\n\nThe text is unchanged in the parts (split on {today()}):\n\n"
+                     + "\n".join(listing) + "\n", "updated", today())
+    from collections import Counter
+    before = Counter(l for l in body.split("\n") if l.strip())
+    after = Counter(l for t in [main, *files.values()] for l in t.split("\n") if l.strip())
+    lost = before - after
+    if lost:
+        raise ValueError(f"the split would lose {sum(lost.values())} lines, e.g. {short(next(iter(lost)), 80)!r}")
+    must_before = _must_before(lib, [n])
+    for p, text in files.items():
+        atomic_write(p, text)
+    atomic_write(n.path, main)
+    names = [n.name] + [p.stem for p in files]
+    if _must(v, names) - must_before:
+        atomic_write(n.path, raw)
+        for p in files:
+            p.unlink(missing_ok=True)
+        raise ValueError("the split broke a link")
+    rel = lambda p: p.relative_to(v.root).as_posix()  # noqa: E731
+    return journal.log(v, "care", what="split", note=n.name, path=n.rel, before=raw, after=journal.sha(main),
+                       parts=[{"path": rel(p), "sha": journal.sha(t)} for p, t in files.items()],
+                       why=f"~{n.tokens} tokens is too much to read whole; {len(files)} parts by its sections, "
+                           "text unchanged")
+
+
 # --- the nightly step -----------------------------------------------------------------------
 
 def run(v: Vault, think: bool = False) -> dict:
@@ -305,6 +405,21 @@ def run(v: Vault, think: bool = False) -> dict:
                      [n.rel] + ([hub.rel] if hub else []))
         except (OSError, ValueError, KeyError, UnicodeError) as e:  # one odd note must not stop the others
             out.setdefault("errors", []).append(f"{n.name}: {type(e).__name__}: {e}"[:160])
+
+    split = 0
+    for n in split_candidates(Library(v.root), dirty):
+        if split >= SPLIT_MAX:
+            break
+        if ("split", *_pair(n.name, "")) in veto or rests(f"split {n.name}"):
+            continue
+        try:
+            e = _split(v, n, Library(v.root))
+            if e:
+                split += 1
+                done(e, f"split {n.name}", [e["path"]] + [p["path"] for p in e["parts"]])
+        except (OSError, ValueError, KeyError, UnicodeError) as e:
+            m = state.setdefault(f"split {n.name}", {"n": 0})
+            m.update(n=int(m.get("n") or 0) + 1, t=today(), why=short(str(e), 160))
 
     lib = Library(v.root)
     by_name = {n.name: n for n in lib.notes.values()}
@@ -359,7 +474,7 @@ def run(v: Vault, think: bool = False) -> dict:
             except (ValueError, KeyError, OSError, UnicodeError) as e:
                 m = state.setdefault(key, {"n": 0})
                 m.update(n=int(m.get("n") or 0) + 1, t=today(), why=short(str(e), 160))
-        save_json(state_path, state)
+    save_json(state_path, state)
     return out
 
 
@@ -379,6 +494,16 @@ def undo(v: Vault, e: dict) -> str:
         return f"{e['lesson']} has its old {e['field']} again"
     if what == "distinct":
         return f"{e.get('note')} and {e.get('other')} are compared again next night"
+    if what == "split":
+        p = v.root / e["path"]
+        parts = [(v.root / x["path"], x.get("sha")) for x in e.get("parts") or []]
+        if not p.exists() or journal.sha(p.read_text(encoding="utf-8")) != e.get("after") or any(
+                not q.exists() or journal.sha(q.read_text(encoding="utf-8")) != h for q, h in parts):
+            raise ValueError(f"{e['path']} or one of its parts changed since the split — edit them by hand")
+        atomic_write(p, e["before"])
+        for q, _h in parts:
+            q.unlink()
+        return f"{e.get('note')} is one note again ({len(parts)} parts removed), and is not split a second time"
     p = v.root / e["path"]
     cur = p.read_text(encoding="utf-8") if p.exists() else None
     if cur is None:

@@ -37,6 +37,10 @@ DEFAULTS = {
     "learn_max_new": 5,
     # upkeep the night fixes on its own (care.py): at most this many fixes that need the LLM per night
     "care_max": 3,
+    # after each answer, the LLM checks it in the background against your `always` rules (answers.py). A breach
+    # counts only with a verbatim quote; it is shown once in your next prompt, and a rule that keeps being broken
+    # is sharpened at night. Uses llm_cmd and at most a quarter of the day's budget.
+    "answer_check": True,
     "lessons_max": 60,
     "retire_after_days": 60,
     # knowledge from your sessions: how many new sessions to read per night, how many claims to file
