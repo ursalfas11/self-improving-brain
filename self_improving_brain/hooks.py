@@ -348,13 +348,51 @@ def check_hits(lessons, tool: str, cmd: str, paths: list[str], content: str) -> 
     return out
 
 
-def guard_for(lessons, tool: str, cmd: str, paths: list[str], content: str = ""):
-    """(first guard lesson that fires, reflex lessons whose triggers fire) for one proposed action."""
+def proof_text(tool: str, ti: dict) -> str:
+    """What a call looks like to a guard's `requires:`: the command for Bash, else "<tool> <path, pattern or url>"."""
+    ti = ti if isinstance(ti, dict) else {}
+    if tool in ("Bash", "shell", "local_shell_call", "exec_command", "shell_command"):
+        return command_head(str(ti.get("command") or ti.get("cmd") or ""))
+    return f"{tool.rsplit('__', 1)[-1]} " + str(ti.get("file_path") or ti.get("notebook_path") or ti.get("pattern")
+                                                or ti.get("url") or ti.get("path") or ti.get("description") or "")
+
+
+def requires_met(lesson: Lesson, transcript: str | None) -> bool:
+    """Did a call matching the guard's `requires:` already run in this session? Reads the session log only when the
+    guard would fire otherwise. No readable log: no (the guard asks, and the proof can be fetched)."""
+    if not lesson.requires or not transcript:
+        return False
+    try:
+        rx = re.compile(lesson.requires, re.I)
+        with open(transcript, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"tool_use"' not in line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(r, dict) or r.get("type") != "assistant" or r.get("isSidechain"):
+                    continue
+                content = (r.get("message") or {}).get("content") if isinstance(r.get("message"), dict) else None
+                for c in content if isinstance(content, list) else []:
+                    if isinstance(c, dict) and c.get("type") == "tool_use" and rx.search(
+                            proof_text(str(c.get("name") or ""), c.get("input") or {})):
+                        return True
+    except (OSError, re.error):
+        pass
+    return False
+
+
+def guard_for(lessons, tool: str, cmd: str, paths: list[str], content: str = "", satisfied=None):
+    """(first guard lesson that fires, reflex lessons whose triggers fire) for one proposed action.
+    `satisfied(lesson)`: the guard's `requires:` proof is there, so it stays quiet."""
     reflexes = []
     for l in lessons:
         fired = fires(l, tool, cmd, paths)
         if l.mechanism == "guard":
-            if fired or (l.check and check_hits([l], tool, cmd, paths, content)):
+            if (fired or (l.check and check_hits([l], tool, cmd, paths, content))) and not (
+                    l.requires and satisfied and satisfied(l)):
                 return l, reflexes
         elif fired and l.mechanism in ("reflex", "skill"):
             reflexes.append(l)
@@ -410,7 +448,9 @@ def pre_tool(v: Vault, payload: dict) -> dict:
     if not candidates:
         return {}
     st = events.session_state(v, session)
-    guard, reflexes = guard_for(candidates, tool, cmd, paths, content)
+    transcript = payload.get("transcript_path")
+    guard, reflexes = guard_for(candidates, tool, cmd, paths, content,
+                                satisfied=lambda l: requires_met(l, str(transcript) if transcript else None))
     lines = []
     for l in reflexes:
         if _mark_lesson(v, session, st, l, "tool:" + tool):

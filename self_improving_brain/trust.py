@@ -13,6 +13,8 @@ file, a tool result, pasted text — is never there, so it can prove nothing.
      word in one of them (`quote_holds`).
   3. without evidence the night takes the lesson back: a new one leaves the note, a changed one returns to the
      form that counted before. Both are in the journal: `brain review`, `brain undo <n>`.
+A change that only takes triggers away (fewer tools or words, nothing added, nothing else touched) needs no evidence,
+except for `always` and `guard` (`narrowed`).
 Never on its own: a rule with a secret, a rule naming an address or a download command you did not name
 yourself, a guard that would fire on everyday commands, and `always` or `guard` without you saying it as a rule.
 
@@ -61,7 +63,10 @@ _hold = False
 
 
 def fingerprint(l: Lesson) -> str:
-    return digest(l.id, l.rule, l.mechanism, ",".join(l.tools), l.commands, l.paths, ",".join(l.words), l.check)
+    parts = [l.id, l.rule, l.mechanism, ",".join(l.tools), l.commands, l.paths, ",".join(l.words), l.check]
+    if l.requires:  # whoever changes the proof a guard waits for changes what it does (empty = the old fingerprint)
+        parts.append("requires=" + l.requires)
+    return digest(*parts)
 
 
 def mode(v: Vault) -> str:
@@ -175,11 +180,17 @@ def locked(l: Lesson) -> str:
     """What never counts on its own, whatever the evidence. Returns the reason, or ''."""
     from .learn import BROAD_TOOLS
     from .secrets import scan
-    if scan(" ".join((l.rule, l.commands, l.paths, l.check))):
+    if scan(" ".join((l.rule, l.commands, l.paths, l.check, l.requires))):
         return "the rule contains a secret"
     if l.mechanism == "guard":
         if set(l.tools) & BROAD_TOOLS:
             return "the guard would stop every call of a built-in tool"
+        if l.requires:
+            try:
+                if re.compile(l.requires, re.I).search(""):
+                    return "requires matches everything"
+            except re.error:
+                return "requires is not a valid regex"
         for name, rx, probes in (("commands", l.commands, EVERYDAY), ("check", l.check, EVERYDAY),
                                  ("paths", l.paths, ("README.md", "src/main.py", "notes/x.md"))):
             if not rx:
@@ -229,6 +240,41 @@ def _named_trigger(l: Lesson, before: str, messages: list[str]) -> str:
     return ""
 
 
+NARROWED = "only triggers narrowed"
+
+
+def narrowed(l: Lesson, before: str) -> str:
+    """Did the change only TAKE AWAY triggers? Then it needs no evidence: rule, mechanism, check and requires are as
+    before, tools and words are a subset, commands and paths are the same or gone, and at least one trigger stays.
+    A rule that fires less often cannot smuggle in new behaviour. Without this the night took back every narrowing,
+    and the rule that was cut back to make room for another came straight back. Never for always or guard: narrowing
+    a guard can disarm it, so that keeps needing your word. Returns a description, or ''."""
+    if not before or l.mechanism in HARD:
+        return ""
+    from .notes import parse_lessons
+    try:
+        old = next((x for x in parse_lessons(before, l.note) if x.id == l.id), None)
+    except Exception:
+        old = None
+    same = lambda a, b: _flat(a or "") == _flat(b or "")  # noqa: E731
+    if old is None or old.mechanism != l.mechanism or not all(same(getattr(old, k), getattr(l, k)) for k in ("rule", "check", "requires")):
+        return ""
+    low = lambda xs: {str(x).strip().lower() for x in xs or [] if str(x).strip()}  # noqa: E731
+    gone = []
+    for k in ("tools", "words"):
+        if not low(getattr(l, k)) <= low(getattr(old, k)):
+            return ""
+        gone += sorted(low(getattr(old, k)) - low(getattr(l, k)))
+    for k in ("commands", "paths"):
+        if getattr(l, k) and not same(getattr(old, k), getattr(l, k)):
+            return ""
+        if getattr(old, k) and not getattr(l, k):
+            gone.append(k)
+    if not gone or not (l.tools or l.commands or l.paths or l.words or l.check):
+        return ""
+    return f"{NARROWED} ({', '.join(gone)[:150]}), no new behaviour"
+
+
 def evidence(l: Lesson, words: list[str], refs=(), decisions=(), before: str = "") -> tuple[str, str]:
     """Does this rule stand in your own words? Returns (quote, '') or ('', why not).
     A passage of ONE message must carry the rule's core. `always` and `guard` also need you to say it as a rule in
@@ -242,6 +288,9 @@ def evidence(l: Lesson, words: list[str], refs=(), decisions=(), before: str = "
     foreign, hard = _foreign(l), l.mechanism in HARD
     picked = [] if hard else list(decisions or [])
     quote = _named_trigger(l, before, picked + list(words or []))
+    if quote:
+        return quote, ""
+    quote = narrowed(l, before)
     if quote:
         return quote, ""
     near = ""
@@ -492,7 +541,8 @@ def settled(v: Vault, lesson_id: str) -> None:
 
 def release(v: Vault, l: Lesson, quote: str, how: str, entry: dict | None = None) -> dict:
     """Evidence found: the lesson counts, and the journal says with what (`brain undo` takes it back).
-    how: 'wording' (hook or night) | 'verdict' (a model's yes with a word-for-word quote)."""
+    how: 'wording' (hook or night) | 'verdict' (a model's yes with a word-for-word quote) | 'narrowing' (the change
+    only took triggers away: `quote` says which, see `narrowed`)."""
     from . import journal
     e = entry or {}
     block = block_now(v, l)
@@ -500,7 +550,7 @@ def release(v: Vault, l: Lesson, quote: str, how: str, entry: dict | None = None
     return journal.log(v, "release", lesson=l.id, note=l.note, mechanism=l.mechanism, rule=l.rule,
                        quote=short(quote, 240), how=how, session=str(e.get("session", ""))[:8], tool=e.get("tool", ""),
                        block=block, before=e.get("before", ""), counted=bool(e.get("counted")),
-                       why="you said so in the session")
+                       why=("the change only took triggers away" if how == "narrowing" else "you said so in the session"))
 
 
 def brought_back(v: Vault, lesson_id: str) -> list[str]:
@@ -518,17 +568,20 @@ def in_hook(v: Vault, new: list[str], transcript) -> list[str]:
     from .notes import Library
     words, picked = own_words(transcript), own_decisions(transcript)
     pending = load(v).get("pending") or {}
-    backed, waiting = [], []
+    backed, narrow, waiting = [], [], []
     for l in Library(v.root).lessons():
         if l.id not in new:
             continue
         quote, why = evidence(l, words, brought_back(v, l.id), picked, str((pending.get(l.id) or {}).get("before") or ""))
         if quote:
-            release(v, l, quote, "wording", pending.get(l.id))
-            backed.append(l.id)
+            release(v, l, quote, "narrowing" if quote.startswith(NARROWED) else "wording", pending.get(l.id))
+            (narrow if quote.startswith(NARROWED) else backed).append(l.id)
         else:
             waiting.append(f"{l.id} ({why})")
     out = []
+    if narrow:
+        out.append(f"BRAIN: the lesson(s) {', '.join(narrow)}: only triggers were taken away, they count at once "
+                   "(no evidence needed).")
     if backed:
         out.append(f"BRAIN: the lesson(s) {', '.join(backed)} are backed by the user's own words in this session and "
                    "count from now on.")
@@ -666,7 +719,7 @@ def settle(v: Vault, think: bool = True, judge=None) -> dict:
                 else:
                     why = "you did not ask for it in the session"
         if quote:
-            release(v, l, quote, how, e)
+            release(v, l, quote, "narrowing" if quote.startswith(NARROWED) else how, e)
             out["backed"].append(lid)
             continue
         age = _age_days(str(e.get("t", "")))

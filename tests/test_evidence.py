@@ -409,12 +409,13 @@ class TestDialogAnswers(EvidenceCase):
         self.assertIn("stay silent for now", edit("q4", tp))
         self.assertEqual(trust.settle(self.v, judge=NO)["discarded"], ["L-wib"])
         self.assertNotIn("wab_tool", p.read_text())
-        # you picked it in a dialog that names the lesson and the trigger: it counts, no model needed
-        p.write_text(p.read_text().replace("tools: wib_tool, wub_tool", "tools: wib_tool"))
+        # a trigger swapped for another (not only taken away): you picked it in a dialog that names the lesson and
+        # the triggers: it counts, no model needed
+        p.write_text(p.read_text().replace("tools: wib_tool, wub_tool", "tools: wib_tool, wab_tool"))
         tp = self.session("q5", ["carry on"])
         self.assertIn("stay silent for now", edit("q5", tp), "nobody asked for it yet")
         self.assertFalse(self.reaches_agent("L-wib", "wib it after the backup"))
-        self.dialog(tp, "L-wib crowds out another lesson at wub_tool. How shall I solve it?", "Narrow the trigger")
+        self.dialog(tp, "L-wib moves from wub_tool to wab_tool. How shall I solve it?", "Narrow the trigger")
         self.assertEqual(trust.settle(self.v, judge=NO_MODEL)["backed"], ["L-wib"])
         self.assertNotIn("wub_tool", p.read_text())
         self.assertTrue(self.reaches_agent("L-wib", "wib it after the backup"))

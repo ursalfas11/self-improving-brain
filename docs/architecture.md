@@ -42,6 +42,8 @@ can change them with confidence.
 | `journal.py` | every autonomous change, per host and append-only; `brain review` and `brain undo` |
 | `llm.py` | the LLM CLI (claude, codex, ollama): headless call, JSON answer, cost booking, daily budget and the share per purpose, reachability probe |
 | `answers.py` | the answer check: each answer against the `always` rules (Stop hook, detached), feedback once in the next prompt, `brain answers`, sharpening of rules that do not work |
+| `autoguard.py` | a rule that keeps coming back becomes a guard after a replay over your sessions (draft, replay, false-hit cap, holdout); a guard you let through nearly every time is stepped back; journal `guard` / `unguard`; `brain autoguard` |
+| `gate.py` | the vault gate: MUST findings sorted into causes, measured before and after the night's steps, nights in a row in `state/gate-red.json` |
 | `metrics.py` | learned recall model, weekly correction curve, token share, weekly digest, lesson health, threshold autotune |
 | `hooks.py` | Claude Code hook protocol: session-start (one line, `always` lessons, repo notes, handoff, the weekly line), prompt, pre-tool (guards, `check:` on writes), post-tool (`check:` violations), pre-compact, session-end, stop (starts the answer check, detached) |
 | `cache.py` | parsed vault + BM25 index cached in `~/.cache/self-improving-brain/`, keyed by a fingerprint of every note's size and mtime plus the code version |
@@ -353,6 +355,20 @@ before the correction, in that turn's prompt or at a tool call. Results: **caugh
 words that would have) and **uncovered**. Lessons whose evidence is still pending are not counted. A correction
 from before a lesson's `since` date is one the lesson was learned from: it matches by design, so the percentage
 counts only the others ("unseen").
+
+## Autoguard
+
+A reflex or `always` rule that was shown and still broken is only text. At night `autoguard.py` takes the rules with at
+least three corrections after their `since` date where the rule would have fired (the `replay` cases) and asks a model,
+with the agent's tool calls in front of it, which call broke the rule. No such call: the rule stays text. Otherwise the model
+drafts a guard (a command regex, an MCP tool or a path, optionally `requires:`, plus the reason with the right way). The draft
+must pass `trust.locked`, then runs over every tool call of the sessions on this machine, with the hook's own matching.
+Each hit outside the proven breaches is judged. It is taken over only with at least two real breaches, at most
+a fifth false hits (and never more than the rate at which you reject calls of that kind anyway), the same on the newest third of the calls the model never
+saw, and at most 60 hits. The vault gate must not get a new finding. The journal keeps the callout before (`guard`);
+`brain undo` restores it, and that rule is never promoted again. A guard the night made that you let through at least 80 % of
+at least five asks (replayed from the sessions: a call the guard matches and you did not reject) goes back to its form before (`unguard`)
+and rests 60 days. `requires:` makes a guard "prove it first": the hook reads the session log only when the guard would fire.
 
 ## Install day
 

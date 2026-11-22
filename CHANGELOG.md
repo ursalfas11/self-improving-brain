@@ -6,6 +6,19 @@
   tag, which the check did not expect, so a pasted rule could vouch for itself.
 
 ### Rules that are there but do not work
+- **Autoguard.** A rule that keeps coming back although the agent was shown it becomes a `guard` by itself, but
+  only as far as a replay over your real sessions proves it safe: the nightly run drafts the trigger with the LLM,
+  replays it over every tool call, and takes it over only if it catches real breaches and stays under a cap of false
+  hits (also on the newest third of the calls). A guard you let through nearly every time it asked is stepped back
+  and rests for 60 days. Journal kinds `guard` and `unguard`, both undone with `brain undo`; `brain autoguard
+  --dry-run` shows the plan; `brain config autoguard false` turns it off. New rule field `requires:` makes a guard
+  ask only until a given call ran earlier in the session.
+- **A narrowing needs no evidence.** A change that only takes triggers away (fewer tools or words, nothing else
+  touched) counts at once instead of being taken back, except on `always` and `guard`. Before, the night undid
+  every narrowing, and the rule that had been cut back to make room for another came straight back.
+- **Vault gate.** The night measures the MUST findings of `brain lint` before and after its steps, so a finding that
+  was there already is not blamed on them, and counts the nights in a row. From the second night, `brain`,
+  `brain doctor` and `brain review` say it, with the cause and what to do.
 - **Answer check.** `always` rules sit in every session, so nothing measured whether they hold. Now, after each
   answer, the Stop hook starts a detached check: the LLM reads the answer against your `always` rules, and a breach
   counts only with a word-for-word quote from the answer or its tool calls. It is shown once, with the quote, in

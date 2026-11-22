@@ -13,8 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import (adapters, distill, events, freshness, github_refs, handoff, hooks, inbox, journal, learn, llm, maplib,
-               metrics, nightly, replay, trust)
+from . import (adapters, autoguard, distill, events, freshness, gate, github_refs, handoff, hooks, inbox, journal, learn,
+               llm, maplib, metrics, nightly, replay, trust)
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -139,6 +139,7 @@ def c_status(a):
         attention.append(f"The nightly run last ran on {day_label(rep['t'])} → brain doctor")
     if llm.available(v) and rep.get("llm_cmd") is False:
         attention.append("Last night's run could not see your LLM setting, so it learned nothing → brain schedule install")
+    attention += gate.streak_lines(v)
     attention += [x for x in rep.get("attention") or []][:3]
     # a rule an agent wrote is not listed here: the brain settles it on its own (your own words back it, or the
     # night takes it back). Nothing of that waits for you; `brain review` shows both.
@@ -156,6 +157,8 @@ def c_review(a):
     c = _Paint()
     rows = journal.recent(v, days=a.days, undone=True)  # undone ones keep their number, so the others keep theirs
     silent = trust.untrusted(v, cache.lessons(v))
+    for line in gate.streak_lines(v):  # a red that heals itself needs nobody; this one does not: first, before anything
+        print(c.y("! ") + line)
     if not rows and not silent:
         print(f"Nothing learned in the last {a.days} days. It keeps learning from your sessions every night.")
         return 0
@@ -272,6 +275,9 @@ def c_doctor(a):
             print(f"! the last run was {age} days ago: a missed night starts with your next session, or run `brain nightly`")
     else:
         print("· the nightly run has not run yet")
+    for line in gate.streak_lines(v):
+        print("! " + line)
+        ok = False
     url, problem = nightly.backup_state(v.root)
     if not url:
         print("· no backup remote — `brain setup --github` keeps a private copy on GitHub")
@@ -916,6 +922,28 @@ def c_replay(a):
     return 0
 
 
+def c_autoguard(a):
+    v = _vault(a)
+    trust.hold(trust.in_agent_session())  # a guard is a hard rule: an agent does not make one past the evidence
+    try:
+        res = autoguard.run(v, think=llm.available(v), files=[Path(f).expanduser() for f in a.file] if a.file else None,
+                            only=a.ids or None, dry=a.dry_run, days=a.days)
+    finally:
+        trust.hold(False)
+    if a.json:
+        print(json.dumps(res, indent=1, ensure_ascii=False, default=str))
+        return 0
+    print(("(dry run, nothing written) " if a.dry_run else "") + autoguard.summary(res))
+    for lid, d in (res.get("drafts") or {}).items():
+        print(f"  {lid}: {d['rule']}\n      " + " · ".join(f"{k}: {x}" for k, x in d.items() if k != "rule" and x))
+    for k in ("refused", "stays", "lifted"):
+        for lid, why in (res.get(k) or {}).items():
+            print(f"  {k:<8} {lid}: {why}")
+    if res.get("waiting"):
+        print(f"  waiting: {res['waiting']}")
+    return 0
+
+
 def c_report(a):
     from . import report
     st = report.build(_vault(a))
@@ -1147,6 +1175,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(f=c_trust)
     s = add("promote", "change how a rule acts (reflex, always, guard)", True)
     s.add_argument("id"); s.add_argument("--to", required=True, choices=["reflex", "always", "guard", "skill"]); s.set_defaults(f=c_promote)
+    s = add("autoguard", "make rules that keep coming back guards, proven by a replay (the nightly run does it)", True)
+    s.add_argument("ids", nargs="*"); s.add_argument("--dry-run", action="store_true", help="show what it would do, write nothing")
+    s.add_argument("--days", type=int, default=autoguard.DAYS); s.add_argument("--file", action="append")
+    s.add_argument("--json", action="store_true"); s.set_defaults(f=c_autoguard)
     s = add("replay", "past corrections against today's rules: caught or missed?", True)
     s.add_argument("--days", type=int, default=30); s.add_argument("--file", action="append")
     s.add_argument("--draft", action="store_true"); s.add_argument("--json", action="store_true")

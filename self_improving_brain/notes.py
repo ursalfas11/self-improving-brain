@@ -46,6 +46,7 @@ class Lesson:
     paths: str = ""
     words: list[str] = field(default_factory=list)
     check: str = ""      # regex on what the agent wrote or ran: a match is a violation, found without you
+    requires: str = ""   # regex on an EARLIER call of the same session: a guard with it asks only while no such call ran
     since: str = ""
     evidence: str = ""
     klass: str = ""
@@ -63,6 +64,8 @@ class Lesson:
             lines.append("> words: " + ", ".join(self.words))
         if self.check:
             lines.append(f"> check: {self.check}")
+        if self.requires:
+            lines.append(f"> requires: {self.requires}")
         if self.klass:
             lines.append(f"> class: {self.klass}")
         if self.since:
@@ -296,6 +299,8 @@ def parse_lessons(body: str, note_name: str) -> list[Lesson]:
             cur.words = [x.strip() for x in v.split(",") if x.strip()]
         elif k == "check":
             cur.check = v
+        elif k == "requires":
+            cur.requires = v
         elif k == "since":
             cur.since = v
         elif k == "evidence":

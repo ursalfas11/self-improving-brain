@@ -12,10 +12,12 @@
   extract    the LLM reads what is new in your sessions for decisions, facts, pitfalls       (budgeted)
   distill    files them into the notes; a newer statement replaces an outdated one           (budgeted)
   answers    an always rule the answer check finds broken again and again is worded sharper  (budgeted)
+  autoguard  a rule that keeps coming back although it was shown becomes a guard, if a replay over your real
+             sessions proves it safe; a guard you let through nearly every time it asked is stepped back (budgeted)
   curate     quiet rules retire, the rule set stays within its caps
   replay     past corrections against today's rules: would they have been caught?
   cache      rebuild the learned recall model; autotune the recall threshold from its precision
-  index      regenerate INDEX.md, lint the vault
+  index      regenerate INDEX.md, lint the vault (the vault gate: MUST findings, counted per night, see gate.py)
   sync       git commit + pull --rebase + push (if the vault is a git repo with a remote)
 
 Every change it makes is in the journal: `brain review` shows it, `brain undo` takes it back.
@@ -217,7 +219,7 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 def _run(v: Vault, quick: bool) -> dict:
     # imported here, so the hooks that only ask `overdue()` stay fast
-    from . import care, curate, distill, extract, freshness, learn, llm, maplib, metrics, trust
+    from . import autoguard, care, curate, distill, extract, freshness, gate, learn, llm, maplib, metrics, trust
     from .lint import lint
     from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
@@ -251,6 +253,12 @@ def _run(v: Vault, quick: bool) -> dict:
 
     if v.get("git_sync") and not quick and (v.root / ".git").exists():
         step("pull", lambda: pull(v))
+    # the vault gate before the steps that write: a MUST finding that was there already is not theirs
+    gate_before = None
+    try:
+        gate_before = gate.measure(v)
+    except Exception as e:  # noqa: BLE001
+        s["gate_before"] = f"error: {type(e).__name__}: {e}"[:300]
     step("learn", lambda: learn.scan(v))
     think = llm.available(v) and not quick
     if think:
@@ -275,6 +283,8 @@ def _run(v: Vault, quick: bool) -> dict:
     if think:
         from . import answers
         step("answers", lambda: answers.sharpen(v))  # always rules the answer check finds broken again and again
+    if not quick and v.get("autoguard"):
+        step("autoguard", lambda: autoguard.run(v, think))
     step("curate", lambda: curate.run(v))
     step("care", lambda: care.run(v, think))
     if not quick:
@@ -286,7 +296,17 @@ def _run(v: Vault, quick: bool) -> dict:
 
     def _lint():
         findings = lint(v, Library(v.root))
-        return {"must": sum(f.level == "MUST" for f in findings), "should": sum(f.level == "SHOULD" for f in findings)}
+        out = {"must": sum(f.level == "MUST" for f in findings), "should": sum(f.level == "SHOULD" for f in findings)}
+        res = gate.measure(v, findings)
+        new = gate.new_causes(gate_before, res)
+        if res["red"] and not quick:
+            rec = gate.book(v, res)
+            out["gate"] = {"causes": res["causes"], "new": new, "nights": rec["nights"] if rec else 0}
+            if new:  # red now, green before the steps: this night caused it
+                rep["attention"].append(f"the night's steps left a MUST finding in the vault ({', '.join(new)}) → brain lint")
+        elif not quick:
+            gate.book(v, res)
+        return out
     step("lint", _lint)
     if llm.PROBLEMS:  # a failed login looks like a quiet night unless it is said here
         rep["llm_error"] = llm.PROBLEMS[0]
@@ -313,6 +333,7 @@ def summary(rep: dict) -> str:
     cu = s.get("curate") if isinstance(s.get("curate"), dict) else {}
     se = s.get("settle") if isinstance(s.get("settle"), dict) else {}
     ca = s.get("care") if isinstance(s.get("care"), dict) else {}
+    ag = s.get("autoguard") if isinstance(s.get("autoguard"), dict) else {}
     filed = sum(1 for line in s.get("distill") or [] if isinstance(line, str) and ": " in line
                 and line.split(": ", 1)[1].startswith(("append", "update", "new")))
     rules = len(ad.get("rules") or [])
@@ -325,6 +346,10 @@ def summary(rep: dict) -> str:
              if se.get("backed") else "",
              f"{len(se.get('discarded') or [])} without evidence taken back" if se.get("discarded") else "",
              f"{len(ca.get('fixed') or [])} tidied" if ca.get("fixed") else "",
+             f"{len(ag.get('guarded') or [])} rule{'s' * (len(ag.get('guarded') or []) != 1)} became a guard"
+             if ag.get("guarded") else "",
+             f"{len(ag.get('lifted') or {})} guard{'s' * (len(ag.get('lifted') or {}) != 1)} stepped back"
+             if ag.get("lifted") else "",
              "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
     t = str(rep.get("t", ""))
     when = t[11:16] if days_since(t[:10]) in (0, 1) else day_label(t)

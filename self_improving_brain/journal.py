@@ -17,6 +17,11 @@ needs to be undone (append-only and one file per machine, so syncing the vault n
              own words in that session
   discard    a rule an agent wrote without that:    undo: it stands in the note again and counts
              removed, or set back to what counted
+  guard      a rule that kept coming back despite   undo: the callout as it was; the night does not
+             being shown became a guard, after a    promote it again
+             replay against your real sessions
+  unguard    that guard asked in vain (you let it   undo: the guard again
+             through) and went back to its form
 
 `brain review` lists the last two weeks, `brain undo <n>` takes one back. You have a veto, not a duty.
 """
@@ -47,13 +52,14 @@ def entries(v: Vault) -> list[dict]:
     for f in sorted(d.glob("*.jsonl")) if d.exists() else []:
         for e in read_jsonl(f):
             if e.get("kind") == "undo":
-                undone[e.get("target")] = e.get("t")
+                undone[e.get("target")] = e
             else:
                 rows.append(e)
     for e in rows:
         e["status"] = "undone" if e.get("id") in undone else "done"
         if e["status"] == "undone":
-            e["undone"] = undone[e["id"]]
+            e["undone"] = undone[e["id"]].get("t")
+            e["undone_auto"] = bool(undone[e["id"]].get("auto"))  # the night took it back itself (a pause, not a veto)
     return sorted(rows, key=lambda e: str(e.get("t", "")))
 
 
@@ -97,7 +103,13 @@ def describe(e: dict) -> tuple[str, str, str]:
     if k == "merge":
         return "merged", f"{e.get('other', '')} into {e.get('note', '')}", e.get("why", "")
     if k == "release":
+        if e.get("how") == "narrowing":
+            return "narrowed", e.get("rule", ""), f"an agent wrote it; {short(e.get('quote', ''), 110)}"
         return "confirmed", e.get("rule", ""), f"an agent wrote it; you said: “{short(e.get('quote', ''), 80)}”"
+    if k == "guard":
+        return "guard", f"{e.get('lesson', '')} › {e.get('rule', '')}", e.get("why", "")
+    if k == "unguard":
+        return "guard lifted", f"{e.get('lesson', '')} › {e.get('rule', '')}", e.get("why", "")
     if k == "discard":
         return "taken back", e.get("rule", ""), f"an agent wrote it; {e.get('why', '')}"
     return k or "?", "", ""
@@ -194,11 +206,15 @@ def undo(v: Vault, ref: str) -> str:
         if lesson is None or trust.discard(v, lesson, {"before": e.get("before", ""), "counted": e.get("counted")}, "undone by you",
                                            undo_of=e["id"]) is None:
             raise ValueError(f"{lid} is no longer in its note")
-        learn.block(v, lesson.words if len(lesson.words) >= 2
-                    else [w for w in terms(e.get("rule", "")) if w not in learn.FILLER][:4],
-                    f"undone: {short(e.get('rule', ''), 120)}")
+        if e.get("how") != "narrowing":  # a narrowing says nothing against the topic itself
+            learn.block(v, lesson.words if len(lesson.words) >= 2
+                        else [w for w in terms(e.get("rule", "")) if w not in learn.FILLER][:4],
+                        f"undone: {short(e.get('rule', ''), 120)}")
         msg = (f"{lid} is back to what counted before" if e.get("before")
                else f"{lid} left its note; this topic is not learned again")
+    elif kind in ("guard", "unguard"):
+        from . import autoguard
+        msg = autoguard.undo(v, e)
     elif kind == "discard":  # you want the lesson after all: the callout that was taken back returns
         from . import trust
         p = v.root / str(e.get("path") or "")
