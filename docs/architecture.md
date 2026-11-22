@@ -34,6 +34,8 @@ can change them with confidence.
 |---|---|
 | `notes.py` | parse Markdown: frontmatter subset, H2 sections, `[[links]]`, `[!lesson]` callouts (code blocks ignored) |
 | `search.py` | BM25 over sections + learned terms + hit-rate multiplier + graph spreading |
+| `fuzzy.py` | character 4-gram index and the fusion of the extra signals onto the BM25 scale |
+| `dense.py` | optional embeddings from a local ollama (bge-m3), loopback only, built by the night, fail open |
 | `events.py` | append-only per-host event log; per-session "already shown" state |
 | `inbox.py` | single-claim queue with secret scan and near-duplicate check |
 | `transcripts.py` | Claude Code / Codex / generic JSONL → neutral `Turn`s |
@@ -74,6 +76,22 @@ hitrate(note) = 0.75 + 0.5 · (hits + 1) / (shown + 2)        (only once shown �
 score         = (text + learned) · hitrate
 graph         = top-3 seeds pass β · score / √(deg(seed) · deg(neighbour)) to linked notes (β = 0.3)
 ```
+
+Two more signals are fused onto this scale after the graph (`fuzzy.py`, `dense.py`), so `recall_threshold` stays a score:
+
+```
+fuzzy(note)  = cosine of character 4-gram tf-idf vectors (name x4, description x5, headings x2, body x1)
+dense(note)  = cosine of local bge-m3 vectors, half the whole note, half its best section   (optional)
+score       += w · max(best_text_score, 4) · (cosine / best_cosine)^4        w = 0.8 fuzzy, 0.4 fuzzy + 0.8 dense
+```
+
+The leader of a signal gets a share of the best word score, a trailing note almost nothing. A question that
+shares no word with any note is still ordered, but with scores below the default threshold: the signals order
+candidates, the words decide whether to show one. The 4-gram index is packed and pickled with the BM25 index
+(rebuilt when a note changes, warmed by the night); the vectors live in the cache directory, are built by the
+nightly `dense` step, and a note whose text did not change keeps its vectors. The prompt hook asks the local
+server with a 0.35 s deadline; a miss pauses the signal for five minutes. Only the loopback address is contacted.
+`eval/recall.py` measures all of it, `eval/gold_build.py` builds a gold set from your own sessions.
 
 Hubs are excluded from the graph and from prompt recall, because they link everything and would
 always win. A note is injected only if its score is ≥ `recall_threshold`. The nightly run raises

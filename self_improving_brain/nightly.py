@@ -21,8 +21,11 @@
   care       upkeep: descriptions, orphans, triggers, notes that carry the same topic are merged     (budgeted)
   themes     two rules that demand the same thing become one, the older one carries it             (budgeted)
   replay     past corrections against today's rules: would they have been caught?
-  cache      rebuild the learned recall model; autotune the recall threshold from its precision
-  index      regenerate INDEX.md, lint the vault (the vault gate: MUST findings, counted per night, see gate.py)
+  cache      rebuild the learned recall model
+  dense      embed the notes with a local model (ollama + bge-m3), if there is one: recall finds meaning too
+  autotune   the recall threshold from its precision
+  index      regenerate INDEX.md, lint the vault (the vault gate: MUST findings, counted per night, see gate.py); then
+             warm the recall cache for the first prompt of the day
   sync       git commit + pull --rebase + push (if the vault is a git repo with a remote)
 
 Every change it makes is in the journal: `brain review` shows it, `brain undo` takes it back.
@@ -301,6 +304,9 @@ def _run(v: Vault, quick: bool) -> dict:
         from . import replay
         step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
     step("cache", lambda: metrics.refresh_cache(v))
+    if v.get("search_fuzzy") and v.get("search_dense"):  # local embeddings, only if ollama has the model
+        from . import cache, dense
+        step("dense", lambda: dense.build(v, cache.library(v)))
     step("autotune", lambda: metrics.autotune(v))
     step("index_changed", lambda: maplib.write(v))
 
@@ -318,6 +324,13 @@ def _run(v: Vault, quick: bool) -> dict:
             gate.book(v, res)
         return out
     step("lint", _lint)
+
+    def _warm():  # the first prompt after the night finds the parsed vault and the recall index ready
+        from . import cache
+        cache.index(v, {})
+        return "ok"
+    if not quick:
+        step("warm", _warm)
     if llm.PROBLEMS:  # a failed login looks like a quiet night unless it is said here
         rep["llm_error"] = llm.PROBLEMS[0]
         if not llm.PROBLEMS[0].startswith("today's learning budget"):

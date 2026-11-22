@@ -20,6 +20,14 @@
 - Two rules that demand the same thing become one at night: the older carries both, the other retires with a pointer
   (journal kind `join`; guards are never touched; `brain undo` restores both and the pair is never joined again).
 
+### Recall finds word forms, compounds and typos
+- Recall now adds a character 4-gram signal to BM25 (`search_fuzzy`, on by default): "cartonbild" finds the note
+  that says "Cartonbilder", "deploymnt" finds "deployment". On the bundled test half of `eval/recall.py` the right
+  note is first for 98 % of the questions instead of 86 %; the recall threshold stays 4.0. If a local ollama has
+  `bge-m3`, the nightly run also builds dense vectors (`search_dense`; loopback only, off without the model).
+- `eval/recall.py` measures recall on a gold set (top-1, top-5, MRR, what the hook would show per threshold) and
+  `eval/gold_build.py` builds one from your own sessions, split by session into a tuning and a test half.
+
 - Text you pasted into a message no longer counts as your own words. Claude Code repeats the id in the closing
   tag, which the check did not expect, so a pasted rule could vouch for itself.
 

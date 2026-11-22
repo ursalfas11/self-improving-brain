@@ -410,7 +410,8 @@ def c_context(a):
 def c_search(a):
     v = _vault(a)
     lib = Library(v.root)
-    hits = Index(lib, learned_model(v)).score(a.query, graph_beta=float(v.get("graph_beta")))[: a.k]
+    hits = Index(lib, learned_model(v)).score(a.query, graph_beta=float(v.get("graph_beta")), fuzzy=bool(v.get("search_fuzzy")),
+                                              dense=v if v.get("search_dense") else None)[: a.k]
     events.log(v, "tool", cmd="search", session=_ses())
     if a.json:
         print(json.dumps([{"note": h.note.name, "path": h.note.rel, "score": h.score, "section": h.section.title if h.section else "",

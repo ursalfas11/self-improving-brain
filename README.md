@@ -247,7 +247,7 @@ The model itself never learns. What improves is **what your agent is told, and w
 2. **Wiki.** Markdown notes with a tiny frontmatter, hubs and `[[wikilinks]]`, kept to *one truth per fact*. The nightly run files each claim: it appends it, replaces the outdated line it contradicts, or starts a note. A change that fails lint or the secret scan is rolled back, and every change lands in the journal.
 3. **Interface.** A CLI your agent calls instead of `cat`-ing whole files. `brain search` returns the 3–5 best *sections* with dates. `brain read note "section"` returns an outline with token counts, or exactly one section.
 
-Recall combines **BM25 over sections**, **learned terms** and **graph spreading** over your `[[links]]`. It is explainable and has zero dependencies. The parsed vault is cached and rebuilt only when a note changes, so the hooks stay fast:
+Recall combines **BM25 over sections**, **learned terms**, **graph spreading** over your `[[links]]` and **character 4-grams**, which find word forms, compounds and typos that exact words miss (`brain config search_fuzzy false` turns them off). If a local `ollama` has the model `bge-m3`, the nightly run also embeds your notes and recall finds meaning too; that talks to your own machine only, an `OLLAMA_HOST` elsewhere is ignored (`brain config search_dense false` turns it off). It is explainable and has zero dependencies. The parsed vault is cached and rebuilt only when a note changes, so the hooks stay fast:
 
 | Hook (600-note vault, Apple M5, incl. Python start) | Time |
 |---|---|

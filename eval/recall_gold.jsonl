@@ -1,0 +1,123 @@
+{"id": "q001", "question": "how often do the payment keys expire", "gold": ["api-key-rotation"], "kind": "exact"}
+{"id": "q002", "question": "rotated keys expiring", "gold": ["api-key-rotation"], "kind": "form"}
+{"id": "q003", "question": "revoked old keys", "gold": ["api-key-rotation"], "kind": "form"}
+{"id": "q004", "question": "paymant keys revokation", "gold": ["api-key-rotation"], "kind": "typo"}
+{"id": "q005", "question": "rolling back a failed deploy", "gold": ["deploy-rollback"], "kind": "form"}
+{"id": "q006", "question": "rolled back releases", "gold": ["deploy-rollback"], "kind": "form"}
+{"id": "q007", "question": "rollbak after failing health checks", "gold": ["deploy-rollback"], "kind": "typo"}
+{"id": "q008", "question": "undo a bad release on the test cluster", "gold": ["deploy-rollback"], "kind": "paraphrase"}
+{"id": "q009", "question": "how are databases backed up", "gold": ["postgres-backup"], "kind": "form"}
+{"id": "q010", "question": "restoring snapshots", "gold": ["postgres-backup"], "kind": "form"}
+{"id": "q011", "question": "databse backup retention", "gold": ["postgres-backup"], "kind": "typo"}
+{"id": "q012", "question": "what if the old data is lost", "gold": ["postgres-backup"], "kind": "paraphrase"}
+{"id": "q013", "question": "exporting invoices", "gold": ["invoice-export"], "kind": "form"}
+{"id": "q014", "question": "invoiced lines download", "gold": ["invoice-export"], "kind": "form"}
+{"id": "q015", "question": "invoce export", "gold": ["invoice-export"], "kind": "typo"}
+{"id": "q016", "question": "monthly billing file for the bookkeepers", "gold": ["invoice-export"], "kind": "paraphrase"}
+{"id": "q017", "question": "onboarding checklist for newcomers", "gold": ["onboarding-checklist"], "kind": "exact"}
+{"id": "q018", "question": "engineers joining the company", "gold": ["onboarding-checklist"], "kind": "form"}
+{"id": "q019", "question": "what should newcomers do on day one", "gold": ["onboarding-checklist"], "kind": "paraphrase"}
+{"id": "q020", "question": "flagged features rolling out gradually", "gold": ["feature-flags"], "kind": "form"}
+{"id": "q021", "question": "flags that were switched on", "gold": ["feature-flags"], "kind": "form"}
+{"id": "q022", "question": "featureflags cleanup", "gold": ["feature-flags"], "kind": "compound"}
+{"id": "q023", "question": "flakiness in the pipeline", "gold": ["ci-flaky-tests"], "kind": "form"}
+{"id": "q024", "question": "quarantined tests", "gold": ["ci-flaky-tests"], "kind": "form"}
+{"id": "q025", "question": "flakey testing reruns", "gold": ["ci-flaky-tests"], "kind": "typo"}
+{"id": "q026", "question": "logged passwords", "gold": ["logging-conventions"], "kind": "form"}
+{"id": "q027", "question": "which log levels do we use", "gold": ["logging-conventions"], "kind": "exact"}
+{"id": "q028", "question": "structred logging fields", "gold": ["logging-conventions"], "kind": "typo"}
+{"id": "q029", "question": "rate limited customers", "gold": ["rate-limiting"], "kind": "form"}
+{"id": "q030", "question": "ratelimit headers", "gold": ["rate-limiting"], "kind": "compound"}
+{"id": "q031", "question": "how many calls per minute may a client make", "gold": ["rate-limiting"], "kind": "paraphrase"}
+{"id": "q032", "question": "escalating support tickets", "gold": ["support-escalation"], "kind": "form"}
+{"id": "q033", "question": "customersupport escalation", "gold": ["support-escalation"], "kind": "compound"}
+{"id": "q034", "question": "when does support escalate", "gold": ["support-escalation"], "kind": "exact"}
+{"id": "q035", "question": "which image formats are allowed", "gold": ["product-image-limits"], "kind": "exact"}
+{"id": "q036", "question": "uploaded images sizes", "gold": ["product-image-limits"], "kind": "form"}
+{"id": "q037", "question": "productimage naming", "gold": ["product-image-limits"], "kind": "compound"}
+{"id": "q038", "question": "a customer sees an old price in the shop", "gold": ["cache-invalidation"], "kind": "paraphrase"}
+{"id": "q039", "question": "cached entries purged", "gold": ["cache-invalidation"], "kind": "form"}
+{"id": "q040", "question": "cache invalidaton", "gold": ["cache-invalidation"], "kind": "typo"}
+{"id": "q041", "question": "releasing and tagging", "gold": ["release-process"], "kind": "form"}
+{"id": "q042", "question": "relase process", "gold": ["release-process"], "kind": "typo"}
+{"id": "q043", "question": "published releases changelog", "gold": ["release-process"], "kind": "form"}
+{"id": "q044", "question": "who carries the pager this week", "gold": ["oncall-handbook"], "kind": "exact"}
+{"id": "q045", "question": "oncall handover", "gold": ["oncall-handbook"], "kind": "compound"}
+{"id": "q046", "question": "acknowledged pages", "gold": ["oncall-handbook"], "kind": "form"}
+{"id": "q047", "question": "secrets leaked into git", "gold": ["secrets-management"], "kind": "form"}
+{"id": "q048", "question": "where do passwords and tokens live", "gold": ["secrets-management"], "kind": "exact"}
+{"id": "q049", "question": "how do I get vpn access", "gold": ["vpn-access"], "kind": "exact"}
+{"id": "q050", "question": "contractors profile expiring", "gold": ["vpn-access"], "kind": "form"}
+{"id": "q051", "question": "getting into the internal network from home", "gold": ["vpn-access"], "kind": "paraphrase"}
+{"id": "q052", "question": "monitoringdashboards", "gold": ["monitoring-dashboards"], "kind": "compound"}
+{"id": "q053", "question": "alerting on dashboards", "gold": ["monitoring-dashboards"], "kind": "form"}
+{"id": "q054", "question": "alerts nobody acts on", "gold": ["monitoring-dashboards"], "kind": "exact"}
+{"id": "q055", "question": "translated strings", "gold": ["translation-workflow"], "kind": "form"}
+{"id": "q056", "question": "translaton workflow", "gold": ["translation-workflow"], "kind": "typo"}
+{"id": "q057", "question": "how do we translate the shop texts", "gold": ["translation-workflow"], "kind": "exact"}
+{"id": "q058", "question": "how long do we keep order data", "gold": ["data-retention"], "kind": "exact"}
+{"id": "q059", "question": "erasing customer data", "gold": ["data-retention"], "kind": "form"}
+{"id": "q060", "question": "gdpr retention periods", "gold": ["data-retention"], "kind": "paraphrase"}
+{"id": "q061", "question": "retrying webhooks", "gold": ["webhook-retries"], "kind": "form"}
+{"id": "q062", "question": "webhok signatures", "gold": ["webhook-retries"], "kind": "typo"}
+{"id": "q063", "question": "what is the retry schedule", "gold": ["webhook-retries"], "kind": "exact"}
+{"id": "q064", "question": "releasing the moblie app", "gold": ["mobile-app-release"], "kind": "typo"}
+{"id": "q065", "question": "mobile releases submitted to stores", "gold": ["mobile-app-release"], "kind": "form"}
+{"id": "q066", "question": "phased rollout hotfix", "gold": ["mobile-app-release"], "kind": "exact"}
+{"id": "q067", "question": "reviewing pull requests", "gold": ["code-review-guidelines"], "kind": "form"}
+{"id": "q068", "question": "codereview", "gold": ["code-review-guidelines"], "kind": "compound"}
+{"id": "q069", "question": "how big may a pull request be", "gold": ["code-review-guidelines"], "kind": "exact"}
+{"id": "q070", "question": "updating dependecies", "gold": ["dependency-updates"], "kind": "typo"}
+{"id": "q071", "question": "how do we update dependencies", "gold": ["dependency-updates"], "kind": "exact"}
+{"id": "q072", "question": "bot opens update pull requests for libraries", "gold": ["dependency-updates"], "kind": "paraphrase"}
+{"id": "q073", "question": "reindexing after schema changes", "gold": ["search-indexing"], "kind": "form"}
+{"id": "q074", "question": "seach index", "gold": ["search-indexing"], "kind": "typo"}
+{"id": "q075", "question": "search results lag behind", "gold": ["search-indexing"], "kind": "exact"}
+{"id": "q076", "question": "emailing customers from sandbox", "gold": ["email-templates"], "kind": "form"}
+{"id": "q077", "question": "emailtemplates", "gold": ["email-templates"], "kind": "compound"}
+{"id": "q078", "question": "how do I test a template", "gold": ["email-templates"], "kind": "exact"}
+{"id": "q079", "question": "refunding card payments", "gold": ["payment-refunds"], "kind": "form"}
+{"id": "q080", "question": "chargebacks evidence", "gold": ["payment-refunds"], "kind": "exact"}
+{"id": "q081", "question": "how much may support refund alone", "gold": ["payment-refunds"], "kind": "exact"}
+{"id": "q082", "question": "stagin environment", "gold": ["staging-environment"], "kind": "typo"}
+{"id": "q083", "question": "what data does staging hold", "gold": ["staging-environment"], "kind": "exact"}
+{"id": "q084", "question": "reset every sunday", "gold": ["staging-environment"], "kind": "exact"}
+{"id": "q085", "question": "loadtest before campaigns", "gold": ["load-testing"], "kind": "compound"}
+{"id": "q086", "question": "testing the system under peak traffic before sales", "gold": ["load-testing"], "kind": "paraphrase"}
+{"id": "q087", "question": "load tested bottlenecks", "gold": ["load-testing"], "kind": "form"}
+{"id": "q088", "question": "postmortems after incidents", "gold": ["incident-postmortems"], "kind": "form"}
+{"id": "q089", "question": "how to write a postmortem", "gold": ["incident-postmortems"], "kind": "exact"}
+{"id": "q090", "question": "blameless writeups", "gold": ["incident-postmortems"], "kind": "form"}
+{"id": "q091", "question": "naming branches and commits", "gold": ["branch-naming"], "kind": "form"}
+{"id": "q092", "question": "branch naming convention", "gold": ["branch-naming"], "kind": "exact"}
+{"id": "q093", "question": "committed messages imperative", "gold": ["branch-naming"], "kind": "form"}
+{"id": "q094", "question": "wie beantrage ich urlaub", "gold": ["urlaubsplanung"], "kind": "exact"}
+{"id": "q095", "question": "urlaubsantrag", "gold": ["urlaubsplanung"], "kind": "compound"}
+{"id": "q096", "question": "urlaup beantragen", "gold": ["urlaubsplanung"], "kind": "typo"}
+{"id": "q097", "question": "falsche rechnung korrigieren", "gold": ["rechnungskorrektur"], "kind": "exact"}
+{"id": "q098", "question": "rechnungskorrekturen", "gold": ["rechnungskorrektur"], "kind": "compound"}
+{"id": "q099", "question": "gutschriften nach reklamationen", "gold": ["rechnungskorrektur"], "kind": "form"}
+{"id": "q100", "question": "lieferanten bewerten", "gold": ["lieferantenbewertung"], "kind": "form"}
+{"id": "q101", "question": "lieferantenbewertungen", "gold": ["lieferantenbewertung"], "kind": "compound"}
+{"id": "q102", "question": "bewertung der lieferanten", "gold": ["lieferantenbewertung"], "kind": "exact"}
+{"id": "q103", "question": "retouren annehmen", "gold": ["retourenabwicklung"], "kind": "form"}
+{"id": "q104", "question": "retourenabwicklung", "gold": ["retourenabwicklung"], "kind": "compound"}
+{"id": "q105", "question": "rücksendung prüfen und erstatten", "gold": ["retourenabwicklung"], "kind": "paraphrase"}
+{"id": "q106", "question": "passwörter wechseln", "gold": ["passwort-rotation"], "kind": "form"}
+{"id": "q107", "question": "passwortwechsel", "gold": ["passwort-rotation"], "kind": "compound"}
+{"id": "q108", "question": "zugangsdaten rotieren", "gold": ["passwort-rotation"], "kind": "paraphrase"}
+{"id": "q109", "question": "kartonbild ablegen", "gold": ["kartonbilder-ablage"], "kind": "form"}
+{"id": "q110", "question": "shopbild benennen", "gold": ["kartonbilder-ablage"], "kind": "form"}
+{"id": "q111", "question": "karton bilder", "gold": ["kartonbilder-ablage"], "kind": "form"}
+{"id": "q112", "question": "bestände abgleichen", "gold": ["bestandsabgleich"], "kind": "form"}
+{"id": "q113", "question": "lagerbestand abweichungen", "gold": ["bestandsabgleich"], "kind": "compound"}
+{"id": "q114", "question": "inventur einmal im jahr", "gold": ["bestandsabgleich"], "kind": "exact"}
+{"id": "q115", "question": "preise ändern", "gold": ["preisaenderungen"], "kind": "form"}
+{"id": "q116", "question": "preisänderung freigeben", "gold": ["preisaenderungen"], "kind": "form"}
+{"id": "q117", "question": "preisaenderungen marge prüfen", "gold": ["preisaenderungen"], "kind": "exact"}
+{"id": "q118", "question": "server umziehen", "gold": ["serverumzug"], "kind": "form"}
+{"id": "q119", "question": "umzug nachts", "gold": ["serverumzug"], "kind": "exact"}
+{"id": "q120", "question": "umgezogene anwendungen", "gold": ["serverumzug"], "kind": "form"}
+{"id": "q121", "question": "datenbank sichern", "gold": ["datensicherung-wiederherstellung"], "kind": "form"}
+{"id": "q122", "question": "sicherungen wiederherstellen", "gold": ["datensicherung-wiederherstellung"], "kind": "form"}
+{"id": "q123", "question": "datensicherung üben", "gold": ["datensicherung-wiederherstellung"], "kind": "exact"}

@@ -83,3 +83,63 @@ The judge run cost **$0.012** (3 calls, 39,600 tokens).
 - The patterns live in `self_improving_brain/learn.py`. `tests/test_eval.py` fails when the test numbers drop, so a change that helps one language cannot quietly hurt another.
 
 To add a language, add its phrases to the pattern lists in `learn.py` and its messages to the data. Report the test half, never the dev half.
+
+# Does recall find the right note?
+
+The second thing measured here: given a question, does `brain search` (and the prompt hook) rank the note that
+answers it first? [`recall.py`](recall.py) asks 123 questions about 40 invented notes ([`recall_vault/`](recall_vault),
+English and German) and checks where the right note lands. Each question is tagged by how it differs from the note:
+`exact` (shares its words), `form` (another word form: "rolled back" for "rollback"), `compound`, `typo`, `paraphrase`
+(shares no word at all).
+
+```bash
+python3 eval/recall.py                        # test half: word search against words + 4-grams
+python3 eval/recall.py --split dev            # tuning half, with every miss listed
+python3 eval/recall.py --thresholds 3,4,5,6   # what the hook would show at each recall_threshold
+python3 eval/recall.py --time                 # median search time
+```
+
+The split is a hash of the question id. The fusion weights come from the original tuning on real sessions; on this
+set `dev` (60 questions) was only used to check the threshold, and `test` (63 questions) is what is reported.
+
+## Results (test half, November 22, 2026)
+
+| questions | n | words: top-1 / top-5 / MRR | words + 4-grams: top-1 / top-5 / MRR |
+|---|---:|---|---|
+| all | 63 | 86 % / 89 % / 0.87 | **98 % / 98 % / 0.99** |
+| exact | 18 | 94 % / 100 % / 0.97 | 100 % / 100 % / 1.00 |
+| form | 27 | 93 % / 96 % / 0.94 | 100 % / 100 % / 1.00 |
+| compound | 6 | 33 % / 33 % / 0.33 | 100 % / 100 % / 1.00 |
+| typo | 6 | 83 % / 83 % / 0.83 | 100 % / 100 % / 1.00 |
+| paraphrase | 6 | 83 % / 83 % / 0.83 | 83 % / 83 % / 0.86 |
+
+The recall threshold stays at 4.0. At that threshold the hook shows the right note first for 56 of 63 test questions
+(52 with words only) and a wrong one for 1 (1); on dev it shows 49 right and 3 wrong (45 and 5). A lower threshold
+(3.0) would show a note for every question but also let 4-gram-only hits through: the signals order candidates, the
+words decide whether to show one.
+
+**Limits, read these.** The notes and the questions are invented by the same author, small, and the questions were
+written to include word-form, compound and typo mismatches, which is exactly what 4-grams fix: the +12 points show
+that the signal works where it should, not what you will gain on your vault (on the maintainer's own real sessions the same idea
+gave about +9 points top-1 and +4.6 top-5, with a wide interval). `paraphrase` is where only dense vectors
+(`bge-m3` through a local ollama) can help; they are **not measured here** because the model is not part of this
+repository, so the dense signal is covered by unit tests only. Cost: the prompt hook is about 10 ms slower per
+prompt in a 300-note vault; the first prompt after a note changed rebuilds the 4-gram index (about 0.15 s at 300
+notes, warmed by the night).
+
+## A gold set of your own
+
+Numbers on invented notes say little about your vault. [`gold_build.py`](gold_build.py) builds a gold set from your
+sessions: it finds the questions after which your agent opened notes (`candidates`, no LLM), lets your LLM CLI judge
+which of them were needed (`judge`, budgeted, asks first), and splits the result **by session**, 50 % `dev` and 50 %
+`test`, so a conversation is never on both sides.
+
+```bash
+python3 eval/gold_build.py candidates --vault ~/brain
+python3 eval/gold_build.py judge --vault ~/brain
+python3 eval/gold_build.py check ~/brain/.brain/state/gold.jsonl
+python3 eval/recall.py --gold ~/brain/.brain/state/gold.jsonl --vault ~/brain
+```
+
+The files hold your real questions and stay in `.brain/state/`, which the vault's git ignores. Never publish them;
+publish numbers. Report the test half only. The judge is a model, not the truth: read a sample.
