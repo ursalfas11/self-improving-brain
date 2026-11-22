@@ -1,12 +1,14 @@
 """Recall: BM25 over sections + what the brain has learned + the [[link]] graph.
 
-Three signals, all local:
+Four signals, all local (the last two are fused onto the BM25 scale, see fuzzy.py and dense.py):
   1. BM25 on note sections (title and description weigh more).
   2. Learned terms: when the agent needed a note that recall did not offer, the words of that
      prompt get attached to the note. Next time the same kind of question finds it.
      Notes that are offered but never opened slowly lose weight (hit rate multiplier).
   3. Graph: the strongest hits pass a share of their score to linked notes, damped by
      1/sqrt(degree*degree) so heavily linked stubs do not pull in everything.
+  4. Fuzzy: character 4-grams find word forms, compounds and typos that BM25 misses; optionally dense vectors
+     from a local embedding model (never a service).
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from .config import Vault
+from .fuzzy import FuzzyIndex, fuse, top as _top, CANDIDATES
 from .notes import Library, Note, Section
 from .util import load_json, terms
 
@@ -30,8 +33,9 @@ class Hit:
 
 
 class Index:
-    def __init__(self, lib: Library, learned: dict | None = None):
+    def __init__(self, lib: Library, learned: dict | None = None, fuzzy: "FuzzyIndex | None | bool" = True):
         self.lib = lib
+        self.fuzzy = FuzzyIndex(lib) if fuzzy is True else (fuzzy or None)
         self.learned = learned or {}
         self.docs: list[tuple[str, int, Counter, int]] = []  # (note, section idx, tf, length)
         df: Counter = Counter()
@@ -55,7 +59,8 @@ class Index:
         return self.idf.get(t, math.log(1 + self.N))
 
     def score(self, query: str, *, use_learned: bool = True, graph_beta: float = 0.3,
-              seeds: int = 3, include_hubs: bool = True) -> list[Hit]:
+              seeds: int = 3, include_hubs: bool = True, fuzzy: bool = True, dense: Vault | None = None) -> list[Hit]:
+        """Ranked hits. `fuzzy` fuses the 4-gram signal; `dense` (a Vault) also asks a local embedding model."""
         q = list(dict.fromkeys(terms(query)))
         if not q:
             return []
@@ -102,6 +107,9 @@ class Index:
                         scores[nb] = scores.get(nb, 0.0) + add
                         why.setdefault(nb, f"linked from {seed}")
 
+        if fuzzy and self.fuzzy is not None:
+            self._fuse(query, scores, why, dense)
+
         hits = []
         for name, s in sorted(scores.items(), key=lambda x: -x[1]):
             n = self.lib.notes[name]
@@ -112,6 +120,24 @@ class Index:
                 sec = n.sections[best_sec[name]]
             hits.append(Hit(n, round(s, 2), sec, why.get(name, "")))
         return hits
+
+
+    def _fuse(self, query: str, scores: dict, why: dict, dense: Vault | None) -> None:
+        """Add the fuzzy (and dense) signals to `scores`. Any failure leaves the word search as it was."""
+        try:
+            fz = self.fuzzy.scores(query)  # may be empty: the dense signal can still carry a question with no word in common
+            hubs = {n for n, note in self.lib.notes.items() if note.is_hub}
+            dn: dict = {}
+            if dense is not None:
+                from . import dense as dense_mod
+                cand = set(_top({n: s for n, s in scores.items() if n not in hubs}, CANDIDATES)) | set(_top(fz, CANDIDATES))
+                dn = dense_mod.scores(dense, self.lib, query, cand)
+            before = set(scores)
+            fuse(scores, {n: s for n, s in fz.items() if n in self.lib.notes}, dn or None, hubs)
+            for n in set(scores) - before:
+                why.setdefault(n, "fuzzy")
+        except Exception:  # noqa: BLE001 — fail open
+            pass
 
 
 def learned_model(v: Vault, max_age_s: int = 3600) -> dict:

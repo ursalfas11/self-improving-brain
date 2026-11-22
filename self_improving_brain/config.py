@@ -23,6 +23,11 @@ DEFAULTS = {
     # graph recall: share of a seed's score passed to linked notes
     "graph_beta": 0.3,
     "graph_seeds": 3,
+    # recall also finds word forms, compounds and typos (character 4-grams, fused into the BM25 score)
+    "search_fuzzy": True,
+    # and, only if a local ollama has the model bge-m3, meaning (dense vectors; nothing leaves this machine, and
+    # an OLLAMA_HOST on another machine is ignored). Without the model this setting does nothing.
+    "search_dense": True,
     # lessons with mechanism "always" are capped to keep session start cheap
     "always_max": 8,
     # the LLM CLI the nightly run thinks with (`brain setup` picks claude, codex or ollama). Prompt on stdin,

@@ -14,8 +14,10 @@
   answers    an always rule the answer check finds broken again and again is worded sharper  (budgeted)
   curate     quiet rules retire, the rule set stays within its caps
   replay     past corrections against today's rules: would they have been caught?
-  cache      rebuild the learned recall model; autotune the recall threshold from its precision
-  index      regenerate INDEX.md, lint the vault
+  cache      rebuild the learned recall model
+  dense      embed the notes with a local model (ollama + bge-m3), if there is one: recall finds meaning too
+  autotune   the recall threshold from its precision
+  index      regenerate INDEX.md, lint the vault; then warm the recall cache for the first prompt of the day
   sync       git commit + pull --rebase + push (if the vault is a git repo with a remote)
 
 Every change it makes is in the journal: `brain review` shows it, `brain undo` takes it back.
@@ -281,6 +283,9 @@ def _run(v: Vault, quick: bool) -> dict:
         from . import replay
         step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
     step("cache", lambda: metrics.refresh_cache(v))
+    if v.get("search_fuzzy") and v.get("search_dense"):  # local embeddings, only if ollama has the model
+        from . import cache, dense
+        step("dense", lambda: dense.build(v, cache.library(v)))
     step("autotune", lambda: metrics.autotune(v))
     step("index_changed", lambda: maplib.write(v))
 
@@ -288,6 +293,13 @@ def _run(v: Vault, quick: bool) -> dict:
         findings = lint(v, Library(v.root))
         return {"must": sum(f.level == "MUST" for f in findings), "should": sum(f.level == "SHOULD" for f in findings)}
     step("lint", _lint)
+
+    def _warm():  # the first prompt after the night finds the parsed vault and the recall index ready
+        from . import cache
+        cache.index(v, {})
+        return "ok"
+    if not quick:
+        step("warm", _warm)
     if llm.PROBLEMS:  # a failed login looks like a quiet night unless it is said here
         rep["llm_error"] = llm.PROBLEMS[0]
         if not llm.PROBLEMS[0].startswith("today's learning budget"):

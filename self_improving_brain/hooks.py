@@ -234,7 +234,8 @@ def prompt(v: Vault, payload: dict) -> dict:
     lib = idx.lib
     st = events.session_state(v, session)
     hits = idx.score(text, graph_beta=float(v.get("graph_beta")), seeds=int(v.get("graph_seeds")),
-                     include_hubs=False)
+                     include_hubs=False, fuzzy=bool(v.get("search_fuzzy")),
+                     dense=v if v.get("search_dense") else None)
     th = float(v.get("recall_threshold"))
     rules = [l for l in trust.effective(v, cache.lessons(v))
              if l.mechanism in ("reflex", "skill") and words_match(l, text) and _mark_lesson(v, session, st, l, "words")]
