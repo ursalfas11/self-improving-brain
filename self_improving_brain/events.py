@@ -11,6 +11,9 @@ Event kinds:
   correction {session, text, week, draft, lessons_shown} a user correction found by `brain learn`
   violation {session, id, tool, sample}          a lesson's `check:` matched what the agent did
   tool     {cmd}                                 a CLI command was used
+  outcome  {id, art, repo, session, assigned, how, ref}  something that happened after the agent's work (red CI,
+                                                 revert, change request, failed deploy, tool failing in a row), found
+                                                 by the nightly run (outcomes.py); `session` is the one it came from
 
 Counters that would flood the log (every hook call) are tallied per ISO week instead: `.brain/tally/<host>.json`.
 """

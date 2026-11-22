@@ -4,8 +4,9 @@
   orphan        a note that links to nothing is linked to the hub it fits, and the hub lists it
   trigger       a reflex rule without any trigger gets the rule's own words
   shorten       a rule longer than 240 characters is shortened by the LLM; names, commands and numbers must survive
-  duplicate     the LLM reads two notes that look alike: different → remembered and never reported again,
-                the same → merged into one note, and the other one points to it
+  duplicate     the LLM reads two notes that look alike (by title and description, and by what they say, see
+                themes.py): different → remembered and never reported again, the same → merged into one note,
+                and the other one points to it
   split         a note larger than lint.SPLIT_AT tokens moves its ## sections, word for word, into parts that
                 link back to it; the note stays the way in and lists them. No LLM; nothing may get lost
 
@@ -441,7 +442,11 @@ def run(v: Vault, think: bool = False) -> dict:
             if len(l.rule) > 240 and ("shorten", *_pair(l.id, "")) not in veto:
                 todo.append((f"shorten {l.id}", l))
         known = distinct(v)
-        for a, b, _j in duplicate_pairs(lib):
+        from . import themes  # notes that say the same under other titles: found by content, judged like look-alikes
+        pairs = list(duplicate_pairs(lib))
+        seen = {_pair(a, b) for a, b, _j in pairs}
+        pairs += [p for p in themes.topic_pairs(lib) if _pair(p[0], p[1]) not in seen]
+        for a, b, _j in pairs:
             if _pair(a, b) not in known and ("merge", *_pair(a, b)) not in veto:
                 todo.append((f"duplicate {a} {b}", (a, b)))
         left = int(v.get("care_max"))

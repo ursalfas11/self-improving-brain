@@ -20,7 +20,7 @@ import re
 import subprocess
 from datetime import date as _date, timedelta as _timedelta
 
-from . import events, inbox, journal, llm, nightly
+from . import events, inbox, journal, llm, nightly, themes
 from .config import Vault
 from .lint import lint_note
 from .notes import Library, atomic_write, dump_frontmatter, parse_frontmatter, set_field
@@ -110,7 +110,7 @@ Quote: @QUOTE@
 
 Candidate notes:
 @CANDS@
-
+@SIMILAR@
 Hubs: @HUBS@
 """
 
@@ -189,12 +189,16 @@ def _auto(v: Vault, queue: list[dict], lib: Library, hubs: str, report: list[str
                             + [f"### {h.note.name} ({h.note.rel})\n{h.note.description}\n"
                                f"{(h.section.body if h.section else '')[:1500]}"
                                for h in cands if about is None or h.note.name != about.name]) or "(none)"
+        similar = themes.hint_lines(lib, it["claim"], exclude={h.note.name for h in cands})
         hint = str(it.get("hint") or it.get("conflict") or "")
         prompt = (DECIDE.replace("@HINT@", f"\nAn earlier attempt to file this claim failed: {hint}. Decide so that "
                                            "this cannot happen again; when it cannot be filed safely, skip it.\n"
                                  if hint else "")
                   .replace("@TYPE@", it["type"]).replace("@CLAIM@", it["claim"])
-                  .replace("@QUOTE@", it.get("quote", "")).replace("@HUBS@", hubs).replace("@CANDS@", ctext))
+                  .replace("@QUOTE@", it.get("quote", "")).replace("@HUBS@", hubs).replace("@CANDS@", ctext)
+                  .replace("@SIMILAR@", "\nNotes that may carry this topic already (outside the candidates; when one does, "
+                                       "append or update there, never open a second note on the same topic):\n"
+                                       + "\n".join(similar) + "\n" if similar else ""))
         try:
             d = llm.ask_json(v, prompt)
         except llm.NoLLM as e:
@@ -248,6 +252,10 @@ def _auto(v: Vault, queue: list[dict], lib: Library, hubs: str, report: list[str
                 _append(path, str(d.get("section", "")), text)
         else:
             title = str(d.get("title") or it["claim"][:60])
+            twin = themes.existing_topic(lib, title, str(d.get("description") or ""), text)
+            if twin:  # one topic, one state: the next try is told where it stands
+                report.append(f"{it['id']}: refused a second note on one topic, " + _failed(v, it, twin))
+                continue
             base = name = slugify(title)
             k = 2
             while name in lib.notes or name.lower() in lib.by_stem:  # never a second note with a name you use

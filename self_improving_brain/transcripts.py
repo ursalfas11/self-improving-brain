@@ -41,6 +41,7 @@ class Turn:
     tool: str = ""
     rejected: bool = False
     ts: str = ""
+    failed: bool = False  # a tool result the agent's tool reported as an error (outcomes.py counts them)
 
     def __post_init__(self):
         # everything downstream (drafts, events, evidence, the prompt to the LLM CLI) starts here:
@@ -119,7 +120,7 @@ def _claude(lines: list[dict], path: Path) -> Transcript:
                     if isinstance(c, dict) and c.get("type") == "tool_result":
                         txt = _text_of(c.get("content", ""))
                         rej = bool(c.get("is_error")) and _rejection(txt)
-                        turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts))
+                        turns.append(Turn("tool_result", txt[:2000], rejected=rej, ts=ts, failed=bool(c.get("is_error"))))
                 continue
             origin = d.get("origin")
             if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):

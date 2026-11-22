@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from . import (adapters, distill, events, freshness, github_refs, handoff, hooks, inbox, journal, learn, llm, maplib,
-               metrics, nightly, replay, trust)
+               metrics, nightly, outcomes, replay, themes, trust)
 from .config import DEFAULTS, MARKER, NotAVault, Vault, is_vault, open_vault, remember_vault
 from .lint import lint
 from .notes import Lesson, Library
@@ -487,6 +487,12 @@ def c_remember(a):
         print(str(e))
         return 1
     print(f"✓ {rec['id']} in inbox ({rec['type']}). The nightly run files it into the right note.")
+    try:  # one topic, one state: say where it will most likely go
+        hint = themes.remember_hint(Library(v.root), rec["claim"])
+    except (OSError, ValueError, KeyError):
+        hint = ""
+    if hint:
+        print(hint)
     return 0
 
 
@@ -1008,6 +1014,23 @@ def c_github(a):
     return 0
 
 
+def c_outcomes(a):
+    """What happened after the agent's work (red CI, reverts, change requests, failed deploys), and how it was assigned."""
+    v = _vault(a)
+    if a.collect:
+        rep = outcomes.run(v, llm.available(v))
+        print(rep if isinstance(rep, str) else json.dumps(rep, ensure_ascii=False, indent=1))
+        return 0
+    print("\n".join(outcomes.show(v, a.days)))
+    return 0
+
+
+def c_themes(a):
+    """Where one topic may stand twice: notes that say the same, rules that demand the same. Reads only."""
+    print("\n".join(themes.show(_vault(a))))
+    return 0
+
+
 def c_index(a):
     v = _vault(a)
     print("INDEX.md updated" if maplib.write(v) else "INDEX.md unchanged")
@@ -1160,6 +1183,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(f=c_care)
     s = add("github", "do the notes still say what GitHub says? (the nightly run asks this, too)", True)
     s.set_defaults(f=c_github)
+    s = add("outcomes", "what happened after the agent's work: red CI, reverts, change requests, failed deploys", True)
+    s.add_argument("--days", type=int, default=28)
+    s.add_argument("--collect", action="store_true", help="collect and judge now instead of at night (reads GitHub through gh)")
+    s.set_defaults(f=c_outcomes)
+    s = add("themes", "notes and rules that may say the same thing twice (the nightly run merges them)", True)
+    s.set_defaults(f=c_themes)
     s = add("index", "regenerate INDEX.md", True); s.set_defaults(f=c_index)
     s = add("scan", "secret scan (stdin, files, or --staged)", True); s.add_argument("files", nargs="*")
     s.add_argument("--staged", action="store_true"); s.set_defaults(f=c_scan)

@@ -13,6 +13,8 @@ needs to be undone (append-only and one file per machine, so syncing the vault n
   replace    your newer word replaced a rule        undo: the old rule holds again
   care       upkeep fixed in a note or a rule       undo: as it was, and it is not fixed again
   merge      two notes that said the same           undo: both notes as they were
+  join       two rules that demanded the same,      undo: both rules as they were, never joined again
+             the older one carries both
   release    a rule an agent wrote, backed by your  undo: taken back like one without evidence
              own words in that session
   discard    a rule an agent wrote without that:    undo: it stands in the note again and counts
@@ -96,6 +98,8 @@ def describe(e: dict) -> tuple[str, str, str]:
         return "tidied", f"{e.get('lesson') or e.get('note', '')} › {e.get('what', '')}", e.get("why", "")
     if k == "merge":
         return "merged", f"{e.get('other', '')} into {e.get('note', '')}", e.get("why", "")
+    if k == "join":
+        return "joined", f"{e.get('joined', '')} into {e.get('lesson', '')}: {e.get('rule', '')}", e.get("why", "")
     if k == "release":
         return "confirmed", e.get("rule", ""), f"an agent wrote it; you said: “{short(e.get('quote', ''), 80)}”"
     if k == "discard":
@@ -188,6 +192,9 @@ def undo(v: Vault, ref: str) -> str:
     elif kind in ("care", "merge"):
         from . import care
         msg = care.undo(v, e)
+    elif kind == "join":
+        from . import themes
+        msg = themes.undo_join(v, e)
     elif kind == "release":  # the evidence does not hold after all: the lesson goes the way of one without
         from . import trust
         lesson = next((l for l in Library(v.root).lessons(retired=True) if l.id == lid), None)

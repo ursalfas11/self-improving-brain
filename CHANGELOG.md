@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Learning from what happens
+- **Outcomes.** The night now also learns from what happened after the agent's work: a CI run that turned red on a
+  pull request one of your sessions opened, a revert or a fix right after the merge, a change request, a failing
+  run or deploy on the main branch, a tool failing three times with the same message in one session. They are read
+  through `gh` (read-only, at most 100 calls and 14 failure logs a night) and tied to the session that left the
+  pull request, branch or commit; a repository and a time window alone assign nothing. One call judges at most 14
+  new outcomes; a lesson becomes a draft like a correction of yours (two sessions, a `reflex`, a single case expires
+  after 30 days), knowledge goes to the inbox. `brain outcomes` shows them, `brain config outcome_check false` turns
+  it off. New event kind `outcome`.
+
+### One topic, one state
+- Notes that say the same under other titles are found by content (head words, tf-idf, links) and merged by `care`
+  under its usual checks; `brain themes` lists them. A new note that doubles a topic you have is refused and the
+  retry is told where it stands, the distill prompt names notes that may carry a claim, and `brain remember` says
+  where a claim will go.
+- Two rules that demand the same thing become one at night: the older carries both, the other retires with a pointer
+  (journal kind `join`; guards are never touched; `brain undo` restores both and the pair is never joined again).
+
 - Text you pasted into a message no longer counts as your own words. Claude Code repeats the id in the closing
   tag, which the check did not expect, so a pasted rule could vouch for itself.
 
