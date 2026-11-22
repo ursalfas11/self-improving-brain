@@ -732,7 +732,8 @@ class TestSafeguards(VaultCase):
         self.assertIn("Tag every release", p.read_text())
 
     def test_a_new_note_never_takes_a_name_you_use(self):
-        self.note("10-projects/payments.md", "---\nname: payments\ndescription: Old\n---\n# Payments\n\nPart of [[hub-brain]].\n")
+        self.note("10-projects/payments.md", "---\nname: payments\ndescription: Old\n---\n# Invoice numbering\n\n"
+                  "Invoices are numbered per year, starting at one in January.\n\nPart of [[hub-brain]].\n")
         out = self.fact({"action": "new", "title": "Payments", "description": "How payments work",
                          "text": "Payments use Stripe webhooks."}, "Payments use Stripe webhooks, not polling.")
         self.assertIn("payments-2.md", out[0])

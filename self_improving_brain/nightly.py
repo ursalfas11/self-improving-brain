@@ -3,6 +3,9 @@
   pull       what your other machines learned (if the vault syncs through git)
   learn      mine new transcripts for your corrections (no LLM)
   probe      one tiny LLM call: unreachable (asleep, offline) = a broken night, tried again in a few hours
+  outcomes   what happened after the agent's work (red CI, a revert, a change request, a failing deploy, a tool
+             failing in a row): read through `gh` (no LLM), then one LLM call judges whether it was the agent's
+             mistake; a lesson becomes a draft like a correction, knowledge goes to the inbox  (budgeted)
   judge      the LLM sorts them: lasting rule, one-off steering, fact to remember, or noise   (budgeted)
   merge      the LLM joins drafts that ask for the same thing in other words                 (budgeted)
   adopt      policy, no LLM: what you said twice or as "always/never" becomes a rule; a rule that comes
@@ -15,6 +18,8 @@
   autoguard  a rule that keeps coming back although it was shown becomes a guard, if a replay over your real
              sessions proves it safe; a guard you let through nearly every time it asked is stepped back (budgeted)
   curate     quiet rules retire, the rule set stays within its caps
+  care       upkeep: descriptions, orphans, triggers, notes that carry the same topic are merged     (budgeted)
+  themes     two rules that demand the same thing become one, the older one carries it             (budgeted)
   replay     past corrections against today's rules: would they have been caught?
   cache      rebuild the learned recall model; autotune the recall threshold from its precision
   index      regenerate INDEX.md, lint the vault (the vault gate: MUST findings, counted per night, see gate.py)
@@ -219,7 +224,8 @@ def run(v: Vault, quick: bool = False) -> dict:
 
 def _run(v: Vault, quick: bool) -> dict:
     # imported here, so the hooks that only ask `overdue()` stay fast
-    from . import autoguard, care, curate, distill, extract, freshness, gate, learn, llm, maplib, metrics, trust
+    from . import (autoguard, care, curate, distill, extract, freshness, gate, learn, llm, maplib, metrics, outcomes,
+                   themes, trust)
     from .lint import lint
     from .notes import Library
     rep: dict = {"t": now_iso(), "steps": {}, "attention": [], "broken": []}
@@ -267,6 +273,8 @@ def _run(v: Vault, quick: bool) -> dict:
         ok, why = llm.reachable(v)
         s["probe"] = "ok" if ok else f"unreachable: {why}"
         think = ok  # the failed call is in llm.PROBLEMS: reported below as broken, so the night is tried again
+    if not quick:  # before judge and adopt: an outcome's lesson is a draft they see, its knowledge is filed tonight
+        step("outcomes", lambda: outcomes.run(v, think))
     if think:
         step("judge", lambda: learn.judge(v))
         step("merge", lambda: learn.merge(v))  # the same rule in other words, before the adoption counts sessions
@@ -287,6 +295,8 @@ def _run(v: Vault, quick: bool) -> dict:
         step("autoguard", lambda: autoguard.run(v, think))
     step("curate", lambda: curate.run(v))
     step("care", lambda: care.run(v, think))
+    if think:
+        step("themes", lambda: themes.run(v, think))
     if not quick:
         from . import replay
         step("replay", lambda: {k: x for k, x in replay.run(v).items() if k not in ("rows", "per_lesson")})
@@ -334,6 +344,9 @@ def summary(rep: dict) -> str:
     se = s.get("settle") if isinstance(s.get("settle"), dict) else {}
     ca = s.get("care") if isinstance(s.get("care"), dict) else {}
     ag = s.get("autoguard") if isinstance(s.get("autoguard"), dict) else {}
+    th = s.get("themes") if isinstance(s.get("themes"), dict) else {}
+    oc = (s.get("outcomes") or {}).get("judge") if isinstance(s.get("outcomes"), dict) else None
+    oc = oc if isinstance(oc, dict) else {}
     filed = sum(1 for line in s.get("distill") or [] if isinstance(line, str) and ": " in line
                 and line.split(": ", 1)[1].startswith(("append", "update", "new")))
     rules = len(ad.get("rules") or [])
@@ -350,6 +363,8 @@ def summary(rep: dict) -> str:
              if ag.get("guarded") else "",
              f"{len(ag.get('lifted') or {})} guard{'s' * (len(ag.get('lifted') or {}) != 1)} stepped back"
              if ag.get("lifted") else "",
+             f"{len(th.get('joined') or [])} rule{'s' * (len(th.get('joined') or []) != 1)} joined" if th.get("joined") else "",
+             f"{oc['drafts']} lesson draft{'s' * (oc['drafts'] != 1)} from outcomes" if oc.get("drafts") else "",
              "backed up" if str(s.get("sync", "")).startswith("synced") else ""]
     t = str(rep.get("t", ""))
     when = t[11:16] if days_since(t[:10]) in (0, 1) else day_label(t)

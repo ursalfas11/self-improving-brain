@@ -21,8 +21,10 @@ can change them with confidence.
 6. **Fail open.** A hook that crashes outputs nothing. The agent is never blocked by a broken brain.
    It blocks on purpose only for secrets, writes into `.brain/` or a session log, trust past the evidence, and
    guards, which ask you rather than refuse.
-7. **Only your words become rules.** The nightly run learns from what the user typed, never from tool
-   output, never from what an agent reports over MCP, and never adopts text with a link or a secret. A lesson
+7. **Only your words and real outcomes become rules.** The nightly run learns from what the user typed and from
+   what happened to the user's pull requests (`outcomes.py`: red CI, reverts, change requests, failed deploys, a
+   failure repeated in one session; always a `reflex`, two sessions, judged once a night), never from the text of
+   a tool result as such, never from what an agent reports over MCP, and never adopts text with a link or a secret. A lesson
    that appeared or changed during a tool call needs evidence in your own words from that session; without
    it the night takes it back. Nobody is asked to approve.
 
@@ -49,6 +51,8 @@ can change them with confidence.
 | `cache.py` | parsed vault + BM25 index cached in `~/.cache/self-improving-brain/`, keyed by a fingerprint of every note's size and mtime plus the code version |
 | `setup.py` | `brain setup` without questions: vault, agents, PATH, history baseline, LLM CLI, nightly schedule, `--github` backup |
 | `adapters.py` | install/uninstall into Claude Code, Codex, Gemini, project `AGENTS.md`; the plugin's hooks and commands |
+| `outcomes.py` | what happened after the agent's work: sessions' pull requests and runs through `gh` (capped, read-only), assignment to the session, one judgement call a night, drafts and inbox claims |
+| `themes.py` | one topic, one state: notes found by content for `care`, the check before a new note, rules that demand the same joined at night |
 | `nightly.py` | the nightly pass with a lock, its launchd/cron/Task Scheduler entry, the catch-up check, git pull and sync |
 | `ledger.py` | records several machines change (drafts, inbox): one file per machine, merged on read |
 | `lint.py` | MUST: secrets, dead links, duplicate lesson ids. SHOULD: orphans, stale projects, near-duplicates, trigger-less lessons |
@@ -99,6 +103,8 @@ one event per call: characters injected, injections, writes checked, violations.
 pull       what the other machines pushed (git sync on)                    no LLM
 learn      new transcripts: corrections → drafts, turns → events          no LLM
 probe*     one tiny call: unreachable → a broken night, tried again later  1 call
+outcomes*  red CI, reverts, change requests, failed deploys, repeated       ≤ 100 gh calls, ≤ 14 logs, 1 call
+           tool failures → drafts and inbox claims                          for ≤ 14 outcomes, ≤ 20 % of the day
 judge*     draft groups → rule | fact | once | noise                      ≤ 3 batches of 20 groups
 merge*     draft groups that ask for the same thing in other words        1 call, ≤ 150 groups
 adopt      fixed rules: lessons, facts, sharpenings, escalations          no LLM
@@ -106,6 +112,8 @@ extract*   new sessions → inbox claims                                     ≤
 distill*   inbox claims → notes                                            ≤ 15 claims, ≤ 50 % of the day
 answers*   always rules the answer check finds broken → sharper wording   ≤ 2 rules
 curate     retire, demote                                                  no LLM
+care*      upkeep, notes that say the same merged                          ≤ care_max fixes
+themes*    rules that demand the same become one (journal `join`)         1 call, ≤ 30 pairs, ≤ 2 joins
 replay · cache · autotune · index · lint · sync
 ```
 
@@ -172,7 +180,7 @@ to-do list for the user:
 | orphan | `Part of [[hub]].` and a line in that hub; the hub is the best match, never a guess | no |
 | reflex or skill rule without a trigger | the rule's own words as `words:` | no |
 | rule longer than 240 characters | one shorter sentence; code spans and numbers must survive | yes |
-| near-duplicate notes | verdict `different` is remembered, `same` merges both bodies into the kept note and turns the other into a pointer | yes |
+| near-duplicate notes (by title and description, or by what they say: `themes.topic_pairs`) | verdict `different` is remembered, `same` merges both bodies into the kept note and turns the other into a pointer | yes |
 | note larger than `lint.SPLIT_AT` (7,500 tokens) with 3+ `##` sections | the sections move word for word into parts (`part_of: <note>`, a link back); the note keeps its intro and lists the parts. Refused if a line would get lost or a link break; never a hub or a note with rules; ≤ 2 a night | no |
 
 A fix is rolled back when it would lose a number, link, code span or rule, add a secret, or raise a new MUST

@@ -94,8 +94,9 @@ def _book(v: Vault, usd: float | None, tokens: int) -> None:
 
 
 # At most this share of the day's budget per purpose. Filing facts once used up the whole day on its own, and
-# the upkeep after it got no call. The answer check runs after every answer, so it gets a small share.
-SHARE = {"distill": 0.5, "answers": 0.25, "autoguard": 0.25}
+# the upkeep after it got no call. The answer check runs after every answer, so it gets a small share, and so do the
+# guard drafts; reading the outcomes of your work and joining rules that say the same are one call a night each.
+SHARE = {"distill": 0.5, "answers": 0.25, "autoguard": 0.25, "outcomes": 0.2, "themes": 0.1}
 _PURPOSE = ""
 
 

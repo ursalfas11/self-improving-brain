@@ -9,7 +9,9 @@ The model itself never learns. What gets better is *what it is told, when*.
           "never", "from now on") becomes a lesson in the note that owns the topic. A rule that comes back
           although it exists is sharpened, then escalated. Every change lands in the journal, undoable.
 
-Only your own words become rules. What an agent reports about itself (MCP `brain_correction`) waits for you.
+Only your own words and what really happened become rules (outcomes.py adds drafts from red CI, reverts, change
+requests and failed deploys, counted the same way). What an agent reports about itself (MCP `brain_correction`)
+waits for you.
 """
 from __future__ import annotations
 

@@ -71,6 +71,10 @@ DEFAULTS = {
     # short names used in notes ("api#12") -> "owner/repo". Clones below repo_roots are found on their own.
     "github_repos": {},
     "repo_roots": [],
+    # what happens after the agent's work (outcomes.py): every night the pull requests your sessions opened and the
+    # runs of their repositories are read through your `gh` login (read-only); a red CI, a revert, a change request
+    # or a failing deploy that was the agent's mistake becomes a draft rule like a correction of yours
+    "outcome_check": True,
     # transcript sources to learn from (globs, ~ expanded)
     "transcripts": [
         "~/.claude/projects/**/*.jsonl",
